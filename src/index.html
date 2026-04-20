@@ -3,347 +3,227 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-  <title>Neon Copter</title>
+  <title>GBA Emulator</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     html, body {
       width: 100%; height: 100%;
-      background: #0a0a1a;
+      background: #111;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: 'Courier New', monospace;
-      color: #fff;
       overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
     }
-    h1 {
-      font-size: clamp(1rem, 5vw, 1.8rem);
-      color: #ff00ff;
-      letter-spacing: 4px;
-      text-shadow: 0 0 12px #ff00ff;
-      margin-bottom: 6px;
+
+    /* ── Upload screen ── */
+    #upload-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 32px 24px;
+      text-align: center;
     }
-    #hud {
-      font-size: clamp(0.7rem, 3vw, 0.95rem);
-      color: #aaa;
-      margin-bottom: 6px;
-      letter-spacing: 2px;
+
+    #upload-screen h1 {
+      font-size: clamp(1.4rem, 5vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fff;
     }
-    #hud span { color: #fff; font-weight: bold; }
-    #gameWrap {
-      position: relative;
-      display: block;
-      line-height: 0;
+
+    #upload-screen p {
+      font-size: 0.9rem;
+      color: #888;
+      max-width: 320px;
+      line-height: 1.5;
     }
-    canvas {
-      display: block;
-      border: 2px solid #ff00ff;
-      box-shadow: 0 0 24px #ff00ffaa;
-      background: #050510;
-      -webkit-tap-highlight-color: transparent;
-    }
-    #overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+
+    #file-label {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 14px;
-      background: rgba(5,5,16,0.7);
-    }
-    #overlay.hidden { display: none; }
-    #overlayTitle {
-      font-size: clamp(1.2rem, 6vw, 2rem);
-      color: #ff00ff;
-      text-shadow: 0 0 16px #ff00ff;
-      letter-spacing: 4px;
-    }
-    #overlayMsg {
-      font-size: clamp(0.7rem, 3vw, 1rem);
-      color: #00ffe7;
-      letter-spacing: 2px;
-      text-align: center;
-      padding: 0 16px;
-    }
-    #overlayScore {
-      font-size: clamp(0.8rem, 3.5vw, 1.1rem);
-      color: #ffe600;
-      letter-spacing: 2px;
-    }
-    #startBtn {
-      padding: 14px 40px;
-      background: transparent;
-      border: 2px solid #ff00ff;
-      color: #ff00ff;
-      font-family: 'Courier New', monospace;
-      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+      gap: 12px;
+      width: clamp(240px, 80vw, 340px);
+      height: 160px;
+      border: 2px dashed #444;
+      border-radius: 16px;
       cursor: pointer;
-      letter-spacing: 3px;
-      text-shadow: 0 0 8px #ff00ff;
-      box-shadow: 0 0 14px #ff00ff66;
-      -webkit-tap-highlight-color: transparent;
-      border-radius: 4px;
+      transition: border-color 0.2s, background 0.2s;
+      color: #888;
+      font-size: 0.85rem;
     }
-    #startBtn:active { background: #ff00ff33; }
+
+    #file-label:hover, #file-label.drag-over {
+      border-color: #6c8fff;
+      background: #1a1f30;
+      color: #aabbff;
+    }
+
+    #file-label svg {
+      width: 40px; height: 40px;
+      opacity: 0.5;
+    }
+
+    #file-label.drag-over svg { opacity: 0.9; }
+
+    #rom-input { display: none; }
+
+    #file-name {
+      font-size: 0.8rem;
+      color: #555;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #launch-btn {
+      display: none;
+      padding: 14px 40px;
+      background: #4a6fff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    #launch-btn:hover { background: #3a5fee; }
+    #launch-btn:active { transform: scale(0.97); }
+
+    /* ── Emulator screen ── */
+    #emu-screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+
+    #back-btn {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #333;
+      color: #ccc;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s;
+    }
+
+    #back-btn:hover { background: rgba(0,0,0,0.85); }
   </style>
 </head>
 <body>
-  <h1>NEON COPTER</h1>
-  <div id="hud">SCORE: <span id="scoreVal">0</span> &nbsp;|&nbsp; BEST: <span id="bestVal">0</span></div>
-  <div id="gameWrap">
-    <canvas id="c"></canvas>
-    <div id="overlay">
-      <div id="overlayTitle">NEON COPTER</div>
-      <div id="overlayMsg">TAP TO FLY</div>
-      <div id="overlayScore"></div>
-      <button id="startBtn">START</button>
-    </div>
+
+  <!-- Upload Screen -->
+  <div id="upload-screen">
+    <h1>GBA Emulator</h1>
+    <p>Load a Game Boy Advance ROM (.gba) to play. Your file stays on your device — nothing is uploaded.</p>
+
+    <label id="file-label" for="rom-input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+        <polyline points="8 12 12 8 16 12"/>
+        <line x1="12" y1="8" x2="12" y2="20"/>
+      </svg>
+      Tap to select a .gba file
+      <span style="font-size:0.75rem;color:#555">or drag and drop</span>
+    </label>
+
+    <input type="file" id="rom-input" accept=".gba,.GBA,.zip,.ZIP"/>
+    <div id="file-name"></div>
+    <button id="launch-btn">▶ Launch Game</button>
+  </div>
+
+  <!-- Emulator Screen -->
+  <div id="emu-screen">
+    <button id="back-btn">← Back</button>
+    <div id="game"></div>
   </div>
 
   <script>
-    const canvas = document.getElementById('c');
-    const ctx = canvas.getContext('2d');
-    const overlay = document.getElementById('overlay');
-    const startBtn = document.getElementById('startBtn');
-    const scoreEl = document.getElementById('scoreVal');
-    const bestEl = document.getElementById('bestVal');
+    const romInput   = document.getElementById('rom-input');
+    const fileLabel  = document.getElementById('file-label');
+    const fileName   = document.getElementById('file-name');
+    const launchBtn  = document.getElementById('launch-btn');
+    const uploadScr  = document.getElementById('upload-screen');
+    const emuScr     = document.getElementById('emu-screen');
+    const backBtn    = document.getElementById('back-btn');
 
-    function getSize() {
-      const W = Math.min(window.innerWidth - 4, 420);
-      const H = Math.min(window.innerHeight - 100, 560);
-      return { W: Math.floor(W), H: Math.floor(H) };
-    }
+    let romObjectURL = null;
+    let romName      = '';
 
-    let { W, H } = getSize();
-    canvas.width = W;
-    canvas.height = H;
-
-    const sc = () => W / 420;
-    const sh = () => H / 560;
-
-    const FLAP_VY   = -7.5;      // instant upward velocity on tap
-    const GRAVITY   = 0.42;
-    const PIPE_W    = () => Math.floor(52 * sc());
-    const GAP       = () => Math.floor(150 * sh());
-    const PIPE_SPD  = () => 2.6 * sc();
-    const BIRD_X    = () => Math.floor(W * 0.22);
-    const BIRD_R    = () => Math.floor(14 * sc());
-    const PIPE_INT  = () => Math.floor(W * 1.1);
-
-    let bird, pipes, particles, score, best, state;
-
-    function init() {
-      best = parseInt(localStorage.getItem('ncBest') || '0');
-      bestEl.textContent = best;
-      scoreEl.textContent = 0;
-      state = 'idle';
-      bird = { x: BIRD_X(), y: H / 2, vy: 0, angle: 0 };
-      pipes = [];
-      particles = [];
-      score = 0;
-      overlay.classList.remove('hidden');
-      document.getElementById('overlayTitle').textContent = 'NEON COPTER';
-      document.getElementById('overlayMsg').textContent = 'TAP TO FLY';
-      document.getElementById('overlayScore').textContent = '';
-      startBtn.textContent = 'START';
-    }
-
-    function startGame() {
-      overlay.classList.add('hidden');
-      state = 'playing';
-      bird = { x: BIRD_X(), y: H / 2, vy: 0, angle: 0 };
-      pipes = [makePipe(W + 80)];
-      particles = [];
-      score = 0;
-      scoreEl.textContent = 0;
-    }
-
-    function flap() {
-      if (state !== 'playing') return;
-      bird.vy = FLAP_VY * sh();
-    }
-
-    function makePipe(x) {
-      const minTop = Math.floor(H * 0.12);
-      const maxTop = Math.floor(H - GAP() - H * 0.12);
-      const topH = minTop + Math.floor(Math.random() * (maxTop - minTop));
-      return { x, topH, scored: false };
-    }
-
-    function spawnParticles(x, y, color, n) {
-      for (let i = 0; i < n; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const spd = 1.5 + Math.random() * 3;
-        particles.push({ x, y, dx: Math.cos(a)*spd, dy: Math.sin(a)*spd, life: 1, color });
-      }
-    }
-
-    function update() {
-      if (state !== 'playing') return;
-
-      bird.vy += GRAVITY * sh();
-      bird.vy = Math.max(-10 * sh(), Math.min(bird.vy, 11 * sh()));
-      bird.y += bird.vy;
-      bird.angle = Math.max(-28, Math.min(bird.vy * 4.5, 75));
-
-      if (bird.y - BIRD_R() < 0 || bird.y + BIRD_R() > H) { die(); return; }
-
-      const pw = PIPE_W(), gap = GAP(), spd = PIPE_SPD();
-      pipes.forEach(p => p.x -= spd);
-      pipes = pipes.filter(p => p.x + pw > -20);
-      if (!pipes.length || pipes[pipes.length-1].x < W - PIPE_INT()) {
-        pipes.push(makePipe(W + pw));
-      }
-
-      const bx = bird.x, by = bird.y, br = BIRD_R() * 0.80;
-      for (let p of pipes) {
-        if (bx + br > p.x && bx - br < p.x + pw) {
-          if (by - br < p.topH || by + br > p.topH + gap) { die(); return; }
-        }
-        if (!p.scored && p.x + pw < bx) {
-          p.scored = true;
-          score++;
-          scoreEl.textContent = score;
-          spawnParticles(bx, by, '#ffe600', 8);
-        }
-      }
-
-      particles.forEach(p => { p.x += p.dx; p.y += p.dy; p.dy += 0.12; p.life -= 0.045; });
-      particles = particles.filter(p => p.life > 0);
-    }
-
-    function die() {
-      state = 'dead';
-      spawnParticles(bird.x, bird.y, '#ff4444', 12);
-      spawnParticles(bird.x, bird.y, '#ff00ff', 10);
-      if (score > best) {
-        best = score;
-        localStorage.setItem('ncBest', best);
-        bestEl.textContent = best;
-      }
-      setTimeout(() => {
-        overlay.classList.remove('hidden');
-        document.getElementById('overlayTitle').textContent = '💀 CRASHED';
-        document.getElementById('overlayMsg').textContent = `SCORE: ${score}`;
-        document.getElementById('overlayScore').textContent = score >= best ? '🏆 NEW BEST!' : `BEST: ${best}`;
-        startBtn.textContent = 'TRY AGAIN';
-      }, 500);
-    }
-
-    function drawBird() {
-      const x = bird.x, y = bird.y, r = BIRD_R();
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(bird.angle * Math.PI / 180);
-      ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 18;
-      ctx.fillStyle = '#cc00cc';
-      ctx.beginPath(); ctx.ellipse(0, 2, r*1.1, r*0.65, 0, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#00ffe7'; ctx.shadowColor = '#00ffe7'; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.ellipse(-r*0.15, 0, r*0.42, r*0.35, -0.3, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#990099'; ctx.shadowBlur = 4;
-      ctx.beginPath();
-      ctx.moveTo(r*0.8,0); ctx.lineTo(r*1.6,-r*0.1); ctx.lineTo(r*1.6,r*0.5); ctx.lineTo(r*0.8,r*0.4);
-      ctx.closePath(); ctx.fill();
-      const t = Date.now()/80;
-      ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 2; ctx.shadowColor='#ff00ff'; ctx.shadowBlur=8;
-      for (let i=0;i<2;i++){const a=t+i*Math.PI;ctx.beginPath();ctx.moveTo(r*1.6,r*0.2-r*0.28*Math.cos(a));ctx.lineTo(r*1.6,r*0.2+r*0.28*Math.cos(a));ctx.stroke();}
-      const t2 = Date.now()/60;
-      ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.shadowColor='#fff';ctx.shadowBlur=10;
-      for (let i=0;i<2;i++){const a=t2+i*Math.PI;ctx.beginPath();ctx.moveTo(-r*1.1*Math.cos(a),-r*0.75-r*0.1*Math.sin(a));ctx.lineTo(r*1.1*Math.cos(a),-r*0.75+r*0.1*Math.sin(a));ctx.stroke();}
-      ctx.restore();
-    }
-
-    function drawPipes() {
-      const pw = PIPE_W(), gap = GAP();
-      for (let p of pipes) {
-        const grad1 = ctx.createLinearGradient(p.x,0,p.x+pw,0);
-        grad1.addColorStop(0,'#004d33'); grad1.addColorStop(0.5,'#00ff88'); grad1.addColorStop(1,'#004d33');
-        ctx.fillStyle = grad1; ctx.shadowColor='#00ff88'; ctx.shadowBlur=10;
-        ctx.fillRect(p.x, 0, pw, p.topH);
-        ctx.fillRect(p.x-4, p.topH-14, pw+8, 14);
-        const botY = p.topH + gap;
-        ctx.fillRect(p.x, botY, pw, H-botY);
-        ctx.fillRect(p.x-4, botY, pw+8, 14);
-      }
-      ctx.shadowBlur = 0;
-    }
-
-    function drawParticles() {
-      for (let p of particles) {
-        ctx.globalAlpha = p.life;
-        ctx.fillStyle = p.color; ctx.shadowColor = p.color; ctx.shadowBlur = 8;
-        ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
-      }
-      ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-    }
-
-    function draw() {
-      ctx.clearRect(0,0,W,H);
-      // stars
-      ctx.fillStyle='#fff';
-      for(let i=0;i<40;i++){
-        ctx.globalAlpha=0.15+(i%5)*0.06;
-        ctx.beginPath();
-        ctx.arc((i*137+score*0.4)%W,(i*97)%H,(i%3===0)?1.2:0.6,0,Math.PI*2);
-        ctx.fill();
-      }
-      ctx.globalAlpha=1;
-      drawPipes();
-      drawParticles();
-      drawBird();
-      if(state==='playing'){
-        ctx.globalAlpha=0.12; ctx.fillStyle='#fff';
-        ctx.font=`bold ${Math.floor(H*0.13)}px Courier New`;
-        ctx.textAlign='center';
-        ctx.fillText(score,W/2,H*0.18);
-        ctx.textAlign='left'; ctx.globalAlpha=1;
-      }
-    }
-
-    function loop() { update(); draw(); requestAnimationFrame(loop); }
-
-    // ── INPUT ─────────────────────────────────────────────
-    // Single tap = flap. Works on canvas AND document level.
-    // No hold mechanic — instant velocity on each tap/click.
-
-    function handleTap(e) {
-      e.preventDefault();
-      if (state === 'playing') flap();
-    }
-
-    // Keyboard
-    document.addEventListener('keydown', e => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); }
+    // File selected via input
+    romInput.addEventListener('change', () => {
+      const file = romInput.files[0];
+      if (file) handleFile(file);
     });
 
-    // Mouse click on canvas
-    canvas.addEventListener('click', e => { if (state==='playing') flap(); });
-
-    // Touch — attached to document so it fires regardless of what element is tapped
-    document.addEventListener('touchstart', e => {
-      // Don't intercept the START button
-      if (e.target === startBtn) return;
+    // Drag & drop
+    fileLabel.addEventListener('dragover', e => { e.preventDefault(); fileLabel.classList.add('drag-over'); });
+    fileLabel.addEventListener('dragleave', () => fileLabel.classList.remove('drag-over'));
+    fileLabel.addEventListener('drop', e => {
       e.preventDefault();
-      if (state === 'playing') flap();
-    }, { passive: false });
-
-    // Start button
-    startBtn.addEventListener('click', e => { e.stopPropagation(); startGame(); });
-    startBtn.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); startGame(); }, { passive: false });
-
-    window.addEventListener('resize', () => {
-      const s = getSize(); W = s.W; H = s.H;
-      canvas.width = W; canvas.height = H;
-      if (state === 'playing') die();
+      fileLabel.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
     });
 
-    init();
-    loop();
+    function handleFile(file) {
+      if (romObjectURL) URL.revokeObjectURL(romObjectURL);
+      romObjectURL = URL.createObjectURL(file);
+      romName = file.name;
+      fileName.textContent = file.name;
+      launchBtn.style.display = 'block';
+    }
+
+    launchBtn.addEventListener('click', launchEmulator);
+
+    function launchEmulator() {
+      if (!romObjectURL) return;
+
+      uploadScr.style.display = 'none';
+      emuScr.style.display = 'block';
+
+      // EmulatorJS config — must be set before loader.js runs
+      window.EJS_player      = '#game';
+      window.EJS_core        = 'gba';
+      window.EJS_gameUrl     = romObjectURL;
+      window.EJS_gameName    = romName.replace(/\.[^.]+$/, '');
+      window.EJS_pathtodata  = 'https://cdn.emulatorjs.org/stable/data/';
+      window.EJS_startOnLoaded = true;
+      window.EJS_color       = '#4a6fff';
+
+      // Touch controls on by default for mobile
+      window.EJS_mobileControls = true;
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      document.body.appendChild(script);
+    }
+
+    backBtn.addEventListener('click', () => {
+      // Reload to cleanly reset the emulator
+      location.reload();
+    });
   </script>
 </body>
 </html>
