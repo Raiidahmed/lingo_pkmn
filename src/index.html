@@ -208,7 +208,7 @@
       window.EJS_core        = 'gba';
       window.EJS_gameUrl     = romObjectURL;
       window.EJS_gameName    = romName.replace(/\.[^.]+$/, '');
-      window.EJS_pathtodata  = 'https://cdn.emulatorjs.org/stable/data/';
+      window.EJS_pathtodata  = 'data/';
       window.EJS_startOnLoaded = true;
       window.EJS_color       = '#4a6fff';
 
@@ -216,7 +216,7 @@
       window.EJS_mobileControls = true;
 
       const script = document.createElement('script');
-      script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      script.src = 'data/loader.js';
       document.body.appendChild(script);
     }
 
