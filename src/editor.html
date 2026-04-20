@@ -73,13 +73,28 @@
     .tab.active { display: block; }
 
     /* ---- MAP EDITOR ---- */
-    #map-editor { display: flex; gap: 16px; flex-wrap: wrap; }
+    #map-editor {
+      display: flex;
+      gap: 12px;
+      flex-direction: column;
+    }
+    @media (min-width: 700px) {
+      #map-editor { flex-direction: row; }
+    }
 
     #tile-palette {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: wrap;
       gap: 6px;
-      min-width: 110px;
+      width: 100%;
+    }
+    @media (min-width: 700px) {
+      #tile-palette {
+        flex-direction: column;
+        width: auto;
+        min-width: 110px;
+      }
     }
     #tile-palette h3 { color: var(--accent); font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 4px; }
     .palette-btn {
@@ -99,7 +114,14 @@
     .palette-btn.active { border-color: var(--accent); color: var(--accent); }
     .palette-swatch { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
 
-    #map-canvas-wrap { overflow: auto; flex: 1; }
+    #map-canvas-wrap {
+      overflow: auto;
+      width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+    @media (min-width: 700px) {
+      #map-canvas-wrap { flex: 1; width: auto; }
+    }
     #map-canvas {
       display: block;
       cursor: crosshair;
@@ -108,11 +130,21 @@
 
     #map-tools {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: wrap;
       gap: 8px;
-      min-width: 130px;
+      width: 100%;
     }
-    #map-tools h3 { color: var(--accent); font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 4px; }
+    #map-tools h3 { width: 100%; }
+    @media (min-width: 700px) {
+      #map-tools {
+        flex-direction: column;
+        width: auto;
+        min-width: 130px;
+      }
+      #map-tools h3 { width: auto; }
+    }
+    #map-tools h3 { color: var(--accent); font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 4px; width: 100%; }
     .tool-btn {
       padding: 6px 10px;
       background: var(--surface);
@@ -397,7 +429,7 @@
 // ============================================================
 //  DEFAULT DATA (mirrors index.html)
 // ============================================================
-const TILE_SIZE = 28;
+const TILE_SIZE = window.innerWidth < 700 ? 20 : 28;
 
 const TILE_TYPES = [
   { id: 0, name: 'Floor',    color: '#2a2235' },
