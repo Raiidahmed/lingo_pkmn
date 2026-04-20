@@ -3,227 +3,783 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-  <title>GBA Emulator</title>
+  <title>LingoDungeon</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html, body {
       width: 100%; height: 100%;
-      background: #111;
+      background: #0d0d0d;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
       color: #eee;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+      touch-action: none;
     }
 
-    /* ── Upload screen ── */
-    #upload-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-      padding: 32px 24px;
-      text-align: center;
-    }
-
-    #upload-screen h1 {
-      font-size: clamp(1.4rem, 5vw, 2rem);
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: #fff;
-    }
-
-    #upload-screen p {
-      font-size: 0.9rem;
-      color: #888;
-      max-width: 320px;
-      line-height: 1.5;
-    }
-
-    #file-label {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      width: clamp(240px, 80vw, 340px);
-      height: 160px;
-      border: 2px dashed #444;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      color: #888;
-      font-size: 0.85rem;
-    }
-
-    #file-label:hover, #file-label.drag-over {
-      border-color: #6c8fff;
-      background: #1a1f30;
-      color: #aabbff;
-    }
-
-    #file-label svg {
-      width: 40px; height: 40px;
-      opacity: 0.5;
-    }
-
-    #file-label.drag-over svg { opacity: 0.9; }
-
-    #rom-input { display: none; }
-
-    #file-name {
-      font-size: 0.8rem;
-      color: #555;
-      max-width: 320px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    #launch-btn {
-      display: none;
-      padding: 14px 40px;
-      background: #4a6fff;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-
-    #launch-btn:hover { background: #3a5fee; }
-    #launch-btn:active { transform: scale(0.97); }
-
-    /* ── Emulator screen ── */
-    #emu-screen {
-      display: none;
+    /* ── HUD ── */
+    #hud {
       width: 100%;
-      height: 100%;
-      position: relative;
-    }
-
-    #game {
-      width: 100%;
-      height: 100%;
-    }
-
-    #back-btn {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.6);
-      border: 1px solid #333;
-      color: #ccc;
-      border-radius: 8px;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 6px 12px;
       font-size: 0.75rem;
-      cursor: pointer;
-      backdrop-filter: blur(4px);
-      transition: background 0.2s;
+      color: #aaa;
+      background: #111;
+      border-bottom: 1px solid #222;
+      flex-shrink: 0;
+    }
+    #hud .title { color: #f9c74f; font-weight: bold; letter-spacing: 2px; }
+    #hud .xp { color: #90be6d; }
+
+    /* ── Canvas ── */
+    #game-wrap {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
     }
 
-    #back-btn:hover { background: rgba(0,0,0,0.85); }
+    /* ── Dialogue box ── */
+    #dialogue {
+      display: none;
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(10,10,20,0.97);
+      border-top: 2px solid #f9c74f;
+      padding: 12px 14px 10px;
+      z-index: 10;
+    }
+    #dialogue .speaker {
+      font-size: 0.7rem;
+      color: #f9c74f;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    #dialogue .text {
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #eee;
+      margin-bottom: 10px;
+    }
+    #dialogue .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .choice-btn {
+      background: #1a1a2e;
+      border: 1px solid #333;
+      color: #ddd;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .choice-btn:hover, .choice-btn:active { background: #252545; border-color: #f9c74f; }
+    .choice-btn.correct { background: #1a3320; border-color: #90be6d; color: #90be6d; }
+    .choice-btn.wrong   { background: #331a1a; border-color: #e05c5c; color: #e05c5c; }
+
+    #continue-btn {
+      display: none;
+      margin-top: 8px;
+      width: 100%;
+      background: #f9c74f;
+      color: #111;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* ── Mobile D-pad ── */
+    #dpad {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, 44px);
+      grid-template-rows: repeat(3, 44px);
+      gap: 3px;
+      z-index: 5;
+      opacity: 0.75;
+    }
+    .dpad-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .dpad-btn.center { background: transparent; border: none; cursor: default; }
+
+    #action-btn {
+      position: absolute;
+      bottom: 28px;
+      right: 16px;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(249,199,79,0.15);
+      border: 2px solid #f9c74f;
+      color: #f9c74f;
+      font-size: 0.65rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      letter-spacing: 1px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      z-index: 5;
+      opacity: 0.85;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── Notification toast ── */
+    #toast {
+      position: absolute;
+      top: 8px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 6px 16px;
+      font-size: 0.75rem;
+      color: #f9c74f;
+      white-space: nowrap;
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Upload Screen -->
-  <div id="upload-screen">
-    <h1>GBA Emulator</h1>
-    <p>Load a Game Boy Advance ROM (.gba) to play. Your file stays on your device — nothing is uploaded.</p>
+<div id="hud">
+  <span class="title">LINGO DUNGEON</span>
+  <span class="xp">XP: <span id="xp-val">0</span></span>
+</div>
 
-    <label id="file-label" for="rom-input">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-        <polyline points="8 12 12 8 16 12"/>
-        <line x1="12" y1="8" x2="12" y2="20"/>
-      </svg>
-      Tap to select a .gba file
-      <span style="font-size:0.75rem;color:#555">or drag and drop</span>
-    </label>
+<div id="game-wrap">
+  <canvas id="canvas"></canvas>
 
-    <input type="file" id="rom-input"/>
-    <div id="file-name"></div>
-    <button id="launch-btn">▶ Launch Game</button>
+  <!-- D-pad -->
+  <div id="dpad">
+    <div></div>
+    <div class="dpad-btn" id="btn-up">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-left">◀</div>
+    <div class="dpad-btn center"></div>
+    <div class="dpad-btn" id="btn-right">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-down">▼</div>
+    <div></div>
   </div>
 
-  <!-- Emulator Screen -->
-  <div id="emu-screen">
-    <button id="back-btn">← Back</button>
-    <div id="game"></div>
+  <!-- Action button -->
+  <div id="action-btn">TALK</div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- Dialogue overlay -->
+  <div id="dialogue">
+    <div class="speaker" id="dlg-speaker"></div>
+    <div class="text" id="dlg-text"></div>
+    <div class="choices" id="dlg-choices"></div>
+    <button id="continue-btn">Continue ▶</button>
   </div>
+</div>
 
-  <script>
-    const romInput   = document.getElementById('rom-input');
-    const fileLabel  = document.getElementById('file-label');
-    const fileName   = document.getElementById('file-name');
-    const launchBtn  = document.getElementById('launch-btn');
-    const uploadScr  = document.getElementById('upload-screen');
-    const emuScr     = document.getElementById('emu-screen');
-    const backBtn    = document.getElementById('back-btn');
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS & TILE DEFINITIONS
+// ═══════════════════════════════════════════════════════
+const TILE = 32; // pixels per tile
 
-    let romObjectURL = null;
-    let romName      = '';
+const T = {
+  FLOOR:   0,
+  WALL:    1,
+  DOOR_C:  2, // door closed
+  DOOR_O:  3, // door open
+  CHEST_C: 4, // chest closed
+  CHEST_O: 5, // chest open
+  STAIRS:  6,
+  RUG:     7,
+};
 
-    // File selected via input
-    romInput.addEventListener('change', () => {
-      const file = romInput.files[0];
-      if (file) handleFile(file);
-    });
+// Pixel art palette
+const COLORS = {
+  [T.FLOOR]:   '#2a2235',
+  [T.WALL]:    '#1a1a2e',
+  WALL_TOP:    '#252540',
+  WALL_EDGE:   '#111122',
+  [T.DOOR_C]:  '#8B4513',
+  [T.DOOR_O]:  '#5c3009',
+  [T.CHEST_C]: '#c9820a',
+  [T.CHEST_O]: '#6e4800',
+  [T.STAIRS]:  '#3a5a3a',
+  [T.RUG]:     '#3d1f4e',
+};
 
-    // Drag & drop
-    fileLabel.addEventListener('dragover', e => { e.preventDefault(); fileLabel.classList.add('drag-over'); });
-    fileLabel.addEventListener('dragleave', () => fileLabel.classList.remove('drag-over'));
-    fileLabel.addEventListener('drop', e => {
-      e.preventDefault();
-      fileLabel.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    });
+// ═══════════════════════════════════════════════════════
+//  DUNGEON MAP  (0=floor,1=wall,2=door,4=chest,6=stairs)
+//  15 wide x 13 tall
+// ═══════════════════════════════════════════════════════
+const MAP_W = 15;
+const MAP_H = 13;
 
-    function handleFile(file) {
-      if (romObjectURL) URL.revokeObjectURL(romObjectURL);
-      romObjectURL = URL.createObjectURL(file);
-      romName = file.name;
-      fileName.textContent = file.name;
-      launchBtn.style.display = 'block';
+const MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,4,0,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,1,1,2,1,1,1,1,1,1,1,2,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,6,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+// Which doors/chests are locked (need a challenge to open)
+// key: "col,row"
+const LOCKS = {
+  '6,3':  { type: 'door',  unlocked: false, challengeId: 0 },
+  '3,6':  { type: 'door',  unlocked: false, challengeId: 1 },
+  '11,6': { type: 'door',  unlocked: false, challengeId: 2 },
+  '10,4': { type: 'chest', unlocked: false, challengeId: 3 },
+};
+
+// ═══════════════════════════════════════════════════════
+//  NPCs
+// ═══════════════════════════════════════════════════════
+const NPCS = [
+  { id: 'guard',   col: 2,  row: 9,  color: '#e05c5c', label: 'G', name: 'Guard',
+    dialogue: [
+      "¡Bienvenido, aventurero! I am the guard of this dungeon.",
+      "To pass through this place, you must prove your Spanish.",
+      "Speak to the doors and chests — they will test you.",
+      "¡Buena suerte! (Good luck!)"
+    ]
+  },
+  { id: 'sage',    col: 12, row: 9,  color: '#90be6d', label: 'S', name: 'Sage',
+    dialogue: [
+      "Ah, a student of languages! In Spanish, we greet people with '¡Hola!'",
+      "Numbers are important too. 'Uno, dos, tres...' — one, two, three.",
+      "Keep going. The stairs await those who learn well."
+    ]
+  },
+  { id: 'mystery', col: 7,  row: 2,  color: '#a78bfa', label: '?', name: 'Stranger',
+    dialogue: [
+      "...",
+      "Colors in Spanish: rojo (red), azul (blue), verde (green).",
+      "Remember them. They may help you."
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════
+//  LANGUAGE CHALLENGES
+// ═══════════════════════════════════════════════════════
+const CHALLENGES = [
+  {
+    prompt: "The door is locked! A sign reads:\n\"¿Cómo te llamas?\" means...",
+    choices: ["What time is it?", "What is your name?", "Where are you going?", "How old are you?"],
+    answer: 1,
+    reward: "¡Correcto! '¿Cómo te llamas?' means 'What is your name?' The door creaks open.",
+  },
+  {
+    prompt: "This door has a riddle:\nHow do you say 'Thank you' in Spanish?",
+    choices: ["Por favor", "De nada", "Gracias", "Perdón"],
+    answer: 2,
+    reward: "¡Muy bien! 'Gracias' means 'Thank you.' The door swings open!",
+  },
+  {
+    prompt: "The final door glows with magic runes:\nWhat does 'Buenos días' mean?",
+    choices: ["Good night", "Good afternoon", "Goodbye", "Good morning"],
+    answer: 3,
+    reward: "¡Excelente! 'Buenos días' means 'Good morning.' You may pass!",
+  },
+  {
+    prompt: "A locked chest! It whispers:\n\"Translate: The cat is small.\"\nChoose the correct Spanish:",
+    choices: ["El perro es grande.", "El gato es pequeño.", "La casa es bonita.", "El libro es nuevo."],
+    answer: 1,
+    reward: "¡Perfecto! 'El gato es pequeño' — The cat is small. The chest opens!",
+  },
+];
+
+// ═══════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════
+let player = { col: 7, row: 10 };
+let xp = 0;
+let dialogueOpen = false;
+let pendingLock = null;
+let pendingNPC  = null;
+let npcDialogueIdx = 0;
+let mapState = MAP.map(r => [...r]); // mutable copy
+
+const keys = {};
+let moveTimer = 0;
+const MOVE_DELAY = 150; // ms between moves when key held
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════════════════════════
+const canvas  = document.getElementById('canvas');
+const ctx     = canvas.getContext('2d');
+const wrap    = document.getElementById('game-wrap');
+
+function resizeCanvas() {
+  const maxW = Math.min(wrap.clientWidth, 480);
+  const scale = Math.floor(maxW / (MAP_W * TILE));
+  const s = Math.max(1, scale);
+  canvas.width  = MAP_W * TILE;
+  canvas.height = MAP_H * TILE;
+  canvas.style.width  = (MAP_W * TILE * s) + 'px';
+  canvas.style.height = (MAP_H * TILE * s) + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ═══════════════════════════════════════════════════════
+//  DRAWING
+// ═══════════════════════════════════════════════════════
+function drawTile(col, row, type) {
+  const x = col * TILE, y = row * TILE;
+
+  if (type === T.WALL) {
+    // Wall body
+    ctx.fillStyle = COLORS[T.WALL];
+    ctx.fillRect(x, y, TILE, TILE);
+    // Top highlight
+    ctx.fillStyle = COLORS.WALL_TOP;
+    ctx.fillRect(x, y, TILE, 6);
+    // Border
+    ctx.strokeStyle = COLORS.WALL_EDGE;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+    return;
+  }
+
+  // Floor base
+  ctx.fillStyle = COLORS[T.FLOOR];
+  ctx.fillRect(x, y, TILE, TILE);
+
+  // Subtle grid lines on floor
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+
+  if (type === T.DOOR_C || type === T.DOOR_O) {
+    const open = type === T.DOOR_O;
+    ctx.fillStyle = open ? COLORS[T.DOOR_O] : COLORS[T.DOOR_C];
+    ctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+    if (!open) {
+      // Door frame
+      ctx.strokeStyle = '#5c3009';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 4, y + 4, TILE - 8, TILE - 8);
+      // Doorknob
+      ctx.fillStyle = '#f9c74f';
+      ctx.beginPath();
+      ctx.arc(x + TILE / 2, y + TILE / 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Lock icon
+      ctx.fillStyle = '#f9c74f';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔒', x + TILE / 2, y + 10);
+    } else {
+      // Open door arch
+      ctx.strokeStyle = '#3d1f00';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 4, y + 4, TILE - 8, TILE - 8);
+    }
+    return;
+  }
+
+  if (type === T.CHEST_C || type === T.CHEST_O) {
+    const open = type === T.CHEST_O;
+    ctx.fillStyle = open ? COLORS[T.CHEST_O] : COLORS[T.CHEST_C];
+    ctx.fillRect(x + 4, y + 10, TILE - 8, TILE - 14);
+    if (!open) {
+      ctx.fillStyle = '#7a4f00';
+      ctx.fillRect(x + 4, y + 10, TILE - 8, 6);
+      ctx.fillStyle = '#f9c74f';
+      ctx.beginPath();
+      ctx.arc(x + TILE / 2, y + 16, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // open lid
+      ctx.fillStyle = '#5c3800';
+      ctx.fillRect(x + 4, y + 6, TILE - 8, 5);
+      // sparkle
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✨', x + TILE / 2, y + TILE - 4);
+    }
+    return;
+  }
+
+  if (type === T.STAIRS) {
+    ctx.fillStyle = COLORS[T.STAIRS];
+    ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
+    ctx.fillStyle = '#2a4a2a';
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(x + 5 + i * 6, y + 8 + i * 5, TILE - 14, 4);
+    }
+    ctx.fillStyle = '#7fff7f';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('▼', x + TILE / 2, y + TILE - 4);
+    return;
+  }
+
+  if (type === T.RUG) {
+    ctx.fillStyle = COLORS[T.RUG];
+    ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+  }
+}
+
+function drawNPC(npc) {
+  const x = npc.col * TILE, y = npc.row * TILE;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(x + TILE/2, y + TILE - 5, 9, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Body
+  ctx.fillStyle = npc.color;
+  ctx.fillRect(x + 10, y + 14, 12, 13);
+  // Head
+  ctx.fillStyle = '#f5cba7';
+  ctx.fillRect(x + 9, y + 6, 14, 12);
+  // Eyes
+  ctx.fillStyle = '#333';
+  ctx.fillRect(x + 12, y + 9, 3, 3);
+  ctx.fillRect(x + 18, y + 9, 3, 3);
+  // Label
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(npc.label, x + TILE / 2, y + 4);
+}
+
+function drawPlayer() {
+  const x = player.col * TILE, y = player.row * TILE;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(x + TILE/2, y + TILE - 4, 9, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Cape/body
+  ctx.fillStyle = '#4a6fff';
+  ctx.fillRect(x + 9, y + 14, 14, 14);
+  // Head
+  ctx.fillStyle = '#f5cba7';
+  ctx.fillRect(x + 10, y + 6, 12, 11);
+  // Hair
+  ctx.fillStyle = '#4a3000';
+  ctx.fillRect(x + 10, y + 5, 12, 4);
+  // Eyes
+  ctx.fillStyle = '#333';
+  ctx.fillRect(x + 12, y + 10, 3, 3);
+  ctx.fillRect(x + 17, y + 10, 3, 3);
+  // Sword
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(x + 23, y + 10, 3, 14);
+  ctx.fillStyle = '#c9820a';
+  ctx.fillRect(x + 21, y + 14, 7, 3);
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw tiles
+  for (let row = 0; row < MAP_H; row++) {
+    for (let col = 0; col < MAP_W; col++) {
+      drawTile(col, row, mapState[row][col]);
+    }
+  }
+
+  // Draw NPCs
+  NPCS.forEach(drawNPC);
+
+  // Draw player
+  drawPlayer();
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════
+function showToast(msg, dur = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, dur);
+}
+
+function addXP(amount) {
+  xp += amount;
+  document.getElementById('xp-val').textContent = xp;
+  showToast(`+${amount} XP! ⭐`);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DIALOGUE SYSTEM
+// ═══════════════════════════════════════════════════════
+const dlgEl       = document.getElementById('dialogue');
+const dlgSpeaker  = document.getElementById('dlg-speaker');
+const dlgText     = document.getElementById('dlg-text');
+const dlgChoices  = document.getElementById('dlg-choices');
+const continueBtn = document.getElementById('continue-btn');
+
+function openNPCDialogue(npc) {
+  pendingNPC = npc;
+  npcDialogueIdx = 0;
+  dialogueOpen = true;
+  showNPCLine();
+}
+
+function showNPCLine() {
+  const npc = pendingNPC;
+  dlgSpeaker.textContent = npc.name.toUpperCase();
+  dlgText.textContent = npc.dialogue[npcDialogueIdx];
+  dlgChoices.innerHTML = '';
+  continueBtn.style.display = 'block';
+  continueBtn.textContent = npcDialogueIdx < npc.dialogue.length - 1 ? 'Next ▶' : 'Close ✕';
+  dlgEl.style.display = 'block';
+}
+
+continueBtn.addEventListener('click', () => {
+  if (pendingNPC) {
+    npcDialogueIdx++;
+    if (npcDialogueIdx < pendingNPC.dialogue.length) {
+      showNPCLine();
+    } else {
+      closeDialogue();
+    }
+    return;
+  }
+  closeDialogue();
+});
+
+function openChallenge(lockKey) {
+  const lock = LOCKS[lockKey];
+  const ch   = CHALLENGES[lock.challengeId];
+  pendingLock = lockKey;
+  dialogueOpen = true;
+
+  dlgSpeaker.textContent = lock.type === 'door' ? '🔒 LOCKED DOOR' : '🔒 LOCKED CHEST';
+  dlgText.textContent = ch.prompt;
+  continueBtn.style.display = 'none';
+  dlgChoices.innerHTML = '';
+
+  ch.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = `${['A','B','C','D'][i]}) ${c}`;
+    btn.addEventListener('click', () => handleAnswer(i, ch));
+    dlgChoices.appendChild(btn);
+  });
+
+  dlgEl.style.display = 'block';
+}
+
+function handleAnswer(idx, ch) {
+  const btns = dlgChoices.querySelectorAll('.choice-btn');
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === ch.answer) {
+    btns[idx].classList.add('correct');
+    dlgText.textContent = ch.reward;
+    addXP(20);
+
+    // Unlock the tile
+    const [col, row] = pendingLock.split(',').map(Number);
+    const lock = LOCKS[pendingLock];
+    lock.unlocked = true;
+    mapState[row][col] = lock.type === 'door' ? T.DOOR_O : T.CHEST_O;
+    render();
+
+    continueBtn.style.display = 'block';
+    continueBtn.textContent = 'Continue ▶';
+    dlgChoices.innerHTML = '';
+    pendingLock = null;
+    pendingNPC = null;
+
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[ch.answer].classList.add('correct');
+    dlgText.textContent = "Not quite! The correct answer is highlighted. Try again next time.";
+    addXP(5);
+
+    setTimeout(() => {
+      continueBtn.style.display = 'block';
+      continueBtn.textContent = 'Try Again Later ▶';
+      dlgChoices.innerHTML = '';
+      pendingLock = null;
+      pendingNPC = null;
+    }, 1200);
+  }
+}
+
+function closeDialogue() {
+  dlgEl.style.display = 'none';
+  dialogueOpen = false;
+  pendingLock = null;
+  pendingNPC = null;
+}
+
+// ═══════════════════════════════════════════════════════
+//  INTERACTION
+// ═══════════════════════════════════════════════════════
+function interact() {
+  if (dialogueOpen) return;
+
+  // Check adjacent tiles (all 4 directions + current)
+  const dirs = [[0,0],[0,-1],[0,1],[-1,0],[1,0]];
+  for (const [dc, dr] of dirs) {
+    const tc = player.col + dc, tr = player.row + dr;
+    if (tc < 0 || tr < 0 || tc >= MAP_W || tr >= MAP_H) continue;
+    const key = `${tc},${tr}`;
+
+    // Locked door/chest?
+    if (LOCKS[key] && !LOCKS[key].unlocked) {
+      openChallenge(key);
+      return;
     }
 
-    launchBtn.addEventListener('click', launchEmulator);
-
-    function launchEmulator() {
-      if (!romObjectURL) return;
-
-      uploadScr.style.display = 'none';
-      emuScr.style.display = 'block';
-
-      // EmulatorJS config — must be set before loader.js runs
-      window.EJS_player      = '#game';
-      window.EJS_core        = 'gba';
-      window.EJS_gameUrl     = romObjectURL;
-      window.EJS_gameName    = romName.replace(/\.[^.]+$/, '');
-      window.EJS_pathtodata  = 'data/';
-      window.EJS_startOnLoaded = true;
-      window.EJS_color       = '#4a6fff';
-
-      // Touch controls on by default for mobile
-      window.EJS_mobileControls = true;
-
-      const script = document.createElement('script');
-      script.src = 'data/loader.js';
-      document.body.appendChild(script);
+    // Stairs?
+    if (mapState[tr][tc] === T.STAIRS) {
+      showToast('¡Lo lograste! You reached the next floor! 🎉 (Coming soon)', 4000);
+      return;
     }
+  }
 
-    backBtn.addEventListener('click', () => {
-      // Reload to cleanly reset the emulator
-      location.reload();
-    });
-  </script>
+  // Check adjacent NPCs
+  for (const npc of NPCS) {
+    const dist = Math.abs(npc.col - player.col) + Math.abs(npc.row - player.row);
+    if (dist <= 1) {
+      openNPCDialogue(npc);
+      return;
+    }
+  }
+
+  showToast('Nothing to interact with here.');
+}
+
+// ═══════════════════════════════════════════════════════
+//  MOVEMENT
+// ═══════════════════════════════════════════════════════
+function tryMove(dc, dr) {
+  if (dialogueOpen) return;
+  const nc = player.col + dc;
+  const nr = player.row + dr;
+  if (nc < 0 || nr < 0 || nc >= MAP_W || nr >= MAP_H) return;
+
+  const tile = mapState[nr][nc];
+  // Block on walls and closed doors
+  if (tile === T.WALL || tile === T.DOOR_C || tile === T.CHEST_C) {
+    // Nudge to interact with adjacent locked objects
+    return;
+  }
+
+  // Block on NPCs
+  for (const npc of NPCS) {
+    if (npc.col === nc && npc.row === nr) return;
+  }
+
+  player.col = nc;
+  player.row = nr;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  INPUT — KEYBOARD
+// ═══════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  if (e.key === ' ' || e.key === 'Enter') interact();
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ═══════════════════════════════════════════════════════
+//  INPUT — D-PAD TOUCH
+// ═══════════════════════════════════════════════════════
+function dpadBind(id, dc, dr) {
+  const btn = document.getElementById(id);
+  let interval = null;
+  const start = () => {
+    tryMove(dc, dr);
+    interval = setInterval(() => tryMove(dc, dr), MOVE_DELAY);
+  };
+  const stop = () => { clearInterval(interval); interval = null; };
+  btn.addEventListener('touchstart', e => { e.preventDefault(); start(); }, { passive: false });
+  btn.addEventListener('touchend',   e => { e.preventDefault(); stop();  }, { passive: false });
+  btn.addEventListener('mousedown',  start);
+  btn.addEventListener('mouseup',    stop);
+  btn.addEventListener('mouseleave', stop);
+}
+dpadBind('btn-up',    0, -1);
+dpadBind('btn-down',  0,  1);
+dpadBind('btn-left', -1,  0);
+dpadBind('btn-right', 1,  0);
+
+document.getElementById('action-btn').addEventListener('touchstart', e => { e.preventDefault(); interact(); }, { passive: false });
+document.getElementById('action-btn').addEventListener('click', interact);
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOOP (keyboard movement)
+// ═══════════════════════════════════════════════════════
+let lastTime = 0;
+function loop(ts) {
+  const dt = ts - lastTime;
+  if (dt > MOVE_DELAY) {
+    lastTime = ts;
+    if (keys['ArrowUp'])    tryMove( 0, -1);
+    if (keys['ArrowDown'])  tryMove( 0,  1);
+    if (keys['ArrowLeft'])  tryMove(-1,  0);
+    if (keys['ArrowRight']) tryMove( 1,  0);
+  }
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+render();
+showToast('¡Bienvenido! Talk to NPCs and unlock doors to learn Spanish.', 4000);
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
