@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LingoDungeon Editor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d14;
+      --surface: #16161f;
+      --border:  #2a2a3a;
+      --accent:  #f9c74f;
+      --green:   #90be6d;
+      --red:     #e05c5c;
+      --purple:  #a78bfa;
+      --text:    #ddd;
+      --muted:   #666;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      min-height: 100vh;
+    }
+
+    /* ---- TOP BAR ---- */
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      flex-wrap: wrap;
+    }
+    #topbar h1 { color: var(--accent); font-size: 1rem; letter-spacing: 2px; flex: 1; }
+    .tab-btn {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #111;
+      border-color: var(--accent);
+      font-weight: bold;
+    }
+    #export-btn {
+      padding: 6px 14px;
+      background: var(--green);
+      border: none;
+      color: #111;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    #export-btn:hover { filter: brightness(1.1); }
+
+    /* ---- TABS ---- */
+    .tab { display: none; padding: 16px; }
+    .tab.active { display: block; }
+
+    /* ---- MAP EDITOR ---- */
+    #map-editor { display: flex; gap: 16px; flex-wrap: wrap; }
+
+    #tile-palette {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 110px;
+    }
+    #tile-palette h3 { color: var(--accent); font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 4px; }
+    .palette-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      transition: border-color 0.15s;
+    }
+    .palette-btn.active { border-color: var(--accent); color: var(--accent); }
+    .palette-swatch { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+
+    #map-canvas-wrap { overflow: auto; flex: 1; }
+    #map-canvas {
+      display: block;
+      cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    #map-tools {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 130px;
+    }
+    #map-tools h3 { color: var(--accent); font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 4px; }
+    .tool-btn {
+      padding: 6px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+    }
+    .tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tool-btn.active { border-color: var(--accent); color: var(--accent); background: #1e1e10; }
+
+    #map-info {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.8;
+    }
+    #map-info span { color: var(--text); }
+
+    /* ---- NPC / CONTENT EDITORS ---- */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .section-header h2 { color: var(--accent); font-size: 0.85rem; letter-spacing: 1px; }
+    .add-btn {
+      padding: 5px 12px;
+      background: var(--accent);
+      border: none;
+      color: #111;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .card:hover { border-color: #3a3a50; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .card-title { font-weight: bold; color: var(--accent); font-size: 0.8rem; }
+    .card-del {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: 4px;
+      padding: 2px 8px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-family: 'Courier New', monospace;
+    }
+    .card-del:hover { background: var(--red); color: #fff; }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .field-row label { color: var(--muted); font-size: 0.7rem; width: 80px; flex-shrink: 0; }
+    input[type=text], input[type=number], textarea, select {
+      background: #0d0d14;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      flex: 1;
+      min-width: 0;
+    }
+    input[type=text]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    textarea { resize: vertical; min-height: 56px; }
+
+    .dialogue-lines { display: flex; flex-direction: column; gap: 6px; }
+    .dialogue-line {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+    .dialogue-line textarea { min-height: 40px; }
+    .line-del {
+      background: transparent;
+      border: 1px solid #333;
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 4px 7px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .line-del:hover { border-color: var(--red); color: var(--red); }
+    .add-line-btn {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 5px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      width: 100%;
+      margin-top: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .add-line-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .npc-color-preview {
+      width: 20px; height: 20px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      flex-shrink: 0;
+    }
+
+    /* Challenge choices */
+    .choices-grid { display: flex; flex-direction: column; gap: 6px; }
+    .choice-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .choice-row input[type=radio] { flex-shrink: 0; accent-color: var(--green); }
+    .choice-label { color: var(--muted); font-size: 0.7rem; width: 16px; flex-shrink: 0; }
+
+    /* ---- EXPORT MODAL ---- */
+    #export-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #export-modal.open { display: flex; }
+    #export-box {
+      background: var(--surface);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      padding: 20px;
+      width: min(600px, 95vw);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #export-box h2 { color: var(--accent); font-size: 0.9rem; }
+    #export-box p { color: var(--muted); font-size: 0.72rem; line-height: 1.5; }
+    #export-output {
+      flex: 1;
+      overflow: auto;
+      background: #0a0a10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.7rem;
+      color: var(--green);
+      white-space: pre;
+      min-height: 200px;
+      max-height: 40vh;
+    }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btns button {
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      font-weight: bold;
+    }
+    #copy-btn { background: var(--accent); border: none; color: #111; }
+    #close-modal-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+    /* ---- MISC ---- */
+    .badge {
+      display: inline-block;
+      background: #1e1e30;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>LINGO DUNGEON EDITOR</h1>
+  <button class="tab-btn active" data-tab="map">MAP</button>
+  <button class="tab-btn" data-tab="npcs">NPCs</button>
+  <button class="tab-btn" data-tab="challenges">CHALLENGES</button>
+  <button id="export-btn">EXPORT JSON</button>
+</div>
+
+<!-- ===================== MAP TAB ===================== -->
+<div id="tab-map" class="tab active">
+  <div id="map-editor">
+
+    <div id="tile-palette">
+      <h3>TILES</h3>
+    </div>
+
+    <div id="map-canvas-wrap">
+      <canvas id="map-canvas"></canvas>
+    </div>
+
+    <div id="map-tools">
+      <h3>TOOLS</h3>
+      <button class="tool-btn active" id="tool-paint">Paint</button>
+      <button class="tool-btn" id="tool-npc">Place NPC</button>
+      <button class="tool-btn" id="tool-player">Set Start</button>
+      <hr class="divider"/>
+      <button class="tool-btn" id="map-fill-walls">Fill Edges</button>
+      <button class="tool-btn" id="map-clear">Clear Map</button>
+      <hr class="divider"/>
+      <div id="map-info">
+        Cursor: <span id="cursor-pos">-</span><br/>
+        Tool: <span id="active-tool-label">Paint</span><br/>
+        Tile: <span id="active-tile-label">Floor</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== NPCs TAB ===================== -->
+<div id="tab-npcs" class="tab">
+  <div class="section-header">
+    <h2>NPCs</h2>
+    <button class="add-btn" id="add-npc-btn">+ Add NPC</button>
+  </div>
+  <div id="npcs-list"></div>
+</div>
+
+<!-- ===================== CHALLENGES TAB ===================== -->
+<div id="tab-challenges" class="tab">
+  <div class="section-header">
+    <h2>LANGUAGE CHALLENGES</h2>
+    <button class="add-btn" id="add-challenge-btn">+ Add Challenge</button>
+  </div>
+  <div id="challenges-list"></div>
+</div>
+
+<!-- ===================== EXPORT MODAL ===================== -->
+<div id="export-modal">
+  <div id="export-box">
+    <h2>EXPORT GAME DATA</h2>
+    <p>Copy this JSON block and paste it into index.html replacing the MAP, LOCKS, NPCS, CHALLENGES, and player constants.</p>
+    <pre id="export-output"></pre>
+    <div class="modal-btns">
+      <button id="copy-btn">Copy to Clipboard</button>
+      <button id="close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DEFAULT DATA (mirrors index.html)
+// ============================================================
+const TILE_SIZE = 28;
+
+const TILE_TYPES = [
+  { id: 0, name: 'Floor',    color: '#2a2235' },
+  { id: 1, name: 'Wall',     color: '#1a1a2e' },
+  { id: 2, name: 'Door',     color: '#8B4513' },
+  { id: 4, name: 'Chest',    color: '#c9820a' },
+  { id: 6, name: 'Stairs',   color: '#3a5a3a' },
+  { id: 7, name: 'Rug',      color: '#3d1f4e' },
+];
+
+const DEFAULT_MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,4,0,0,0,1],
+  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+  [1,1,1,2,1,1,1,1,1,1,1,2,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,6,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+const DEFAULT_LOCKS = {
+  '6,3':  { type: 'door',  challengeId: 0 },
+  '3,6':  { type: 'door',  challengeId: 1 },
+  '11,6': { type: 'door',  challengeId: 2 },
+  '10,4': { type: 'chest', challengeId: 3 },
+};
+
+const DEFAULT_NPCS = [
+  { id: 'guard',   col: 2,  row: 9,  color: '#e05c5c', label: 'G', name: 'Guard',
+    dialogue: [
+      "Bienvenido, aventurero! I am the guard of this dungeon.",
+      "To pass through this place, you must prove your Spanish.",
+      "Speak to the doors and chests -- they will test you.",
+      "Buena suerte! (Good luck!)"
+    ]
+  },
+  { id: 'sage',    col: 12, row: 9,  color: '#90be6d', label: 'S', name: 'Sage',
+    dialogue: [
+      "Ah, a student of languages! In Spanish, we greet people with Hola!",
+      "Numbers are important too. 'Uno, dos, tres...' -- one, two, three.",
+      "Keep going. The stairs await those who learn well."
+    ]
+  },
+  { id: 'mystery', col: 7,  row: 2,  color: '#a78bfa', label: '?', name: 'Stranger',
+    dialogue: [
+      "...",
+      "Colors in Spanish: rojo (red), azul (blue), verde (green).",
+      "Remember them. They may help you."
+    ]
+  },
+];
+
+const DEFAULT_CHALLENGES = [
+  {
+    prompt: "The door is locked! A sign reads:\n\"Como te llamas?\" means...",
+    choices: ["What time is it?", "What is your name?", "Where are you going?", "How old are you?"],
+    answer: 1,
+    reward: "Correcto! 'Como te llamas?' means 'What is your name?' The door creaks open.",
+  },
+  {
+    prompt: "This door has a riddle:\nHow do you say 'Thank you' in Spanish?",
+    choices: ["Por favor", "De nada", "Gracias", "Perdon"],
+    answer: 2,
+    reward: "Muy bien! 'Gracias' means 'Thank you.' The door swings open!",
+  },
+  {
+    prompt: "The final door glows with magic runes:\nWhat does 'Buenos dias' mean?",
+    choices: ["Good night", "Good afternoon", "Goodbye", "Good morning"],
+    answer: 3,
+    reward: "Excelente! 'Buenos dias' means 'Good morning.' You may pass!",
+  },
+  {
+    prompt: "A locked chest! It whispers:\n\"Translate: The cat is small.\"\nChoose the correct Spanish:",
+    choices: ["El perro es grande.", "El gato es pequeno.", "La casa es bonita.", "El libro es nuevo."],
+    answer: 1,
+    reward: "Perfecto! 'El gato es pequeno' -- The cat is small. The chest opens!",
+  },
+];
+
+// ============================================================
+//  STATE  (load from localStorage or use defaults)
+// ============================================================
+function load(key, def) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
+  catch(e) { return def; }
+}
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+}
+
+let mapData      = load('ld_map',        DEFAULT_MAP.map(r => [...r]));
+let locksData    = load('ld_locks',      JSON.parse(JSON.stringify(DEFAULT_LOCKS)));
+let npcsData     = load('ld_npcs',       JSON.parse(JSON.stringify(DEFAULT_NPCS)));
+let challengeData= load('ld_challenges', JSON.parse(JSON.stringify(DEFAULT_CHALLENGES)));
+let playerStart  = load('ld_player',     { col: 7, row: 10 });
+
+function saveAll() {
+  save('ld_map',        mapData);
+  save('ld_locks',      locksData);
+  save('ld_npcs',       npcsData);
+  save('ld_challenges', challengeData);
+  save('ld_player',     playerStart);
+}
+
+// ============================================================
+//  TABS
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'map') renderMapCanvas();
+  });
+});
+
+// ============================================================
+//  MAP EDITOR
+// ============================================================
+const canvas    = document.getElementById('map-canvas');
+const ctx       = canvas.getContext('2d');
+const MAP_W     = 15;
+const MAP_H     = 13;
+
+let activeTile  = 0;
+let activeTool  = 'paint'; // paint | npc | player
+let isPainting  = false;
+let hoverCell   = null;
+
+// Build palette
+const palette = document.getElementById('tile-palette');
+TILE_TYPES.forEach(t => {
+  const btn = document.createElement('button');
+  btn.className = 'palette-btn' + (t.id === 0 ? ' active' : '');
+  btn.dataset.tileId = t.id;
+  btn.innerHTML = `<span class="palette-swatch" style="background:${t.color}"></span>${t.name}`;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTile = t.id;
+    document.getElementById('active-tile-label').textContent = t.name;
+    setTool('paint');
+  });
+  palette.appendChild(btn);
+});
+
+// Tool buttons
+function setTool(name) {
+  activeTool = name;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  const map = { paint: 'tool-paint', npc: 'tool-npc', player: 'tool-player' };
+  if (map[name]) document.getElementById(map[name]).classList.add('active');
+  document.getElementById('active-tool-label').textContent = name;
+}
+document.getElementById('tool-paint').addEventListener('click',  () => setTool('paint'));
+document.getElementById('tool-npc').addEventListener('click',    () => setTool('npc'));
+document.getElementById('tool-player').addEventListener('click', () => setTool('player'));
+
+document.getElementById('map-fill-walls').addEventListener('click', () => {
+  for (let c = 0; c < MAP_W; c++) { mapData[0][c] = 1; mapData[MAP_H-1][c] = 1; }
+  for (let r = 0; r < MAP_H; r++) { mapData[r][0] = 1; mapData[r][MAP_W-1] = 1; }
+  saveAll(); renderMapCanvas();
+});
+document.getElementById('map-clear').addEventListener('click', () => {
+  if (!confirm('Clear the entire map to floors?')) return;
+  mapData = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(0));
+  locksData = {};
+  saveAll(); renderMapCanvas();
+});
+
+function cellFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top)  * scaleY;
+  return { col: Math.floor(cx / TILE_SIZE), row: Math.floor(cy / TILE_SIZE) };
+}
+
+function applyTool(col, row) {
+  if (col < 0 || row < 0 || col >= MAP_W || row >= MAP_H) return;
+  if (activeTool === 'paint') {
+    mapData[row][col] = activeTile;
+    // If placing a door or chest, register a lock entry
+    if (activeTile === 2 || activeTile === 4) {
+      const key = `${col},${row}`;
+      if (!locksData[key]) {
+        const type = activeTile === 2 ? 'door' : 'chest';
+        locksData[key] = { type, challengeId: 0 };
+      }
+    } else {
+      // Remove lock if tile changed away from door/chest
+      const key = `${col},${row}`;
+      if (locksData[key]) delete locksData[key];
+    }
+    saveAll(); renderMapCanvas();
+  } else if (activeTool === 'npc') {
+    // Cycle NPC placement - pick from existing NPCs
+    const name = prompt('NPC id to place here (existing ids: ' + npcsData.map(n=>n.id).join(', ') + ')');
+    if (!name) return;
+    const npc = npcsData.find(n => n.id === name);
+    if (!npc) { alert('NPC not found'); return; }
+    npc.col = col; npc.row = row;
+    saveAll(); renderMapCanvas();
+  } else if (activeTool === 'player') {
+    playerStart = { col, row };
+    saveAll(); renderMapCanvas();
+  }
+}
+
+canvas.addEventListener('mousedown', e => { isPainting = true; applyTool(...Object.values(cellFromEvent(e))); });
+canvas.addEventListener('mousemove', e => {
+  const cell = cellFromEvent(e);
+  hoverCell = cell;
+  document.getElementById('cursor-pos').textContent = `${cell.col}, ${cell.row}`;
+  if (isPainting) applyTool(cell.col, cell.row);
+  else renderMapCanvas();
+});
+canvas.addEventListener('mouseup',   () => isPainting = false);
+canvas.addEventListener('mouseleave',() => { isPainting = false; hoverCell = null; renderMapCanvas(); });
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  isPainting = true;
+  applyTool(...Object.values(cellFromEvent(t)));
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  if (isPainting) applyTool(...Object.values(cellFromEvent(t)));
+}, { passive: false });
+canvas.addEventListener('touchend', () => isPainting = false);
+
+function renderMapCanvas() {
+  canvas.width  = MAP_W * TILE_SIZE;
+  canvas.height = MAP_H * TILE_SIZE;
+
+  for (let row = 0; row < MAP_H; row++) {
+    for (let col = 0; col < MAP_W; col++) {
+      const tileId = mapData[row][col];
+      const ttype  = TILE_TYPES.find(t => t.id === tileId) || TILE_TYPES[0];
+      ctx.fillStyle = ttype.color;
+      ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+      // Grid line
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(col * TILE_SIZE + 0.5, row * TILE_SIZE + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+
+      // Lock indicator on doors/chests
+      const key = `${col},${row}`;
+      if (locksData[key]) {
+        ctx.fillStyle = '#f9c74f';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('L', col * TILE_SIZE + TILE_SIZE/2, row * TILE_SIZE + TILE_SIZE - 4);
+      }
+
+      // Tile label
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '7px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(ttype.name[0], col * TILE_SIZE + TILE_SIZE/2, row * TILE_SIZE + 10);
+    }
+  }
+
+  // Draw player start
+  ctx.fillStyle = '#4a6fff';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('P', playerStart.col * TILE_SIZE + TILE_SIZE/2, playerStart.row * TILE_SIZE + TILE_SIZE/2 + 5);
+
+  // Draw NPCs
+  npcsData.forEach(npc => {
+    ctx.fillStyle = npc.color;
+    ctx.beginPath();
+    ctx.arc(npc.col * TILE_SIZE + TILE_SIZE/2, npc.row * TILE_SIZE + TILE_SIZE/2, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(npc.label, npc.col * TILE_SIZE + TILE_SIZE/2, npc.row * TILE_SIZE + TILE_SIZE/2 + 3);
+  });
+
+  // Hover highlight
+  if (hoverCell) {
+    ctx.strokeStyle = 'rgba(249,199,79,0.7)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(hoverCell.col * TILE_SIZE + 1, hoverCell.row * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+  }
+}
+
+// ============================================================
+//  NPC EDITOR
+// ============================================================
+function renderNPCs() {
+  const list = document.getElementById('npcs-list');
+  list.innerHTML = '';
+  npcsData.forEach((npc, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-title">NPC #${idx + 1}</span>
+        <span class="badge">${npc.id}</span>
+        <button class="card-del" data-idx="${idx}">Delete</button>
+      </div>
+      <div class="field-row">
+        <label>ID</label>
+        <input type="text" data-npc="${idx}" data-field="id" value="${npc.id}"/>
+      </div>
+      <div class="field-row">
+        <label>Name</label>
+        <input type="text" data-npc="${idx}" data-field="name" value="${npc.name}"/>
+      </div>
+      <div class="field-row">
+        <label>Label</label>
+        <input type="text" data-npc="${idx}" data-field="label" value="${npc.label}" style="max-width:60px"/>
+        <label style="width:auto;margin-left:12px;">Color</label>
+        <input type="text" data-npc="${idx}" data-field="color" value="${npc.color}" style="max-width:90px"/>
+        <span class="npc-color-preview" style="background:${npc.color}"></span>
+      </div>
+      <div class="field-row">
+        <label>Position</label>
+        Col <input type="number" data-npc="${idx}" data-field="col" value="${npc.col}" style="max-width:55px"/>
+        &nbsp;Row <input type="number" data-npc="${idx}" data-field="row" value="${npc.row}" style="max-width:55px"/>
+      </div>
+      <div style="color:var(--muted);font-size:0.7rem;margin:8px 0 4px;">DIALOGUE LINES</div>
+      <div class="dialogue-lines" id="dlg-${idx}">
+        ${npc.dialogue.map((line, li) => `
+          <div class="dialogue-line">
+            <textarea data-npc="${idx}" data-line="${li}">${line}</textarea>
+            <button class="line-del" data-npc="${idx}" data-line="${li}">x</button>
+          </div>
+        `).join('')}
+      </div>
+      <button class="add-line-btn" data-npc="${idx}">+ Add Line</button>
+    `;
+    list.appendChild(card);
+  });
+
+  // Events
+  list.querySelectorAll('input[data-npc]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx   = +inp.dataset.npc;
+      const field = inp.dataset.field;
+      const val   = field === 'col' || field === 'row' ? +inp.value : inp.value;
+      npcsData[idx][field] = val;
+      if (field === 'color') {
+        const preview = inp.closest('.field-row').querySelector('.npc-color-preview');
+        if (preview) preview.style.background = val;
+      }
+      saveAll();
+    });
+  });
+  list.querySelectorAll('textarea[data-npc]').forEach(ta => {
+    ta.addEventListener('input', () => {
+      npcsData[+ta.dataset.npc].dialogue[+ta.dataset.line] = ta.value;
+      saveAll();
+    });
+  });
+  list.querySelectorAll('.line-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      npcsData[+btn.dataset.npc].dialogue.splice(+btn.dataset.line, 1);
+      saveAll(); renderNPCs();
+    });
+  });
+  list.querySelectorAll('.add-line-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      npcsData[+btn.dataset.npc].dialogue.push('New line...');
+      saveAll(); renderNPCs();
+    });
+  });
+  list.querySelectorAll('.card-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Delete this NPC?')) return;
+      npcsData.splice(+btn.dataset.idx, 1);
+      saveAll(); renderNPCs();
+    });
+  });
+}
+
+document.getElementById('add-npc-btn').addEventListener('click', () => {
+  npcsData.push({
+    id: 'npc' + Date.now(), col: 7, row: 7, color: '#aaaaff',
+    label: 'N', name: 'New NPC',
+    dialogue: ['Hello, adventurer!']
+  });
+  saveAll(); renderNPCs();
+});
+
+// ============================================================
+//  CHALLENGES EDITOR
+// ============================================================
+function renderChallenges() {
+  const list = document.getElementById('challenges-list');
+  list.innerHTML = '';
+  challengeData.forEach((ch, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const choicesHtml = ch.choices.map((c, ci) => `
+      <div class="choice-row">
+        <span class="choice-label">${['A','B','C','D'][ci]}</span>
+        <input type="radio" name="ans-${idx}" value="${ci}" ${ch.answer === ci ? 'checked' : ''}/>
+        <input type="text" data-ch="${idx}" data-choice="${ci}" value="${c}" placeholder="Choice ${ci+1}"/>
+      </div>
+    `).join('');
+
+    // Build lock assignment options
+    const lockOptions = Object.entries(locksData).map(([key, lock]) =>
+      `<option value="${key}" ${Object.entries(locksData).find(([k,l]) => k === key && l.challengeId === idx) ? 'selected' : ''}>${lock.type} at ${key}</option>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-title">Challenge #${idx + 1}</span>
+        <button class="card-del" data-idx="${idx}">Delete</button>
+      </div>
+      <div class="field-row">
+        <label>Prompt</label>
+        <textarea data-ch="${idx}" data-field="prompt">${ch.prompt}</textarea>
+      </div>
+      <div style="color:var(--muted);font-size:0.7rem;margin:8px 0 4px;">CHOICES &nbsp;<span style="color:var(--green);">(select radio = correct answer)</span></div>
+      <div class="choices-grid" id="choices-${idx}">
+        ${choicesHtml}
+      </div>
+      <div class="field-row" style="margin-top:10px;">
+        <label>Reward</label>
+        <textarea data-ch="${idx}" data-field="reward">${ch.reward}</textarea>
+      </div>
+      <div class="field-row">
+        <label>Assigned to</label>
+        <select data-ch="${idx}" data-field="lock">
+          <option value="">-- none --</option>
+          ${lockOptions}
+        </select>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  // Events
+  list.querySelectorAll('textarea[data-ch]').forEach(ta => {
+    ta.addEventListener('input', () => {
+      challengeData[+ta.dataset.ch][ta.dataset.field] = ta.value;
+      saveAll();
+    });
+  });
+  list.querySelectorAll('input[type=text][data-ch]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      challengeData[+inp.dataset.ch].choices[+inp.dataset.choice] = inp.value;
+      saveAll();
+    });
+  });
+  list.querySelectorAll('input[type=radio]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (radio.checked) {
+        const idx = +radio.name.replace('ans-', '');
+        challengeData[idx].answer = +radio.value;
+        saveAll();
+      }
+    });
+  });
+  list.querySelectorAll('select[data-ch]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const chIdx = +sel.dataset.ch;
+      // Remove this challenge from any lock that previously had it
+      Object.values(locksData).forEach(lock => {
+        if (lock.challengeId === chIdx) lock.challengeId = 0;
+      });
+      // Assign to selected lock
+      if (sel.value && locksData[sel.value]) {
+        locksData[sel.value].challengeId = chIdx;
+      }
+      saveAll();
+    });
+  });
+  list.querySelectorAll('.card-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Delete this challenge?')) return;
+      challengeData.splice(+btn.dataset.idx, 1);
+      saveAll(); renderChallenges();
+    });
+  });
+}
+
+document.getElementById('add-challenge-btn').addEventListener('click', () => {
+  challengeData.push({
+    prompt: 'New challenge prompt...',
+    choices: ['Choice A', 'Choice B', 'Choice C', 'Choice D'],
+    answer: 0,
+    reward: 'Correct! You may pass.'
+  });
+  saveAll(); renderChallenges();
+});
+
+// ============================================================
+//  EXPORT
+// ============================================================
+document.getElementById('export-btn').addEventListener('click', () => {
+  const output = {
+    MAP: mapData,
+    LOCKS: locksData,
+    NPCS: npcsData,
+    CHALLENGES: challengeData,
+    PLAYER_START: playerStart
+  };
+  document.getElementById('export-output').textContent = JSON.stringify(output, null, 2);
+  document.getElementById('export-modal').classList.add('open');
+});
+
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const text = document.getElementById('export-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-btn').textContent = 'Copied!';
+    setTimeout(() => document.getElementById('copy-btn').textContent = 'Copy to Clipboard', 2000);
+  });
+});
+
+document.getElementById('close-modal-btn').addEventListener('click', () => {
+  document.getElementById('export-modal').classList.remove('open');
+});
+
+// ============================================================
+//  INIT
+// ============================================================
+renderMapCanvas();
+renderNPCs();
+renderChallenges();
+</script>
+</body>
+</html>
