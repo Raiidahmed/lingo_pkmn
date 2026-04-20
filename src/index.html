@@ -15,9 +15,9 @@
       min-height: 100vh;
       font-family: 'Courier New', monospace;
       color: #fff;
-      touch-action: none;
       overflow: hidden;
       user-select: none;
+      -webkit-user-select: none;
     }
     h1 {
       font-size: clamp(1rem, 5vw, 1.8rem);
@@ -39,6 +39,8 @@
       background: #050510;
       max-width: 100vw;
       display: block;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
     }
     #overlay {
       position: absolute;
@@ -85,7 +87,7 @@
 <body>
   <h1>NEON COPTER</h1>
   <div id="hud">SCORE: <span id="scoreVal">0</span> &nbsp;|&nbsp; BEST: <span id="bestVal">0</span></div>
-  <div style="position:relative; display:inline-block;">
+  <div style="position:relative; display:inline-block; touch-action:none;">
     <canvas id="c"></canvas>
     <div id="overlay">
       <div id="overlayTitle">NEON COPTER</div>
@@ -421,9 +423,18 @@
     canvas.addEventListener('mouseup', pressEnd);
     canvas.addEventListener('touchstart', e => { e.preventDefault(); pressStart(); }, { passive: false });
     canvas.addEventListener('touchend', e => { e.preventDefault(); pressEnd(); }, { passive: false });
+    canvas.addEventListener('touchcancel', e => { pressEnd(); }, { passive: false });
 
     startBtn.addEventListener('click', startGame);
     startBtn.addEventListener('touchstart', e => { e.preventDefault(); startGame(); }, { passive: false });
+
+    // Fallback: tap anywhere on page during play also works
+    document.addEventListener('touchstart', e => {
+      if (state === 'playing') { e.preventDefault(); pressStart(); }
+    }, { passive: false });
+    document.addEventListener('touchend', e => {
+      if (state === 'playing') { e.preventDefault(); pressEnd(); }
+    }, { passive: false });
 
     window.addEventListener('resize', () => {
       const s = getSize();
