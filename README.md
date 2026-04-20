@@ -2,23 +2,21 @@
 
 A project repo by Raiid Ahmed, managed by Lingo 🐁
 
-## Brick Breaker
+## Neon Copter
 
-A neon-styled browser brick breaker game.
+A neon-styled flappy/helicopter browser game.
 
 ### Play it
-Open `src/index.html` in any browser — no server needed.
-
-Or play it live via GitHub Pages:
 👉 https://raiidahmed.github.io/lingo_pkmn/src/
 
 ### Controls
-- **Mouse** — move paddle
-- **Arrow Keys** — move paddle
-- **Space / Click** — launch ball
+- **Hold Space / Hold Click** — thrust up
+- **Release** — fall
+- **Mobile:** Hold tap to fly
 
 ### Features
-- 3 levels with increasing speed
-- Score multiplier per level
-- Neon glow aesthetic
-- Lives system
+- Flappy Bird style pipe obstacles
+- Animated helicopter sprite with spinning rotors
+- Particle effects on score & crash
+- High score saved locally
+- Fully responsive — works on desktop & phone
