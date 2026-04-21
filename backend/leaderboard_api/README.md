@@ -13,15 +13,15 @@ Admin auth headers accepted:
 - `X-Admin-Token: <token>`
 - `Authorization: Bearer <token>`
 
-## Frontend API Override (Safe Fallback)
+## Frontend API Override
 
-`src/index.html` still defaults to the current worker URL, but now supports runtime override:
+`src/index.html` now defaults to same-origin (`/scores`) in the Flask app, and still supports runtime override:
 
 - `window.LINGO_LEADERBOARD_API_BASE` (highest priority)
 - query param `?leaderboardApi=https://your-api.example.com`
 - `localStorage.setItem('lingoLeaderboardApiBase', 'https://your-api.example.com')`
 
-If none are set, it keeps using `https://lingo-dungeon-api.raiidahmed.workers.dev`.
+If none are set, it uses same-origin API calls.
 
 ## Local Run
 

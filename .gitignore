@@ -1,2 +1,7 @@
 __pycache__/
 *.py[cod]
+.venv/
+backend/leaderboard_api/*.db
+backend/leaderboard_api/*.db-shm
+backend/leaderboard_api/*.db-wal
+backend/leaderboard_api/*.db-journal
