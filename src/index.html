@@ -786,25 +786,70 @@ async function fetchLeaderboard() {
   try {
     const r = await fetch(API + '/scores');
     if (!r.ok) throw new Error();
-    return await r.json();
-  } catch(e) { return null; }
+    const scores = await r.json();
+    if (!Array.isArray(scores)) throw new Error();
+    return { ok: true, scores };
+  } catch(e) {
+    return { ok: false, scores: [] };
+  }
 }
 
-function renderLeaderboard(scores, containerId) {
+function makeLeaderboardMessageRow(text) {
+  const row = document.createElement('div');
+  row.className = 'lb-row';
+  row.style.color = '#555';
+  row.style.justifyContent = 'center';
+  row.textContent = text;
+  return row;
+}
+
+function renderLeaderboard(result, containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!scores || scores.length === 0) {
-    el.innerHTML = '<div class="lb-row" style="color:#555;justify-content:center;">No scores yet — be the first!</div>';
+  el.textContent = '';
+
+  if (!result || !result.ok) {
+    el.appendChild(makeLeaderboardMessageRow('Leaderboard unavailable right now.'));
     return;
   }
-  el.innerHTML = scores.slice(0,5).map((s,i) => `
-    <div class="lb-row">
-      <span class="lb-rank">#${i+1}</span>
-      <span class="lb-name">${s.name || 'Unknown'}</span>
-      <span class="lb-score">${s.score || 0} XP</span>
-      <span class="lb-level">Lv${s.level || 1}</span>
-    </div>
-  `).join('');
+
+  const scores = result.scores;
+  if (!scores.length) {
+    el.appendChild(makeLeaderboardMessageRow('No scores yet — be the first!'));
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  scores.slice(0, 5).forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+
+    const rank = document.createElement('span');
+    rank.className = 'lb-rank';
+    rank.textContent = '#' + (i + 1);
+
+    const name = document.createElement('span');
+    name.className = 'lb-name';
+    const rawName = (s && typeof s.name === 'string') ? s.name.trim() : '';
+    name.textContent = (rawName || 'Unknown').slice(0, 16);
+
+    const score = document.createElement('span');
+    score.className = 'lb-score';
+    const scoreNum = Number.isFinite(Number(s && s.score)) ? Math.max(0, Math.floor(Number(s.score))) : 0;
+    score.textContent = scoreNum + ' XP';
+
+    const level = document.createElement('span');
+    level.className = 'lb-level';
+    const levelNum = Number.isFinite(Number(s && s.level)) ? Math.max(1, Math.floor(Number(s.level))) : 1;
+    level.textContent = 'Lv' + levelNum;
+
+    row.appendChild(rank);
+    row.appendChild(name);
+    row.appendChild(score);
+    row.appendChild(level);
+    frag.appendChild(row);
+  });
+  el.appendChild(frag);
 }
 
 async function postScore(level) {

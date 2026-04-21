@@ -165,6 +165,24 @@
       line-height: 1.8;
     }
     #map-info span { color: var(--text); }
+    #level-meta { width: 100%; }
+    #level-meta h3 { color: var(--accent); font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 4px; }
+    .level-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .level-meta-row label {
+      color: var(--muted);
+      font-size: 0.7rem;
+      width: 38px;
+      flex-shrink: 0;
+    }
+    .level-meta-row input {
+      flex: 1;
+      min-width: 0;
+    }
 
     /* ---- NPC / CONTENT EDITORS ---- */
     .section-header {
@@ -384,6 +402,18 @@
       <button class="tool-btn" id="map-fill-walls">Fill Edges</button>
       <button class="tool-btn" id="map-clear">Clear Map</button>
       <hr class="divider"/>
+      <div id="level-meta">
+        <h3>LEVEL</h3>
+        <div class="level-meta-row">
+          <label for="level-id-input">ID</label>
+          <input id="level-id-input" type="number" step="1" value="0"/>
+        </div>
+        <div class="level-meta-row">
+          <label for="level-name-input">Name</label>
+          <input id="level-name-input" type="text" value="Custom Level"/>
+        </div>
+      </div>
+      <hr class="divider"/>
       <div id="map-info">
         Cursor: <span id="cursor-pos">-</span><br/>
         Tool: <span id="active-tool-label">Paint</span><br/>
@@ -415,8 +445,9 @@
 <!-- ===================== EXPORT MODAL ===================== -->
 <div id="export-modal">
   <div id="export-box">
-    <h2>EXPORT GAME DATA</h2>
-    <p>Copy this JSON block and paste it into index.html replacing the MAP, LOCKS, NPCS, CHALLENGES, and player constants.</p>
+    <h2>EXPORT LEVELS DATA</h2>
+    <p>This export matches the game's <code>LEVELS</code> format and includes the current editor level as a single entry.</p>
+    <p>Copy the object below and merge/replace entries in <code>const LEVELS = [...]</code> in <code>index.html</code>.</p>
     <pre id="export-output"></pre>
     <div class="modal-btns">
       <button id="copy-btn">Copy to Clipboard</button>
@@ -514,6 +545,7 @@ const DEFAULT_CHALLENGES = [
     reward: "Perfecto! 'El gato es pequeno' -- The cat is small. The chest opens!",
   },
 ];
+const DEFAULT_LEVEL_META = { id: 0, name: 'Custom Level' };
 
 // ============================================================
 //  STATE  (load from localStorage or use defaults)
@@ -531,6 +563,7 @@ let locksData    = load('ld_locks',      JSON.parse(JSON.stringify(DEFAULT_LOCKS
 let npcsData     = load('ld_npcs',       JSON.parse(JSON.stringify(DEFAULT_NPCS)));
 let challengeData= load('ld_challenges', JSON.parse(JSON.stringify(DEFAULT_CHALLENGES)));
 let playerStart  = load('ld_player',     { col: 7, row: 10 });
+let levelMeta    = load('ld_level_meta', DEFAULT_LEVEL_META);
 
 function saveAll() {
   save('ld_map',        mapData);
@@ -538,6 +571,7 @@ function saveAll() {
   save('ld_npcs',       npcsData);
   save('ld_challenges', challengeData);
   save('ld_player',     playerStart);
+  save('ld_level_meta', levelMeta);
 }
 
 // ============================================================
@@ -560,11 +594,29 @@ const canvas    = document.getElementById('map-canvas');
 const ctx       = canvas.getContext('2d');
 const MAP_W     = 15;
 const MAP_H     = 13;
+const levelIdInput = document.getElementById('level-id-input');
+const levelNameInput = document.getElementById('level-name-input');
 
 let activeTile  = 0;
 let activeTool  = 'paint'; // paint | npc | player
 let isPainting  = false;
 let hoverCell   = null;
+
+levelMeta = {
+  id: Number.isFinite(Number(levelMeta && levelMeta.id)) ? Math.trunc(Number(levelMeta.id)) : DEFAULT_LEVEL_META.id,
+  name: (levelMeta && typeof levelMeta.name === 'string' && levelMeta.name.trim()) ? levelMeta.name : DEFAULT_LEVEL_META.name
+};
+levelIdInput.value = levelMeta.id;
+levelNameInput.value = levelMeta.name;
+levelIdInput.addEventListener('input', () => {
+  const parsed = Number.parseInt(levelIdInput.value, 10);
+  levelMeta.id = Number.isFinite(parsed) ? parsed : 0;
+  saveAll();
+});
+levelNameInput.addEventListener('input', () => {
+  levelMeta.name = levelNameInput.value;
+  saveAll();
+});
 
 // Build palette
 const palette = document.getElementById('tile-palette');
@@ -940,12 +992,24 @@ document.getElementById('add-challenge-btn').addEventListener('click', () => {
 //  EXPORT
 // ============================================================
 document.getElementById('export-btn').addEventListener('click', () => {
+  const parsedLevelId = Number.parseInt(levelIdInput.value, 10);
+  const levelId = Number.isFinite(parsedLevelId) ? parsedLevelId : 0;
+  const levelName = levelNameInput.value.trim() || DEFAULT_LEVEL_META.name;
+  levelMeta = { id: levelId, name: levelName };
+  saveAll();
+
   const output = {
-    MAP: mapData,
-    LOCKS: locksData,
-    NPCS: npcsData,
-    CHALLENGES: challengeData,
-    PLAYER_START: playerStart
+    LEVELS: [
+      {
+        id: levelId,
+        name: levelName,
+        playerStart: playerStart,
+        map: mapData,
+        locks: locksData,
+        npcs: npcsData,
+        challenges: challengeData
+      }
+    ]
   };
   document.getElementById('export-output').textContent = JSON.stringify(output, null, 2);
   document.getElementById('export-modal').classList.add('open');
