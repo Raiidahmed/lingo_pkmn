@@ -712,7 +712,6 @@ function render() {
       drawTile(col, row, mapState[row][col]);
   currentNPCs.forEach(drawNPC);
   drawPlayer();
-  Particles.update();
   Particles.draw();
 }
 
@@ -1085,6 +1084,8 @@ function loop(ts) {
     if (keys['ArrowLeft'])  tryMove(-1,0);
     if (keys['ArrowRight']) tryMove( 1,0);
   }
+  // Always update particles regardless of movement
+  Particles.update();
   requestAnimationFrame(loop);
 }
 
