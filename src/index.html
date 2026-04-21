@@ -922,6 +922,23 @@ function renderChallenge(ch, lockKey) {
     dlgChoices.appendChild(btn);
   });
 
+  // Hint button after 2 wrong attempts
+  if (attempts >= 2 && attempts < 3) {
+    const hintBtn = document.createElement('button');
+    hintBtn.className = 'choice-btn';
+    hintBtn.style.background = '#1a2e3a';
+    hintBtn.style.borderColor = '#4a9fff';
+    hintBtn.style.color = '#4a9fff';
+    hintBtn.style.marginTop = '8px';
+    hintBtn.textContent = '💡 Show Hint';
+    hintBtn.addEventListener('click', () => {
+      dlgText.textContent = ch.prompt + '\n\nHint: ' + ch.hint;
+      hintBtn.remove();
+      Sound.click();
+    });
+    dlgChoices.appendChild(hintBtn);
+  }
+
   dlgEl.style.display = 'block';
 }
 
