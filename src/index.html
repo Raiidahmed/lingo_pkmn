@@ -1083,7 +1083,9 @@ document.getElementById('lc-quit-btn').addEventListener('click', () => {
 //  START BUTTON
 // ============================================================
 document.getElementById('start-btn').addEventListener('click', () => {
-  const nameVal = document.getElementById('name-input').value.trim();
+  let nameVal = document.getElementById('name-input').value.trim();
+  // Strip HTML tags and dangerous characters
+  nameVal = nameVal.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16);
   if (!nameVal) { document.getElementById('name-input').focus(); return; }
   playerName = nameVal;
   totalXP = 0;
