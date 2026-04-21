@@ -988,6 +988,65 @@ function drawHudHelp() {
   ctx.fillText('LEFT/RIGHT TURN   UP/DOWN MOVE   SPACE/ENTER ACT', canvas.width / 2, canvas.height - 14);
 }
 
+function drawMinimap() {
+  if (!mapState.length) return;
+  const CELL = 6;
+  const PAD  = 4;
+  const boxW = MAP_W * CELL + PAD * 2;
+  const boxH = MAP_H * CELL + PAD * 2;
+  const ox   = canvas.width - boxW - 5;
+  const oy   = 5;
+
+  ctx.save();
+
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(ox, oy, boxW, boxH);
+  ctx.globalAlpha = 1;
+
+  // Tile colors: walls bright, floor dark, special tiles distinct
+  const TC = {
+    [T.WALL]:    '#d0d0d0',
+    [T.FLOOR]:   '#141414',
+    [T.RUG]:     '#1e1e1e',
+    [T.DOOR_C]:  '#888',
+    [T.DOOR_O]:  '#282828',
+    [T.CHEST_C]: '#bbb',
+    [T.CHEST_O]: '#333',
+    [T.STAIRS]:  '#fff',
+  };
+
+  for (let r = 0; r < MAP_H; r++) {
+    for (let c = 0; c < MAP_W; c++) {
+      const tile = mapState[r][c];
+      ctx.fillStyle = TC[tile] !== undefined ? TC[tile] : '#141414';
+      ctx.fillRect(ox + PAD + c * CELL, oy + PAD + r * CELL, CELL - 1, CELL - 1);
+    }
+  }
+
+  // NPCs: 2×2 gray dot centered in their cell
+  ctx.fillStyle = '#999';
+  for (const npc of currentNPCs) {
+    ctx.fillRect(ox + PAD + npc.col * CELL + 2, oy + PAD + npc.row * CELL + 2, 2, 2);
+  }
+
+  // Player: white cell with a black dot shifted toward facing direction
+  const px = ox + PAD + player.col * CELL;
+  const py = oy + PAD + player.row * CELL;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(px, py, CELL - 1, CELL - 1);
+
+  const fd = DIRS[player.dir];
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 1 + Math.round(fd.dc * 2), py + 1 + Math.round(fd.dr * 2), 2, 2);
+
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ox + 0.5, oy + 0.5, boxW, boxH);
+
+  ctx.restore();
+}
+
 function drawCrosshair() {
   const cx = canvas.width / 2;
   const cy = canvas.height * 0.57;
@@ -1058,6 +1117,7 @@ function render() {
 
   drawCrosshair();
   drawHudHelp();
+  drawMinimap();
   Particles.draw();
 }
 
