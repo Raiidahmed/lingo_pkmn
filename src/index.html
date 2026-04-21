@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>LingoDungeon</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/src/favicon.png?v=3"/>
   <link rel="icon" type="image/svg+xml" href="/src/favicon.svg?v=3"/>
@@ -28,6 +28,7 @@
       width: 100%; max-width: 100%;
       display: flex; justify-content: space-between; align-items: center;
       padding: 8px 12px;
+      padding-top: max(8px, env(safe-area-inset-top, 8px));
       font-size: 0.6rem; color: #fff;
       background: #000; border-bottom: 3px solid #fff;
       flex-shrink: 0;
@@ -50,11 +51,16 @@
       margin-right: 4px;
     }
     #sound-btn:hover { background: #fff; color: #000; }
+    @media (max-width: 430px) {
+      #hud { padding-left: 6px; padding-right: 6px; gap: 4px; }
+      #hud .title { font-size: 0.5rem; letter-spacing: 1px; }
+      #quit-btn, #sound-btn { padding: 4px 7px; font-size: 0.44rem; letter-spacing: 0; }
+    }
 
     /* ── Canvas wrap ── */
     #game-wrap {
       position: relative; flex: 1; width: 100%; max-width: 100%;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: flex-start; justify-content: center;
       overflow: hidden; background: #000;
     }
     canvas {
@@ -138,7 +144,7 @@
 
     /* ── Overlay screens ── */
     .screen {
-      display: none; position: absolute; inset: 0;
+      display: none; position: fixed; inset: 0;
       background: #000;
       flex-direction: column; align-items: center; justify-content: center;
       z-index: 50; padding: 24px 20px; text-align: center;
@@ -220,8 +226,19 @@
     .stat-box .val { font-size: 1.1rem; color: #fff; font-weight: bold; }
     .stat-box .lbl { font-size: 0.48rem; color: #888; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
 
+    /* ── Mobile controls container (below canvas on touch devices) ── */
+    #mobile-controls {
+      display: none;
+      position: relative;
+      width: 100%; height: 150px;
+      background: #000;
+      border-top: 1px solid #222;
+      flex-shrink: 0;
+    }
+
     /* ── Touch controls — coarse-pointer (touch) devices only ── */
     @media (pointer: coarse) {
+      #mobile-controls { display: block; }
       #dpad { display: grid; }
       #action-btn { display: flex; }
     }
@@ -255,19 +272,6 @@
 <div id="game-wrap">
   <canvas id="canvas"></canvas>
 
-  <div id="dpad">
-    <div></div>
-    <div class="dpad-btn" id="btn-up">▲</div>
-    <div></div>
-    <div class="dpad-btn" id="btn-left">◀</div>
-    <div class="dpad-btn center"></div>
-    <div class="dpad-btn" id="btn-right">▶</div>
-    <div></div>
-    <div class="dpad-btn" id="btn-down">▼</div>
-    <div></div>
-  </div>
-
-  <div id="action-btn">ACT</div>
   <div id="toast"></div>
 
   <div id="dialogue">
@@ -336,6 +340,21 @@
   </div>
 
 </div><!-- end game-wrap -->
+
+<div id="mobile-controls">
+  <div id="dpad">
+    <div></div>
+    <div class="dpad-btn" id="btn-up">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-left">◀</div>
+    <div class="dpad-btn center"></div>
+    <div class="dpad-btn" id="btn-right">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-down">▼</div>
+    <div></div>
+  </div>
+  <div id="action-btn">ACT</div>
+</div>
 
 <script>
 // ============================================================
@@ -683,16 +702,16 @@ const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('game-wrap');
 
 function resizeCanvas() {
-  const maxW = Math.min(wrap.clientWidth, VIEW_WIDTH);
-  const maxH = Math.min(wrap.clientHeight, VIEW_HEIGHT + 104);
-  const s = Math.max(1, Math.min(
-    Math.floor(maxW / VIEW_WIDTH),
-    Math.floor(maxH / VIEW_HEIGHT)
-  ));
+  const availW = wrap.clientWidth;
+  const availH = wrap.clientHeight;
+  const raw = Math.min(availW / VIEW_WIDTH, availH / VIEW_HEIGHT);
+  // Snap to integer on large screens for pixel-perfect rendering;
+  // allow fractional scale on narrow phones so nothing is clipped.
+  const s = raw >= 1 ? Math.min(Math.floor(raw), 2) : Math.max(raw, 0.4);
   canvas.width  = VIEW_WIDTH;
   canvas.height = VIEW_HEIGHT;
-  canvas.style.width  = (VIEW_WIDTH * s) + 'px';
-  canvas.style.height = (VIEW_HEIGHT * s) + 'px';
+  canvas.style.width  = Math.round(VIEW_WIDTH * s) + 'px';
+  canvas.style.height = Math.round(VIEW_HEIGHT * s) + 'px';
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
@@ -750,11 +769,11 @@ function sceneRects() {
   const w = canvas.width;
   const h = canvas.height;
   return [
-    { x: 14,  y: 18,  w: w - 28,  h: h - 54 },
-    { x: 58,  y: 44,  w: w - 116, h: h - 126 },
-    { x: 104, y: 78,  w: w - 208, h: h - 202 },
-    { x: 146, y: 108, w: w - 292, h: h - 260 },
-    { x: 178, y: 130, w: w - 356, h: h - 300 },
+    { x: 8,   y: 12,  w: w - 16,  h: h - 42 },
+    { x: 42,  y: 34,  w: w - 84,  h: h - 102 },
+    { x: 82,  y: 62,  w: w - 164, h: h - 156 },
+    { x: 122, y: 92,  w: w - 244, h: h - 212 },
+    { x: 154, y: 116, w: w - 308, h: h - 268 },
     { x: w / 2 - 16, y: h / 2 - 16, w: 32, h: 32 },
   ];
 }
@@ -823,9 +842,9 @@ function drawSceneBackground() {
 function drawSegment(cur, next, leftWall, rightWall, depth = 0) {
   // Walls get darker with distance for depth perception
   const d = Math.min(depth, 3);
-  const base = Math.max(8, 20 - d * 4);
+  const base = Math.max(4, 28 - d * 8);
   const wallFill = `rgb(${base},${base},${base})`;
-  const edgeBase = Math.max(52, 88 - d * 12);
+  const edgeBase = Math.max(40, 104 - d * 22);
   const wallEdge = `rgb(${edgeBase},${edgeBase},${edgeBase})`;
   const openEdge = `rgb(${Math.max(18, edgeBase - 32)},${Math.max(18, edgeBase - 32)},${Math.max(18, edgeBase - 32)})`;
 
@@ -880,10 +899,12 @@ function drawSegment(cur, next, leftWall, rightWall, depth = 0) {
   ctx.stroke();
 }
 
-function drawFrontSurface(rect, tile) {
-  ctx.fillStyle = '#060606';
+function drawFrontSurface(rect, tile, depth = 0) {
+  const lum = Math.max(6, 14 - depth * 3);
+  ctx.fillStyle = `rgb(${lum},${lum},${lum})`;
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-  ctx.strokeStyle = '#888';
+  const edgeLum = Math.max(80, 152 - depth * 24);
+  ctx.strokeStyle = `rgb(${edgeLum},${edgeLum},${edgeLum})`;
   ctx.lineWidth = 2;
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
@@ -988,9 +1009,126 @@ function drawHudHelp() {
   ctx.fillText('LEFT/RIGHT TURN   UP/DOWN MOVE   SPACE/ENTER ACT', canvas.width / 2, canvas.height - 14);
 }
 
+function sideCueInfo(depth, side) {
+  const pos = relativePos(depth, side);
+  const tile = tileAt(pos.col, pos.row);
+  const npc = npcAt(pos.col, pos.row);
+  const sideLabel = side < 0 ? 'LEFT' : 'RIGHT';
+
+  if (npc) {
+    return { title: 'NPC', subtitle: npc.name.toUpperCase().slice(0, 8), tone: '#fff', strong: true, sideLabel };
+  }
+  if (tile === T.STAIRS) {
+    return {
+      title: remainingLocks() > 0 ? 'SEALED' : 'EXIT',
+      subtitle: 'STAIRS',
+      tone: remainingLocks() > 0 ? '#777' : '#fff',
+      strong: true,
+      sideLabel,
+    };
+  }
+  if (tile === T.DOOR_C) return { title: 'LOCKED', subtitle: 'DOOR', tone: '#ddd', strong: true, sideLabel };
+  if (tile === T.CHEST_C) return { title: 'CHEST', subtitle: 'LOOT', tone: '#fff', strong: true, sideLabel };
+  if (tile === T.DOOR_O) return { title: 'OPEN', subtitle: 'DOOR', tone: '#888', strong: false, sideLabel };
+  if (tile === T.CHEST_O) return { title: 'OPEN', subtitle: 'CHEST', tone: '#777', strong: false, sideLabel };
+  if (tile === T.FLOOR || tile === T.RUG) {
+    return {
+      title: 'PATH',
+      subtitle: depth === 1 ? sideLabel : '2 AWAY',
+      tone: depth === 1 ? '#777' : '#555',
+      strong: false,
+      sideLabel,
+    };
+  }
+  return null;
+}
+
+function drawSideCue(side, depth, info) {
+  const bw = depth === 1 ? 70 : 58;
+  const bh = depth === 1 ? 38 : 32;
+  const x = side < 0 ? 10 : canvas.width - bw - 10;
+  const y = depth === 1 ? Math.floor(canvas.height * 0.56) : Math.floor(canvas.height * 0.38);
+  const arrowMid = y + Math.floor(bh / 2);
+
+  ctx.save();
+  ctx.globalAlpha = info.strong ? 0.96 : 0.82;
+  ctx.fillStyle = '#050505';
+  ctx.fillRect(x, y, bw, bh);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = info.tone;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, bw, bh);
+
+  ctx.fillStyle = info.tone;
+  ctx.beginPath();
+  if (side < 0) {
+    ctx.moveTo(x + bw, arrowMid - 6);
+    ctx.lineTo(x + bw + 7, arrowMid);
+    ctx.lineTo(x + bw, arrowMid + 6);
+  } else {
+    ctx.moveTo(x, arrowMid - 6);
+    ctx.lineTo(x - 7, arrowMid);
+    ctx.lineTo(x, arrowMid + 6);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = info.tone;
+  ctx.font = `${depth === 1 ? 10 : 9}px Courier New`;
+  ctx.fillText(info.title, x + bw / 2, y + 15);
+  ctx.font = `${depth === 1 ? 8 : 7}px Courier New`;
+  ctx.fillText(info.subtitle, x + bw / 2, y + bh - 8);
+  ctx.restore();
+}
+
+function drawSideCues() {
+  for (const depth of [2, 1]) {
+    for (const side of [-1, 1]) {
+      const info = sideCueInfo(depth, side);
+      if (info) drawSideCue(side, depth, info);
+    }
+  }
+}
+
+function minimapVisibleCells() {
+  const seen = [];
+  const push = (col, row, depth, side) => {
+    if (!inBounds(col, row)) return;
+    seen.push({ col, row, depth, side, tile: tileAt(col, row), npc: npcAt(col, row) });
+  };
+
+  push(player.col, player.row, 0, 0);
+
+  let blocked = false;
+  for (let depth = 1; depth <= 3; depth++) {
+    const sideReach = Math.min(depth, 2);
+    for (let side = -sideReach; side <= sideReach; side++) {
+      const pos = relativePos(depth, side);
+      push(pos.col, pos.row, depth, side);
+    }
+
+    const front = relativePos(depth, 0);
+    if (isOpaqueTile(tileAt(front.col, front.row))) {
+      blocked = true;
+      break;
+    }
+  }
+
+  if (!blocked) {
+    for (const side of [-3, 3]) {
+      const flank = relativePos(1, side);
+      push(flank.col, flank.row, 1, side);
+    }
+  }
+
+  return seen;
+}
+
 function drawMinimap() {
   if (!mapState.length) return;
-  const CELL = 6;
+  const narrow = canvas.width <= 480;
+  const CELL = narrow ? 6 : 7;
   const PAD  = 4;
   const boxW = MAP_W * CELL + PAD * 2;
   const boxH = MAP_H * CELL + PAD * 2;
@@ -1004,7 +1142,6 @@ function drawMinimap() {
   ctx.fillRect(ox, oy, boxW, boxH);
   ctx.globalAlpha = 1;
 
-  // Tile colors: walls bright, floor dark, special tiles distinct
   const TC = {
     [T.WALL]:    '#d0d0d0',
     [T.FLOOR]:   '#141414',
@@ -1024,21 +1161,61 @@ function drawMinimap() {
     }
   }
 
-  // NPCs: 2×2 gray dot centered in their cell
-  ctx.fillStyle = '#999';
-  for (const npc of currentNPCs) {
-    ctx.fillRect(ox + PAD + npc.col * CELL + 2, oy + PAD + npc.row * CELL + 2, 2, 2);
+  const visible = minimapVisibleCells();
+  for (const cell of visible) {
+    const vx = ox + PAD + cell.col * CELL;
+    const vy = oy + PAD + cell.row * CELL;
+    const alpha = cell.depth === 0 ? 0 : cell.depth === 1 ? 0.34 : cell.depth === 2 ? 0.22 : 0.14;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = cell.side === 0 ? '#fff' : '#9a9a9a';
+    ctx.fillRect(vx, vy, CELL - 1, CELL - 1);
+    ctx.globalAlpha = 1;
+
+    if (cell.depth > 0 && cell.side === 0) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(vx + 0.5, vy + 0.5, CELL - 2, CELL - 2);
+    }
   }
 
-  // Player: white cell with a black dot shifted toward facing direction
-  const px = ox + PAD + player.col * CELL;
-  const py = oy + PAD + player.row * CELL;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(px, py, CELL - 1, CELL - 1);
+  for (const npc of currentNPCs) {
+    const nx = ox + PAD + npc.col * CELL;
+    const ny = oy + PAD + npc.row * CELL;
+    ctx.fillStyle = '#999';
+    ctx.fillRect(nx + 2, ny + 2, Math.max(2, CELL - 4), Math.max(2, CELL - 4));
+  }
 
-  const fd = DIRS[player.dir];
-  ctx.fillStyle = '#000';
-  ctx.fillRect(px + 1 + Math.round(fd.dc * 2), py + 1 + Math.round(fd.dr * 2), 2, 2);
+  for (const cell of visible) {
+    if (!cell.npc) continue;
+    const nx = ox + PAD + cell.col * CELL;
+    const ny = oy + PAD + cell.row * CELL;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(nx + 1.5, ny + 1.5, Math.max(2, CELL - 4), Math.max(2, CELL - 4));
+  }
+
+  const cs  = CELL - 1;
+  const plx = ox + PAD + player.col * CELL;
+  const ply = oy + PAD + player.row * CELL;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(plx, ply, cs, cs);
+
+  const fd    = DIRS[player.dir];
+  const midX  = plx + cs * 0.5;
+  const midY  = ply + cs * 0.5;
+  const tipX  = midX + fd.dc * 2.5;
+  const tipY  = midY + fd.dr * 2.5;
+  const bX    = midX - fd.dc * 1.5;
+  const bY    = midY - fd.dr * 1.5;
+  const perpX = fd.dr;
+  const perpY = -fd.dc;
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(bX + perpX * 1.5, bY + perpY * 1.5);
+  ctx.lineTo(bX - perpX * 1.5, bY - perpY * 1.5);
+  ctx.closePath();
+  ctx.fill();
 
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 1;
@@ -1058,6 +1235,69 @@ function drawCrosshair() {
   ctx.moveTo(cx, cy - 8);
   ctx.lineTo(cx, cy + 8);
   ctx.stroke();
+}
+
+function drawSideObjectCues() {
+  const rects = sceneRects();
+
+  for (const side of [-1, 1]) {
+    for (let depth = 0; depth <= 2; depth++) {
+      const sidePos = relativePos(depth, side);
+      const sideTile = tileAt(sidePos.col, sidePos.row);
+      const sideNpc  = npcAt(sidePos.col, sidePos.row);
+
+      let cueColor = null;
+      let cueChar  = '';
+
+      if (sideNpc) {
+        cueColor = depth === 0 ? '#fff' : depth === 1 ? '#999' : '#555';
+        cueChar  = sideNpc.label || 'N';
+      } else if (sideTile === T.DOOR_C) {
+        cueColor = depth === 0 ? '#999' : depth === 1 ? '#777' : '#444';
+        cueChar  = 'D';
+      } else if (sideTile === T.CHEST_C) {
+        cueColor = depth === 0 ? '#fff' : depth === 1 ? '#bbb' : '#666';
+        cueChar  = '?';
+      } else if (sideTile === T.STAIRS) {
+        cueColor = '#ddd';
+        cueChar  = '>'; 
+      } else {
+        continue;
+      }
+
+      const cur  = rects[Math.min(depth, rects.length - 2)];
+      const next = rects[Math.min(depth + 1, rects.length - 1)];
+      const edgeX = side === -1 ? next.x : next.x + next.w;
+      const topY  = next.y;
+      const botY  = next.y + next.h;
+      const midY  = (topY + botY) / 2;
+
+      ctx.save();
+      ctx.strokeStyle = cueColor;
+      ctx.lineWidth = depth === 0 ? 3 : depth === 1 ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(edgeX, topY);
+      ctx.lineTo(edgeX, botY);
+      ctx.stroke();
+
+      const panelMidX = side === -1
+        ? (cur.x + next.x) / 2
+        : (cur.x + cur.w + next.x + next.w) / 2;
+      const cueW = depth === 0 ? 16 : depth === 1 ? 12 : 9;
+      const cueH = depth === 0 ? 26 : depth === 1 ? 18 : 12;
+      ctx.globalAlpha = depth === 0 ? 0.95 : depth === 1 ? 0.82 : 0.68;
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(panelMidX - cueW / 2, midY - cueH / 2, cueW, cueH);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = cueColor;
+      ctx.strokeRect(panelMidX - cueW / 2, midY - cueH / 2, cueW, cueH);
+      ctx.fillStyle = cueColor;
+      ctx.font = `${depth === 0 ? 10 : depth === 1 ? 8 : 7}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillText(cueChar, panelMidX, midY + 3);
+      ctx.restore();
+    }
+  }
 }
 
 function render() {
@@ -1081,7 +1321,7 @@ function render() {
     const front = relativePos(depth + 1, 0);
     const frontTile = tileAt(front.col, front.row);
     if (isOpaqueTile(frontTile)) {
-      drawFrontSurface(next, frontTile);
+      drawFrontSurface(next, frontTile, depth);
       blockedAt = depth + 1;
       break;
     }
@@ -1115,6 +1355,8 @@ function render() {
     }
   }
 
+  drawSideObjectCues();
+  drawSideCues();
   drawCrosshair();
   drawHudHelp();
   drawMinimap();
