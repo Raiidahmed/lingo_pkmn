@@ -601,7 +601,7 @@ let pendingNPC = null;
 let npcDialogueIdx = 0;
 let attemptCounts = {}; // lockKey -> attempt count
 const keys = {};
-const MOVE_DELAY = 150;
+const MOVE_COOLDOWN = 100; // ms between moves — raise to reduce speed, lower to feel snappier
 
 // ============================================================
 //  CANVAS
@@ -925,6 +925,7 @@ function renderChallenge(ch, lockKey) {
 }
 
 function handleAnswer(idx, ch, lockKey) {
+  Sound.select();
   const btns = dlgChoices.querySelectorAll('.choice-btn');
   btns.forEach(b => b.disabled = true);
   totalAttempts++;
@@ -1039,7 +1040,9 @@ function tryMove(dc, dr) {
   const tile = mapState[nr][nc];
   if (tile===T.WALL||tile===T.DOOR_C||tile===T.CHEST_C) return;
   for (const npc of currentNPCs) if (npc.col===nc&&npc.row===nr) return;
-  player.col=nc; player.row=nr; render();
+  Sound.step();
+  player.col=nc; player.row=nr;
+  // render() intentionally omitted — the RAF loop paints every frame
 }
 
 // ============================================================
@@ -1055,7 +1058,7 @@ document.addEventListener('keyup', e => { keys[e.key]=false; });
 function dpadBind(id, dc, dr) {
   const btn = document.getElementById(id);
   let interval = null;
-  const start = () => { tryMove(dc,dr); interval=setInterval(()=>tryMove(dc,dr),MOVE_DELAY); };
+  const start = () => { tryMove(dc,dr); interval=setInterval(()=>tryMove(dc,dr),MOVE_COOLDOWN); };
   const stop  = () => { clearInterval(interval); interval=null; };
   btn.addEventListener('touchstart', e=>{e.preventDefault();start();},{passive:false});
   btn.addEventListener('touchend',   e=>{e.preventDefault();stop(); },{passive:false});
@@ -1077,17 +1080,15 @@ document.getElementById('action-btn').addEventListener('click', () => { Sound.cl
 let lastTime = 0;
 function loop(ts) {
   const dt = ts - lastTime;
-  if (dt > MOVE_DELAY) {
+  if (dt > MOVE_COOLDOWN) {
     lastTime = ts;
     if (keys['ArrowUp'])    tryMove(0,-1);
     if (keys['ArrowDown'])  tryMove(0, 1);
     if (keys['ArrowLeft'])  tryMove(-1,0);
     if (keys['ArrowRight']) tryMove( 1,0);
   }
-  // Always update particles regardless of movement
   Particles.update();
-  // Re-render while particles are animating so their motion is visible
-  if (Particles.list.length > 0) render();
+  render(); // always paint — decouples state updates from the paint step
   requestAnimationFrame(loop);
 }
 
@@ -1174,6 +1175,46 @@ const Sound = {
   chest()   { this.play(392, 0.6, 'square', 0.07); }, // G4
   level()   { this.play(783.99, 0.8, 'sine', 0.12); }, // G5
   click()   { this.play(440, 0.1, 'sine', 0.05); }, // A4
+
+  // Short low blip on each successful step — skipped if previous step still ringing
+  step() {
+    if (!this.enabled || !this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const now = this.ctx.currentTime;
+    if (this._stepEnd && now < this._stepEnd) return;
+    const dur = 0.045;
+    this._stepEnd = now + dur;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.frequency.value = 120; osc.type = 'triangle';
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      osc.start(now); osc.stop(now + dur);
+    } catch(e) {}
+  },
+
+  // Two-tone chirp for quiz answer selection — distinct from step() and click()
+  select() {
+    if (!this.enabled || !this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const t = this.ctx.currentTime;
+    try {
+      const o1 = this.ctx.createOscillator(), g1 = this.ctx.createGain();
+      o1.connect(g1); g1.connect(this.ctx.destination);
+      o1.frequency.value = 880; o1.type = 'sine';
+      g1.gain.setValueAtTime(0.08, t);
+      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+      o1.start(t); o1.stop(t + 0.07);
+      const o2 = this.ctx.createOscillator(), g2 = this.ctx.createGain();
+      o2.connect(g2); g2.connect(this.ctx.destination);
+      o2.frequency.value = 1320; o2.type = 'sine';
+      g2.gain.setValueAtTime(0.07, t + 0.06);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      o2.start(t + 0.06); o2.stop(t + 0.16);
+    } catch(e) {}
+  },
 };
 
 // Unlock audio on first user interaction
