@@ -934,7 +934,7 @@ function handleAnswer(idx, ch, lockKey) {
     dlgText.textContent = ch.reward;
     addXP(20);
     challengesPassed++;
-    Sound.unlock();
+    Sound.doorOpen();
     if (locksState[lockKey].type === 'chest') Sound.chest();
 
     const [col, row] = lockKey.split(',').map(Number);
@@ -1164,7 +1164,7 @@ const Sound = {
   // Game sounds
   correct() { this.play(523.25, 0.3, 'sine', 0.1); }, // C5
   wrong()   { this.play(220, 0.4, 'sawtooth', 0.08); }, // A3
-  unlock()  { this.play(659.25, 0.5, 'triangle', 0.09); }, // E5
+  doorOpen() { this.play(659.25, 0.5, 'triangle', 0.09); }, // E5
   chest()   { this.play(392, 0.6, 'square', 0.07); }, // G4
   level()   { this.play(783.99, 0.8, 'sine', 0.12); }, // G5
   click()   { this.play(440, 0.1, 'sine', 0.05); }, // A4
