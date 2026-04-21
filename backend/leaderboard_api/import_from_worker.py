@@ -1,3 +1,7 @@
+# LEGACY / ONE-TIME MIGRATION SCRIPT
+# Used to import scores from the retired Cloudflare Worker leaderboard into SQLite.
+# The Worker is no longer the active backend. Keep this for historical record.
+
 import argparse
 import json
 import os
@@ -26,7 +30,7 @@ def fetch_scores(url: str, timeout: float):
         url,
         headers={
             "Accept": "application/json",
-            "User-Agent": "lingo-leaderboard-import/1.0 (+https://raiidahmed.github.io/lingo_pkmn/)",
+            "User-Agent": "lingo-leaderboard-import/1.0 (+https://lingo-dungeon.com/)",
         },
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - explicit trusted import source

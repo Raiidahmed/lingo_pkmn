@@ -2,8 +2,8 @@
 
 > **WARNING: Temporary setup only.**
 > This uses the Flask development server over plain HTTP with no TLS.
-> Suitable for personal/demo testing on a droplet IP only.
-> Before any real users: add a domain, run Certbot for HTTPS, swap Flask for Gunicorn.
+> Suitable for personal/demo testing only.
+> Before going public on lingo-dungeon.com: point DNS → droplet, run Certbot for HTTPS, swap Flask for Gunicorn.
 
 ---
 
@@ -78,8 +78,10 @@ sudo systemctl reload nginx
 curl -s http://127.0.0.1:5000/health   # Flask direct
 curl -s http://127.0.0.1/health        # via nginx
 
-# From your laptop (replace with your droplet IP)
+# From your laptop — use droplet IP until DNS is live, then lingo-dungeon.com
 curl -s http://<DROPLET_IP>/health
+# Once DNS is active:
+curl -s http://lingo-dungeon.com/health
 ```
 
 Expected: `{"ok": true, "service": "lingo_flask"}`

@@ -38,7 +38,9 @@ Environment variables:
 - `LEADERBOARD_DB_PATH` (default: `backend/leaderboard_api/leaderboard.db`)
 - `LEADERBOARD_ADMIN_TOKEN` (required for `/admin/dedupe`)
 
-## Import Existing Worker Scores
+## Import Existing Worker Scores (Legacy — one-time migration only)
+
+The Cloudflare Worker leaderboard is retired; migration to SQLite is complete. This section is retained for historical context only.
 
 ```bash
 python3 backend/leaderboard_api/import_from_worker.py \
@@ -54,11 +56,7 @@ python3 backend/leaderboard_api/import_from_worker.py \
    sudo mkdir -p /var/lib/lingo-leaderboard
    sudo chown -R $USER:$USER /var/lib/lingo-leaderboard
    ```
-3. Import once (optional):
-   ```bash
-   cd /opt/lingo_pkmn
-   python3 backend/leaderboard_api/import_from_worker.py --db-path /var/lib/lingo-leaderboard/leaderboard.db
-   ```
+3. *(Legacy — skip for new deployments; migration already done.)* If restoring from the retired Cloudflare Worker, see the **Import Existing Worker Scores** section below.
 4. Run API:
    ```bash
    LEADERBOARD_DB_PATH=/var/lib/lingo-leaderboard/leaderboard.db \

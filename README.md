@@ -50,5 +50,9 @@ lingo_pkmn/
 Default SQLite path is `backend/leaderboard_api/leaderboard.db`.
 Override with `LEADERBOARD_DB_PATH=/path/to/leaderboard.db`.
 
+## Public URL
+
+**https://lingo-dungeon.com** — served via nginx on a DigitalOcean droplet (DNS not yet live; HTTPS + Gunicorn before public launch). See `deploy/DEPLOY_HTTP.md` for the current deployment runbook.
+
 ## Note On Planned Architecture
 The larger React + backend architecture is still planned and documented, but not implemented in this repo yet. The current shipped project is the static HTML/CSS/JS game/editor above.
