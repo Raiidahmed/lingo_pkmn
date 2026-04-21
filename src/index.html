@@ -712,6 +712,8 @@ function render() {
       drawTile(col, row, mapState[row][col]);
   currentNPCs.forEach(drawNPC);
   drawPlayer();
+  Particles.update();
+  Particles.draw();
 }
 
 // ============================================================
@@ -724,12 +726,44 @@ function showToast(msg, dur=2200) {
   t._timer = setTimeout(() => { t.style.opacity='0'; }, dur);
 }
 
+// Particle system for visual feedback
+const Particles = {
+  list: [],
+  add(x, y, text, color, vy=-1.5) {
+    this.list.push({ x, y, text, color, vy, life: 60 });
+  },
+  update() {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.y += p.vy;
+      p.life--;
+      if (p.life <= 0) this.list.splice(i, 1);
+    }
+  },
+  draw() {
+    ctx.save();
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const p of this.list) {
+      ctx.globalAlpha = p.life / 60;
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.restore();
+  }
+};
+
 function addXP(amount) {
   xp += amount; totalXP += amount;
   document.getElementById('xp-val').textContent = xp;
   showToast('+' + amount + ' XP!');
   if (amount >= 20) Sound.correct();
   else if (amount > 0) Sound.click();
+  // Floating +XP text at player position
+  const px = player.col * TILE + TILE/2;
+  const py = player.row * TILE + TILE/2;
+  Particles.add(px, py, '+' + amount + ' XP', amount >= 20 ? '#90be6d' : '#f9c74f');
 }
 
 // ============================================================
@@ -907,6 +941,10 @@ function handleAnswer(idx, ch, lockKey) {
     const [col, row] = lockKey.split(',').map(Number);
     locksState[lockKey].unlocked = true;
     mapState[row][col] = locksState[lockKey].type === 'door' ? T.DOOR_O : T.CHEST_O;
+    // Sparkle at unlocked tile
+    const tx = col * TILE + TILE/2;
+    const ty = row * TILE + TILE/2;
+    Particles.add(tx, ty, '✨', '#f9c74f', -0.8);
     render();
 
     continueBtn.style.display = 'block';
@@ -919,6 +957,10 @@ function handleAnswer(idx, ch, lockKey) {
     const attempts = attemptCounts[lockKey];
     btns[idx].classList.add('wrong');
     Sound.wrong();
+    // Floating 'X' particle
+    const px = player.col * TILE + TILE/2;
+    const py = player.row * TILE + TILE/2;
+    Particles.add(px, py, '✗', '#e05c5c', -1);
 
     let msg = 'Not quite! Try again.';
     if (attempts >= 3) msg = 'Try again — a hint has appeared above!';
