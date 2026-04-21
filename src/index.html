@@ -728,6 +728,8 @@ function addXP(amount) {
   xp += amount; totalXP += amount;
   document.getElementById('xp-val').textContent = xp;
   showToast('+' + amount + ' XP!');
+  if (amount >= 20) Sound.correct();
+  else if (amount > 0) Sound.click();
 }
 
 // ============================================================
@@ -840,6 +842,7 @@ function showNPCLine() {
 }
 
 continueBtn.addEventListener('click', () => {
+  Sound.click();
   if (pendingNPC) {
     npcDialogueIdx++;
     if (npcDialogueIdx < pendingNPC.dialogue.length) { showNPCLine(); return; }
@@ -898,6 +901,8 @@ function handleAnswer(idx, ch, lockKey) {
     dlgText.textContent = ch.reward;
     addXP(20);
     challengesPassed++;
+    Sound.unlock();
+    if (locksState[lockKey].type === 'chest') Sound.chest();
 
     const [col, row] = lockKey.split(',').map(Number);
     locksState[lockKey].unlocked = true;
@@ -913,6 +918,7 @@ function handleAnswer(idx, ch, lockKey) {
     attemptCounts[lockKey] = (attemptCounts[lockKey] || 0) + 1;
     const attempts = attemptCounts[lockKey];
     btns[idx].classList.add('wrong');
+    Sound.wrong();
 
     let msg = 'Not quite! Try again.';
     if (attempts >= 3) msg = 'Try again — a hint has appeared above!';
@@ -961,6 +967,7 @@ function handleStairs() {
   document.getElementById('lc-challenges').textContent = challengesPassed;
   document.getElementById('lc-time').textContent = elapsed;
   document.getElementById('lc-attempts').textContent = totalAttempts;
+  Sound.level();
 
   postScore(currentLevelIdx);
 
@@ -1021,7 +1028,7 @@ dpadBind('btn-left', -1, 0);
 dpadBind('btn-right', 1, 0);
 
 document.getElementById('action-btn').addEventListener('touchstart',e=>{e.preventDefault();interact();},{passive:false});
-document.getElementById('action-btn').addEventListener('click', interact);
+document.getElementById('action-btn').addEventListener('click', () => { Sound.click(); interact(); });
 
 // ============================================================
 //  GAME LOOP
@@ -1043,6 +1050,7 @@ function loop(ts) {
 //  QUIT BUTTON
 // ============================================================
 document.getElementById('quit-btn').addEventListener('click', () => {
+  Sound.click();
   const elapsed = fmtTime(Date.now() - levelStartTime);
   document.getElementById('quit-levelname').textContent = LEVELS[currentLevelIdx].name;
   document.getElementById('quit-xp').textContent = totalXP;
@@ -1055,6 +1063,7 @@ document.getElementById('quit-btn').addEventListener('click', () => {
 });
 
 document.getElementById('quit-play-again').addEventListener('click', () => {
+  Sound.click();
   totalXP = 0; playerName = 'Hero';
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
@@ -1062,6 +1071,7 @@ document.getElementById('quit-play-again').addEventListener('click', () => {
 });
 
 document.getElementById('win-play-again').addEventListener('click', () => {
+  Sound.click();
   totalXP = 0;
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
@@ -1069,10 +1079,12 @@ document.getElementById('win-play-again').addEventListener('click', () => {
 });
 
 document.getElementById('nextlevel-btn').addEventListener('click', () => {
+  Sound.click();
   loadLevel(currentLevelIdx + 1);
 });
 
 document.getElementById('lc-quit-btn').addEventListener('click', () => {
+  Sound.click();
   totalXP = 0;
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
@@ -1080,9 +1092,50 @@ document.getElementById('lc-quit-btn').addEventListener('click', () => {
 });
 
 // ============================================================
+//  SOUND MANAGER
+// ============================================================
+const Sound = {
+  enabled: true,
+  ctx: null,
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  },
+  play(freq, duration, type='sine', vol=0.08) {
+    if (!this.enabled || !this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = type;
+      gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch(e) { /* ignore */ }
+  },
+  unlock() { this.init(); },
+  // Game sounds
+  correct() { this.play(523.25, 0.3, 'sine', 0.1); }, // C5
+  wrong()   { this.play(220, 0.4, 'sawtooth', 0.08); }, // A3
+  unlock()  { this.play(659.25, 0.5, 'triangle', 0.09); }, // E5
+  chest()   { this.play(392, 0.6, 'square', 0.07); }, // G4
+  level()   { this.play(783.99, 0.8, 'sine', 0.12); }, // G5
+  click()   { this.play(440, 0.1, 'sine', 0.05); }, // A4
+};
+
+// Unlock audio on first user interaction
+document.addEventListener('click', () => Sound.unlock(), { once: true });
+document.addEventListener('keydown', () => Sound.unlock(), { once: true });
+
+// ============================================================
 //  START BUTTON
 // ============================================================
 document.getElementById('start-btn').addEventListener('click', () => {
+  Sound.click();
   let nameVal = document.getElementById('name-input').value.trim();
   // Strip HTML tags and dangerous characters
   nameVal = nameVal.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16);
