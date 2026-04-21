@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>LingoDungeon</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/src/favicon.png?v=3"/>
   <link rel="icon" type="image/svg+xml" href="/src/favicon.svg?v=3"/>
@@ -28,7 +28,6 @@
       width: 100%; max-width: 100%;
       display: flex; justify-content: space-between; align-items: center;
       padding: 8px 12px;
-      padding-top: max(8px, env(safe-area-inset-top, 8px));
       font-size: 0.6rem; color: #fff;
       background: #000; border-bottom: 3px solid #fff;
       flex-shrink: 0;
@@ -51,16 +50,11 @@
       margin-right: 4px;
     }
     #sound-btn:hover { background: #fff; color: #000; }
-    @media (max-width: 430px) {
-      #hud { padding-left: 6px; padding-right: 6px; gap: 4px; }
-      #hud .title { font-size: 0.5rem; letter-spacing: 1px; }
-      #quit-btn, #sound-btn { padding: 4px 7px; font-size: 0.44rem; letter-spacing: 0; }
-    }
 
     /* ── Canvas wrap ── */
     #game-wrap {
       position: relative; flex: 1; width: 100%; max-width: 100%;
-      display: flex; align-items: flex-start; justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       overflow: hidden; background: #000;
     }
     canvas {
@@ -144,7 +138,7 @@
 
     /* ── Overlay screens ── */
     .screen {
-      display: none; position: fixed; inset: 0;
+      display: none; position: absolute; inset: 0;
       background: #000;
       flex-direction: column; align-items: center; justify-content: center;
       z-index: 50; padding: 24px 20px; text-align: center;
@@ -226,19 +220,8 @@
     .stat-box .val { font-size: 1.1rem; color: #fff; font-weight: bold; }
     .stat-box .lbl { font-size: 0.48rem; color: #888; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* ── Mobile controls container (below canvas on touch devices) ── */
-    #mobile-controls {
-      display: none;
-      position: relative;
-      width: 100%; height: 150px;
-      background: #000;
-      border-top: 1px solid #222;
-      flex-shrink: 0;
-    }
-
     /* ── Touch controls — coarse-pointer (touch) devices only ── */
     @media (pointer: coarse) {
-      #mobile-controls { display: block; }
       #dpad { display: grid; }
       #action-btn { display: flex; }
     }
@@ -258,10 +241,7 @@
 <!-- HUD -->
 <div id="hud">
   <span class="title">LINGO DUNGEON</span>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center">
-    <span class="xp">XP: <span id="xp-val">0</span></span>
-    <span class="xp">DIR: <span id="dir-val">N</span></span>
-  </div>
+  <span class="xp">XP: <span id="xp-val">0</span></span>
   <div style="display:flex;gap:4px;align-items:center">
     <button id="sound-btn">SFX ON</button>
     <button id="quit-btn">QUIT</button>
@@ -272,6 +252,19 @@
 <div id="game-wrap">
   <canvas id="canvas"></canvas>
 
+  <div id="dpad">
+    <div></div>
+    <div class="dpad-btn" id="btn-up">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-left">◀</div>
+    <div class="dpad-btn center"></div>
+    <div class="dpad-btn" id="btn-right">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-down">▼</div>
+    <div></div>
+  </div>
+
+  <div id="action-btn">TALK</div>
   <div id="toast"></div>
 
   <div id="dialogue">
@@ -340,21 +333,6 @@
   </div>
 
 </div><!-- end game-wrap -->
-
-<div id="mobile-controls">
-  <div id="dpad">
-    <div></div>
-    <div class="dpad-btn" id="btn-up">▲</div>
-    <div></div>
-    <div class="dpad-btn" id="btn-left">◀</div>
-    <div class="dpad-btn center"></div>
-    <div class="dpad-btn" id="btn-right">▶</div>
-    <div></div>
-    <div class="dpad-btn" id="btn-down">▼</div>
-    <div></div>
-  </div>
-  <div id="action-btn">ACT</div>
-</div>
 
 <script>
 // ============================================================
@@ -665,7 +643,7 @@ let mapState = [];
 let locksState = {};
 let currentNPCs = [];
 let currentChallenges = [];
-let player = { col: 7, row: 10, dir: 0 };
+let player = { col: 7, row: 10 };
 let xp = 0;
 let totalXP = 0;
 let challengesPassed = 0;
@@ -683,16 +661,7 @@ function remainingLocks() {
   return Object.values(locksState).filter(l => !l.unlocked).length;
 }
 const keys = {};
-const MOVE_COOLDOWN = 100;
-const VIEW_WIDTH = 480;
-const VIEW_HEIGHT = 416;
-const VIEW_DEPTH = 4;
-const DIRS = [
-  { dc: 0, dr: -1, label: 'N' },
-  { dc: 1, dr: 0, label: 'E' },
-  { dc: 0, dr: 1, label: 'S' },
-  { dc: -1, dr: 0, label: 'W' },
-];
+const MOVE_COOLDOWN = 100; // ms between moves — raise to reduce speed, lower to feel snappier
 
 // ============================================================
 //  CANVAS
@@ -702,16 +671,16 @@ const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('game-wrap');
 
 function resizeCanvas() {
-  const availW = wrap.clientWidth;
-  const availH = wrap.clientHeight;
-  const raw = Math.min(availW / VIEW_WIDTH, availH / VIEW_HEIGHT);
-  // Snap to integer on large screens for pixel-perfect rendering;
-  // allow fractional scale on narrow phones so nothing is clipped.
-  const s = raw >= 1 ? Math.min(Math.floor(raw), 2) : Math.max(raw, 0.4);
-  canvas.width  = VIEW_WIDTH;
-  canvas.height = VIEW_HEIGHT;
-  canvas.style.width  = Math.round(VIEW_WIDTH * s) + 'px';
-  canvas.style.height = Math.round(VIEW_HEIGHT * s) + 'px';
+  const maxW = Math.min(wrap.clientWidth, 480);
+  const maxH = Math.min(wrap.clientHeight, 520);
+  const s = Math.max(1, Math.min(
+    Math.floor(maxW / (MAP_W * TILE)),
+    Math.floor(maxH / (MAP_H * TILE))
+  ));
+  canvas.width  = MAP_W * TILE;
+  canvas.height = MAP_H * TILE;
+  canvas.style.width  = (MAP_W * TILE * s) + 'px';
+  canvas.style.height = (MAP_H * TILE * s) + 'px';
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
@@ -719,647 +688,97 @@ window.addEventListener('resize', resizeCanvas);
 // ============================================================
 //  DRAWING
 // ============================================================
-function updateFacingHud() {
-  const el = document.getElementById('dir-val');
-  if (el) el.textContent = DIRS[player.dir].label;
-}
-
-function dirVec(dir = player.dir) {
-  return DIRS[dir];
-}
-
-function sideVec(side = 1, dir = player.dir) {
-  const right = DIRS[(dir + 1) % 4];
-  return { dc: right.dc * side, dr: right.dr * side };
-}
-
-function inBounds(col, row) {
-  return col >= 0 && row >= 0 && col < MAP_W && row < MAP_H;
-}
-
-function tileAt(col, row) {
-  if (!inBounds(col, row)) return T.WALL;
-  return mapState[row][col];
-}
-
-function npcAt(col, row) {
-  return currentNPCs.find(npc => npc.col === col && npc.row === row) || null;
-}
-
-function isOpaqueTile(tile) {
-  return tile === T.WALL || tile === T.DOOR_C || tile === T.CHEST_C;
-}
-
-function blocksMovementAt(col, row) {
-  if (!inBounds(col, row)) return true;
-  if (isOpaqueTile(tileAt(col, row))) return true;
-  return Boolean(npcAt(col, row));
-}
-
-function relativePos(depth = 1, side = 0) {
-  const f = dirVec();
-  const s = sideVec(side);
-  return {
-    col: player.col + f.dc * depth + s.dc,
-    row: player.row + f.dr * depth + s.dr,
-  };
-}
-
-function sceneRects() {
-  const w = canvas.width;
-  const h = canvas.height;
-  return [
-    { x: 8,   y: 12,  w: w - 16,  h: h - 42 },
-    { x: 42,  y: 34,  w: w - 84,  h: h - 102 },
-    { x: 82,  y: 62,  w: w - 164, h: h - 156 },
-    { x: 122, y: 92,  w: w - 244, h: h - 212 },
-    { x: 154, y: 116, w: w - 308, h: h - 268 },
-    { x: w / 2 - 16, y: h / 2 - 16, w: 32, h: 32 },
-  ];
-}
-
-function drawQuad(points, fill, stroke = '#666') {
-  ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-}
-
-function drawSceneBackground() {
-  const w = canvas.width;
-  const h = canvas.height;
-  const horizon = h * 0.52;
-
-  ctx.fillStyle = '#020202';
-  ctx.fillRect(0, 0, w, horizon);
-  ctx.fillStyle = '#0d0d0d';
-  ctx.fillRect(0, horizon, w, h - horizon);
-
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, horizon);
-  ctx.lineTo(w, horizon);
-  ctx.stroke();
-
-  // Floor perspective grid converging at vanishing point
-  const vpx = w / 2;
-  ctx.strokeStyle = '#181818';
-  ctx.lineWidth = 1;
-  const steps = 8;
-  for (let i = 0; i <= steps; i++) {
-    const bx = (i / steps) * w;
-    ctx.beginPath();
-    ctx.moveTo(vpx, horizon + 1);
-    ctx.lineTo(bx, h);
-    ctx.stroke();
-  }
-
-  // Floor horizontal depth markers
-  ctx.strokeStyle = '#161616';
-  for (const yf of [0.65, 0.78, 0.9]) {
-    ctx.beginPath();
-    ctx.moveTo(0, h * yf);
-    ctx.lineTo(w, h * yf);
-    ctx.stroke();
-  }
-
-  // Ceiling subtle lines
-  ctx.strokeStyle = '#0b0b0b';
-  for (const yf of [0.14, 0.34]) {
-    ctx.beginPath();
-    ctx.moveTo(0, h * yf);
-    ctx.lineTo(w, h * yf);
-    ctx.stroke();
-  }
-}
-
-function drawSegment(cur, next, leftWall, rightWall, depth = 0) {
-  // Walls get darker with distance for depth perception
-  const d = Math.min(depth, 3);
-  const base = Math.max(4, 28 - d * 8);
-  const wallFill = `rgb(${base},${base},${base})`;
-  const edgeBase = Math.max(40, 104 - d * 22);
-  const wallEdge = `rgb(${edgeBase},${edgeBase},${edgeBase})`;
-  const openEdge = `rgb(${Math.max(18, edgeBase - 32)},${Math.max(18, edgeBase - 32)},${Math.max(18, edgeBase - 32)})`;
-
-  if (leftWall) {
-    drawQuad([
-      [cur.x, cur.y],
-      [next.x, next.y],
-      [next.x, next.y + next.h],
-      [cur.x, cur.y + cur.h],
-    ], wallFill, wallEdge);
-  } else {
-    ctx.strokeStyle = openEdge;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cur.x, cur.y);
-    ctx.lineTo(next.x, next.y);
-    ctx.moveTo(cur.x, cur.y + cur.h);
-    ctx.lineTo(next.x, next.y + next.h);
-    ctx.stroke();
-  }
-
-  if (rightWall) {
-    drawQuad([
-      [cur.x + cur.w, cur.y],
-      [next.x + next.w, next.y],
-      [next.x + next.w, next.y + next.h],
-      [cur.x + cur.w, cur.y + cur.h],
-    ], wallFill, wallEdge);
-  } else {
-    ctx.strokeStyle = openEdge;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cur.x + cur.w, cur.y);
-    ctx.lineTo(next.x + next.w, next.y);
-    ctx.moveTo(cur.x + cur.w, cur.y + cur.h);
-    ctx.lineTo(next.x + next.w, next.y + next.h);
-    ctx.stroke();
-  }
-
-  const cornerEdge = `rgb(${Math.max(28, edgeBase - 22)},${Math.max(28, edgeBase - 22)},${Math.max(28, edgeBase - 22)})`;
-  ctx.strokeStyle = cornerEdge;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(cur.x, cur.y);
-  ctx.lineTo(next.x, next.y);
-  ctx.moveTo(cur.x + cur.w, cur.y);
-  ctx.lineTo(next.x + next.w, next.y);
-  ctx.moveTo(cur.x, cur.y + cur.h);
-  ctx.lineTo(next.x, next.y + next.h);
-  ctx.moveTo(cur.x + cur.w, cur.y + cur.h);
-  ctx.lineTo(next.x + next.w, next.y + next.h);
-  ctx.stroke();
-}
-
-function drawFrontSurface(rect, tile, depth = 0) {
-  const lum = Math.max(6, 14 - depth * 3);
-  ctx.fillStyle = `rgb(${lum},${lum},${lum})`;
-  ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-  const edgeLum = Math.max(80, 152 - depth * 24);
-  ctx.strokeStyle = `rgb(${edgeLum},${edgeLum},${edgeLum})`;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-
-  if (tile === T.WALL) {
-    ctx.strokeStyle = '#333';
-    ctx.strokeRect(rect.x + 8, rect.y + 8, rect.w - 16, rect.h - 16);
+function drawTile(col, row, type) {
+  const x = col * TILE, y = row * TILE;
+  if (type === T.WALL) {
+    ctx.fillStyle = COLORS[1]; ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = COLORS.WALL_TOP; ctx.fillRect(x, y, TILE, 6);
+    ctx.strokeStyle = COLORS.WALL_EDGE; ctx.lineWidth = 1;
+    ctx.strokeRect(x+.5, y+.5, TILE-1, TILE-1);
     return;
   }
+  ctx.fillStyle = COLORS[0]; ctx.fillRect(x, y, TILE, TILE);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+  ctx.strokeRect(x+.5, y+.5, TILE-1, TILE-1);
 
-  if (tile === T.DOOR_C) {
-    const dw = rect.w * 0.4;
-    const dh = rect.h * 0.72;
-    const dx = rect.x + (rect.w - dw) / 2;
-    const dy = rect.y + rect.h - dh;
-    ctx.fillStyle = '#222';
-    ctx.fillRect(dx, dy, dw, dh);
-    ctx.strokeStyle = '#ddd';
-    ctx.strokeRect(dx, dy, dw, dh);
-    ctx.beginPath();
-    ctx.arc(dx + dw * 0.8, dy + dh * 0.55, Math.max(2, rect.w * 0.02), 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
+  if (type === T.DOOR_C || type === T.DOOR_O) {
+    const open = type === T.DOOR_O;
+    ctx.fillStyle = open ? COLORS[3] : COLORS[2];
+    ctx.fillRect(x+4, y+4, TILE-8, TILE-8);
+    if (!open) {
+      ctx.strokeStyle='#333'; ctx.lineWidth=2;
+      ctx.strokeRect(x+4, y+4, TILE-8, TILE-8);
+      ctx.fillStyle='#fff'; ctx.beginPath();
+      ctx.arc(x+TILE/2, y+TILE/2, 3, 0, Math.PI*2); ctx.fill();
+      ctx.font='10px Courier New'; ctx.textAlign='center';
+      ctx.fillText('L', x+TILE/2, y+10);
+    } else {
+      ctx.strokeStyle='#222'; ctx.lineWidth=2;
+      ctx.strokeRect(x+4, y+4, TILE-8, TILE-8);
+    }
     return;
   }
-
-  if (tile === T.CHEST_C) {
-    const cw = rect.w * 0.44;
-    const ch = rect.h * 0.28;
-    const cx = rect.x + (rect.w - cw) / 2;
-    const cy = rect.y + rect.h * 0.58;
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(cx, cy, cw, ch);
-    ctx.strokeStyle = '#ddd';
-    ctx.strokeRect(cx, cy, cw, ch);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + ch * 0.35);
-    ctx.lineTo(cx + cw, cy + ch * 0.35);
-    ctx.stroke();
-  }
-}
-
-function drawBillboard(rect, title, subtitle = '') {
-  const bw = rect.w * 0.52;
-  const bh = rect.h * 0.56;
-  const bx = rect.x + (rect.w - bw) / 2;
-  const by = rect.y + rect.h - bh - Math.max(8, rect.h * 0.08);
-  ctx.fillStyle = '#050505';
-  ctx.fillRect(bx, by, bw, bh);
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(bx, by, bw, bh);
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center';
-  ctx.font = `${Math.max(9, Math.floor(rect.w * 0.085))}px Courier New`;
-  ctx.fillText(title, bx + bw / 2, by + bh * 0.42);
-  if (subtitle) {
-    ctx.font = `${Math.max(7, Math.floor(rect.w * 0.055))}px Courier New`;
-    ctx.fillText(subtitle, bx + bw / 2, by + bh * 0.7);
-  }
-}
-
-function drawNpcBillboard(rect, npc) {
-  const bw = rect.w * 0.32;
-  const bh = rect.h * 0.52;
-  const bx = rect.x + (rect.w - bw) / 2;
-  const by = rect.y + rect.h - bh - Math.max(10, rect.h * 0.08);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(bx + bw * 0.28, by + bh * 0.08, bw * 0.44, bh * 0.26);
-  ctx.strokeStyle = '#111';
-  ctx.strokeRect(bx + bw * 0.28, by + bh * 0.08, bw * 0.44, bh * 0.26);
-  ctx.fillStyle = npc.color || '#bbb';
-  ctx.fillRect(bx + bw * 0.18, by + bh * 0.38, bw * 0.64, bh * 0.48);
-  ctx.strokeStyle = '#fff';
-  ctx.strokeRect(bx + bw * 0.18, by + bh * 0.38, bw * 0.64, bh * 0.48);
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center';
-  ctx.font = `${Math.max(8, Math.floor(rect.w * 0.055))}px Courier New`;
-  ctx.fillText(npc.name.toUpperCase(), rect.x + rect.w / 2, by - 6);
-}
-
-function drawStairsBillboard(rect, gated) {
-  const left = rect.x + rect.w * 0.28;
-  const top = rect.y + rect.h * 0.54;
-  const width = rect.w * 0.44;
-  const stepH = rect.h * 0.08;
-  ctx.strokeStyle = gated ? '#555' : '#fff';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 4; i++) {
-    const inset = i * rect.w * 0.04;
-    ctx.strokeRect(left + inset, top + i * stepH, width - inset * 2, stepH);
-  }
-  ctx.fillStyle = gated ? '#777' : '#fff';
-  ctx.font = `${Math.max(9, Math.floor(rect.w * 0.08))}px Courier New`;
-  ctx.textAlign = 'center';
-  ctx.fillText(gated ? 'SEALED' : 'EXIT', rect.x + rect.w / 2, rect.y + rect.h * 0.38);
-}
-
-function drawHudHelp() {
-  ctx.fillStyle = '#bdbdbd';
-  ctx.textAlign = 'center';
-  ctx.font = '12px Courier New';
-  ctx.fillText('LEFT/RIGHT TURN   UP/DOWN MOVE   SPACE/ENTER ACT', canvas.width / 2, canvas.height - 14);
-}
-
-function sideCueInfo(depth, side) {
-  const pos = relativePos(depth, side);
-  const tile = tileAt(pos.col, pos.row);
-  const npc = npcAt(pos.col, pos.row);
-  const sideLabel = side < 0 ? 'LEFT' : 'RIGHT';
-
-  if (npc) {
-    return { title: 'NPC', subtitle: npc.name.toUpperCase().slice(0, 8), tone: '#fff', strong: true, sideLabel };
-  }
-  if (tile === T.STAIRS) {
-    return {
-      title: remainingLocks() > 0 ? 'SEALED' : 'EXIT',
-      subtitle: 'STAIRS',
-      tone: remainingLocks() > 0 ? '#777' : '#fff',
-      strong: true,
-      sideLabel,
-    };
-  }
-  if (tile === T.DOOR_C) return { title: 'LOCKED', subtitle: 'DOOR', tone: '#ddd', strong: true, sideLabel };
-  if (tile === T.CHEST_C) return { title: 'CHEST', subtitle: 'LOOT', tone: '#fff', strong: true, sideLabel };
-  if (tile === T.DOOR_O) return { title: 'OPEN', subtitle: 'DOOR', tone: '#888', strong: false, sideLabel };
-  if (tile === T.CHEST_O) return { title: 'OPEN', subtitle: 'CHEST', tone: '#777', strong: false, sideLabel };
-  if (tile === T.FLOOR || tile === T.RUG) {
-    return {
-      title: 'PATH',
-      subtitle: depth === 1 ? sideLabel : '2 AWAY',
-      tone: depth === 1 ? '#777' : '#555',
-      strong: false,
-      sideLabel,
-    };
-  }
-  return null;
-}
-
-function drawSideCue(side, depth, info) {
-  const bw = depth === 1 ? 70 : 58;
-  const bh = depth === 1 ? 38 : 32;
-  const x = side < 0 ? 10 : canvas.width - bw - 10;
-  const y = depth === 1 ? Math.floor(canvas.height * 0.56) : Math.floor(canvas.height * 0.38);
-  const arrowMid = y + Math.floor(bh / 2);
-
-  ctx.save();
-  ctx.globalAlpha = info.strong ? 0.96 : 0.82;
-  ctx.fillStyle = '#050505';
-  ctx.fillRect(x, y, bw, bh);
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = info.tone;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, bw, bh);
-
-  ctx.fillStyle = info.tone;
-  ctx.beginPath();
-  if (side < 0) {
-    ctx.moveTo(x + bw, arrowMid - 6);
-    ctx.lineTo(x + bw + 7, arrowMid);
-    ctx.lineTo(x + bw, arrowMid + 6);
-  } else {
-    ctx.moveTo(x, arrowMid - 6);
-    ctx.lineTo(x - 7, arrowMid);
-    ctx.lineTo(x, arrowMid + 6);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = info.tone;
-  ctx.font = `${depth === 1 ? 10 : 9}px Courier New`;
-  ctx.fillText(info.title, x + bw / 2, y + 15);
-  ctx.font = `${depth === 1 ? 8 : 7}px Courier New`;
-  ctx.fillText(info.subtitle, x + bw / 2, y + bh - 8);
-  ctx.restore();
-}
-
-function drawSideCues() {
-  for (const depth of [2, 1]) {
-    for (const side of [-1, 1]) {
-      const info = sideCueInfo(depth, side);
-      if (info) drawSideCue(side, depth, info);
+  if (type === T.CHEST_C || type === T.CHEST_O) {
+    const open = type === T.CHEST_O;
+    ctx.fillStyle = open ? COLORS[5] : COLORS[4];
+    ctx.fillRect(x+4, y+10, TILE-8, TILE-14);
+    if (!open) {
+      ctx.fillStyle='#555'; ctx.fillRect(x+4, y+10, TILE-8, 6);
+      ctx.fillStyle='#ddd'; ctx.beginPath();
+      ctx.arc(x+TILE/2, y+16, 3, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillStyle='#333'; ctx.fillRect(x+4, y+6, TILE-8, 5);
+      ctx.font='12px sans-serif'; ctx.textAlign='center';
+      ctx.fillStyle='#fff'; ctx.fillText('*', x+TILE/2, y+TILE-4);
     }
+    return;
+  }
+  if (type === T.STAIRS) {
+    const gated = remainingLocks() > 0;
+    ctx.fillStyle = gated ? '#1a1a1a' : COLORS[6];
+    ctx.fillRect(x+3, y+3, TILE-6, TILE-6);
+    ctx.fillStyle = gated ? '#111' : '#333';
+    for (let i=0; i<3; i++) ctx.fillRect(x+5+i*6, y+8+i*5, TILE-14, 4);
+    ctx.fillStyle = gated ? '#555' : '#ddd';
+    ctx.font='10px Courier New'; ctx.textAlign='center';
+    ctx.fillText(gated ? '??' : '>>',x+TILE/2, y+TILE-4);
+    return;
+  }
+  if (type === T.RUG) {
+    ctx.fillStyle = COLORS[7]; ctx.fillRect(x+2, y+2, TILE-4, TILE-4);
   }
 }
 
-function minimapVisibleCells() {
-  const seen = [];
-  const push = (col, row, depth, side) => {
-    if (!inBounds(col, row)) return;
-    seen.push({ col, row, depth, side, tile: tileAt(col, row), npc: npcAt(col, row) });
-  };
-
-  push(player.col, player.row, 0, 0);
-
-  let blocked = false;
-  for (let depth = 1; depth <= 3; depth++) {
-    const sideReach = Math.min(depth, 2);
-    for (let side = -sideReach; side <= sideReach; side++) {
-      const pos = relativePos(depth, side);
-      push(pos.col, pos.row, depth, side);
-    }
-
-    const front = relativePos(depth, 0);
-    if (isOpaqueTile(tileAt(front.col, front.row))) {
-      blocked = true;
-      break;
-    }
-  }
-
-  if (!blocked) {
-    for (const side of [-3, 3]) {
-      const flank = relativePos(1, side);
-      push(flank.col, flank.row, 1, side);
-    }
-  }
-
-  return seen;
+function drawNPC(npc) {
+  const x = npc.col*TILE, y = npc.row*TILE;
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.ellipse(x+TILE/2, y+TILE-5, 9, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle=npc.color; ctx.fillRect(x+10, y+14, 12, 13);
+  ctx.fillStyle='#ccc'; ctx.fillRect(x+9, y+6, 14, 12);
+  ctx.fillStyle='#000'; ctx.fillRect(x+12, y+9, 3, 3); ctx.fillRect(x+18, y+9, 3, 3);
+  ctx.fillStyle='#fff'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
+  ctx.fillText(npc.label, x+TILE/2, y+4);
 }
 
-function drawMinimap() {
-  if (!mapState.length) return;
-  const narrow = canvas.width <= 480;
-  const CELL = narrow ? 6 : 7;
-  const PAD  = 4;
-  const boxW = MAP_W * CELL + PAD * 2;
-  const boxH = MAP_H * CELL + PAD * 2;
-  const ox   = canvas.width - boxW - 5;
-  const oy   = 5;
-
-  ctx.save();
-
-  ctx.globalAlpha = 0.92;
-  ctx.fillStyle = '#000';
-  ctx.fillRect(ox, oy, boxW, boxH);
-  ctx.globalAlpha = 1;
-
-  const TC = {
-    [T.WALL]:    '#d0d0d0',
-    [T.FLOOR]:   '#141414',
-    [T.RUG]:     '#1e1e1e',
-    [T.DOOR_C]:  '#888',
-    [T.DOOR_O]:  '#282828',
-    [T.CHEST_C]: '#bbb',
-    [T.CHEST_O]: '#333',
-    [T.STAIRS]:  '#fff',
-  };
-
-  for (let r = 0; r < MAP_H; r++) {
-    for (let c = 0; c < MAP_W; c++) {
-      const tile = mapState[r][c];
-      ctx.fillStyle = TC[tile] !== undefined ? TC[tile] : '#141414';
-      ctx.fillRect(ox + PAD + c * CELL, oy + PAD + r * CELL, CELL - 1, CELL - 1);
-    }
-  }
-
-  const visible = minimapVisibleCells();
-  for (const cell of visible) {
-    const vx = ox + PAD + cell.col * CELL;
-    const vy = oy + PAD + cell.row * CELL;
-    const alpha = cell.depth === 0 ? 0 : cell.depth === 1 ? 0.34 : cell.depth === 2 ? 0.22 : 0.14;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = cell.side === 0 ? '#fff' : '#9a9a9a';
-    ctx.fillRect(vx, vy, CELL - 1, CELL - 1);
-    ctx.globalAlpha = 1;
-
-    if (cell.depth > 0 && cell.side === 0) {
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(vx + 0.5, vy + 0.5, CELL - 2, CELL - 2);
-    }
-  }
-
-  for (const npc of currentNPCs) {
-    const nx = ox + PAD + npc.col * CELL;
-    const ny = oy + PAD + npc.row * CELL;
-    ctx.fillStyle = '#999';
-    ctx.fillRect(nx + 2, ny + 2, Math.max(2, CELL - 4), Math.max(2, CELL - 4));
-  }
-
-  for (const cell of visible) {
-    if (!cell.npc) continue;
-    const nx = ox + PAD + cell.col * CELL;
-    const ny = oy + PAD + cell.row * CELL;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(nx + 1.5, ny + 1.5, Math.max(2, CELL - 4), Math.max(2, CELL - 4));
-  }
-
-  const cs  = CELL - 1;
-  const plx = ox + PAD + player.col * CELL;
-  const ply = oy + PAD + player.row * CELL;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(plx, ply, cs, cs);
-
-  const fd    = DIRS[player.dir];
-  const midX  = plx + cs * 0.5;
-  const midY  = ply + cs * 0.5;
-  const tipX  = midX + fd.dc * 2.5;
-  const tipY  = midY + fd.dr * 2.5;
-  const bX    = midX - fd.dc * 1.5;
-  const bY    = midY - fd.dr * 1.5;
-  const perpX = fd.dr;
-  const perpY = -fd.dc;
-  ctx.fillStyle = '#111';
-  ctx.beginPath();
-  ctx.moveTo(tipX, tipY);
-  ctx.lineTo(bX + perpX * 1.5, bY + perpY * 1.5);
-  ctx.lineTo(bX - perpX * 1.5, bY - perpY * 1.5);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(ox + 0.5, oy + 0.5, boxW, boxH);
-
-  ctx.restore();
-}
-
-function drawCrosshair() {
-  const cx = canvas.width / 2;
-  const cy = canvas.height * 0.57;
-  ctx.strokeStyle = '#777';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - 8, cy);
-  ctx.lineTo(cx + 8, cy);
-  ctx.moveTo(cx, cy - 8);
-  ctx.lineTo(cx, cy + 8);
-  ctx.stroke();
-}
-
-function drawSideObjectCues() {
-  const rects = sceneRects();
-
-  for (const side of [-1, 1]) {
-    for (let depth = 0; depth <= 2; depth++) {
-      const sidePos = relativePos(depth, side);
-      const sideTile = tileAt(sidePos.col, sidePos.row);
-      const sideNpc  = npcAt(sidePos.col, sidePos.row);
-
-      let cueColor = null;
-      let cueChar  = '';
-
-      if (sideNpc) {
-        cueColor = depth === 0 ? '#fff' : depth === 1 ? '#999' : '#555';
-        cueChar  = sideNpc.label || 'N';
-      } else if (sideTile === T.DOOR_C) {
-        cueColor = depth === 0 ? '#999' : depth === 1 ? '#777' : '#444';
-        cueChar  = 'D';
-      } else if (sideTile === T.CHEST_C) {
-        cueColor = depth === 0 ? '#fff' : depth === 1 ? '#bbb' : '#666';
-        cueChar  = '?';
-      } else if (sideTile === T.STAIRS) {
-        cueColor = '#ddd';
-        cueChar  = '>'; 
-      } else {
-        continue;
-      }
-
-      const cur  = rects[Math.min(depth, rects.length - 2)];
-      const next = rects[Math.min(depth + 1, rects.length - 1)];
-      const edgeX = side === -1 ? next.x : next.x + next.w;
-      const topY  = next.y;
-      const botY  = next.y + next.h;
-      const midY  = (topY + botY) / 2;
-
-      ctx.save();
-      ctx.strokeStyle = cueColor;
-      ctx.lineWidth = depth === 0 ? 3 : depth === 1 ? 2 : 1;
-      ctx.beginPath();
-      ctx.moveTo(edgeX, topY);
-      ctx.lineTo(edgeX, botY);
-      ctx.stroke();
-
-      const panelMidX = side === -1
-        ? (cur.x + next.x) / 2
-        : (cur.x + cur.w + next.x + next.w) / 2;
-      const cueW = depth === 0 ? 16 : depth === 1 ? 12 : 9;
-      const cueH = depth === 0 ? 26 : depth === 1 ? 18 : 12;
-      ctx.globalAlpha = depth === 0 ? 0.95 : depth === 1 ? 0.82 : 0.68;
-      ctx.fillStyle = '#050505';
-      ctx.fillRect(panelMidX - cueW / 2, midY - cueH / 2, cueW, cueH);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = cueColor;
-      ctx.strokeRect(panelMidX - cueW / 2, midY - cueH / 2, cueW, cueH);
-      ctx.fillStyle = cueColor;
-      ctx.font = `${depth === 0 ? 10 : depth === 1 ? 8 : 7}px Courier New`;
-      ctx.textAlign = 'center';
-      ctx.fillText(cueChar, panelMidX, midY + 3);
-      ctx.restore();
-    }
-  }
+function drawPlayer() {
+  const x = player.col*TILE, y = player.row*TILE;
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.ellipse(x+TILE/2, y+TILE-4, 9, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='#555'; ctx.fillRect(x+9, y+14, 14, 14);
+  ctx.fillStyle='#ccc'; ctx.fillRect(x+10, y+6, 12, 11);
+  ctx.fillStyle='#777'; ctx.fillRect(x+10, y+5, 12, 4);
+  ctx.fillStyle='#000'; ctx.fillRect(x+12, y+10, 3, 3); ctx.fillRect(x+17, y+10, 3, 3);
+  ctx.fillStyle='#aaa'; ctx.fillRect(x+23, y+10, 3, 14);
+  ctx.fillStyle='#888'; ctx.fillRect(x+21, y+14, 7, 3);
 }
 
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawSceneBackground();
-  const rects = sceneRects();
-  let blockedAt = VIEW_DEPTH + 1;
-
-  for (let depth = 0; depth < VIEW_DEPTH; depth++) {
-    const cur = rects[depth];
-    const next = rects[depth + 1];
-    const leftPos = relativePos(depth, -1);
-    const rightPos = relativePos(depth, 1);
-    drawSegment(
-      cur,
-      next,
-      isOpaqueTile(tileAt(leftPos.col, leftPos.row)),
-      isOpaqueTile(tileAt(rightPos.col, rightPos.row))
-    );
-
-    const front = relativePos(depth + 1, 0);
-    const frontTile = tileAt(front.col, front.row);
-    if (isOpaqueTile(frontTile)) {
-      drawFrontSurface(next, frontTile, depth);
-      blockedAt = depth + 1;
-      break;
-    }
-  }
-
-  if (blockedAt === VIEW_DEPTH + 1) {
-    ctx.strokeStyle = '#444';
-    ctx.strokeRect(rects[VIEW_DEPTH + 1].x, rects[VIEW_DEPTH + 1].y, rects[VIEW_DEPTH + 1].w, rects[VIEW_DEPTH + 1].h);
-  }
-
-  for (let depth = Math.min(VIEW_DEPTH, blockedAt - 1); depth >= 1; depth--) {
-    const pos = relativePos(depth, 0);
-    const tile = tileAt(pos.col, pos.row);
-    const npc = npcAt(pos.col, pos.row);
-    const rect = rects[depth];
-
-    if (npc) {
-      drawNpcBillboard(rect, npc);
-      continue;
-    }
-    if (tile === T.STAIRS) {
-      drawStairsBillboard(rect, remainingLocks() > 0);
-      continue;
-    }
-    if (tile === T.CHEST_O) {
-      drawBillboard(rect, 'OPEN', 'CHEST');
-      continue;
-    }
-    if (tile === T.DOOR_O) {
-      drawBillboard(rect, 'OPEN', 'DOOR');
-    }
-  }
-
-  drawSideObjectCues();
-  drawSideCues();
-  drawCrosshair();
-  drawHudHelp();
-  drawMinimap();
+  for (let row=0; row<MAP_H; row++)
+    for (let col=0; col<MAP_W; col++)
+      drawTile(col, row, mapState[row][col]);
+  currentNPCs.forEach(drawNPC);
+  drawPlayer();
   Particles.draw();
 }
 
@@ -1407,7 +826,9 @@ function addXP(amount) {
   showToast('+' + amount + ' XP!');
   if (amount >= 20) Sound.correct();
   else if (amount > 0) Sound.click();
-  Particles.add(canvas.width / 2, canvas.height * 0.68, '+' + amount + ' XP', '#fff');
+  const px = player.col * TILE + TILE/2;
+  const py = player.row * TILE + TILE/2;
+  Particles.add(px, py, '+' + amount + ' XP', '#fff');
 }
 
 // ============================================================
@@ -1525,7 +946,7 @@ async function postScore(level) {
 function loadLevel(idx) {
   currentLevelIdx = idx;
   const lvl = LEVELS[idx];
-  player = { ...lvl.playerStart, dir: Number.isInteger(lvl.playerStart.dir) ? lvl.playerStart.dir : 0 };
+  player = { ...lvl.playerStart };
   mapState = lvl.map.map(r => [...r]);
   locksState = {};
   Object.entries(lvl.locks).forEach(([k,v]) => {
@@ -1543,7 +964,6 @@ function loadLevel(idx) {
   levelStartTime = Date.now();
   document.getElementById('xp-val').textContent = '0';
   document.getElementById('dialogue').style.display = 'none';
-  updateFacingHud();
   showScreen(null);
   resizeCanvas();
   render();
@@ -1638,7 +1058,9 @@ function handleAnswer(idx, ch, lockKey) {
     const [col, row] = lockKey.split(',').map(Number);
     locksState[lockKey].unlocked = true;
     mapState[row][col] = locksState[lockKey].type === 'door' ? T.DOOR_O : T.CHEST_O;
-    Particles.add(canvas.width / 2, canvas.height * 0.42, '★', '#fff', -0.8);
+    const tx = col * TILE + TILE/2;
+    const ty = row * TILE + TILE/2;
+    Particles.add(tx, ty, '★', '#fff', -0.8);
     render();
 
     continueBtn.style.display = 'block';
@@ -1651,7 +1073,9 @@ function handleAnswer(idx, ch, lockKey) {
     const attempts = attemptCounts[lockKey];
     btns[idx].classList.add('wrong');
     Sound.wrong();
-    Particles.add(canvas.width / 2, canvas.height * 0.62, '✗', '#aaa', -1);
+    const px = player.col * TILE + TILE/2;
+    const py = player.row * TILE + TILE/2;
+    Particles.add(px, py, '✗', '#aaa', -1);
 
     let msg = 'Not quite! Try again.';
     if (attempts >= 3) msg = 'Try again — a hint has appeared above!';
@@ -1677,38 +1101,20 @@ function closeDialogue() {
 // ============================================================
 function interact() {
   if (dialogueOpen) return;
-
-  const front = relativePos(1, 0);
-  const frontKey = front.col + ',' + front.row;
-  const frontNpc = npcAt(front.col, front.row);
-  if (locksState[frontKey] && !locksState[frontKey].unlocked) {
-    openChallenge(frontKey);
-    return;
+  const dirs = [[0,0],[0,-1],[0,1],[-1,0],[1,0]];
+  for (const [dc,dr] of dirs) {
+    const tc = player.col+dc, tr = player.row+dr;
+    if (tc<0||tr<0||tc>=MAP_W||tr>=MAP_H) continue;
+    const key = tc+','+tr;
+    if (locksState[key] && !locksState[key].unlocked) { openChallenge(key); return; }
+    if (mapState[tr][tc] === T.STAIRS) { handleStairs(); return; }
   }
-  if (frontNpc) {
-    openNPCDialogue(frontNpc);
-    return;
-  }
-  if (tileAt(front.col, front.row) === T.STAIRS) {
-    handleStairs();
-    return;
-  }
-
-  if (tileAt(player.col, player.row) === T.STAIRS) {
-    handleStairs();
-    return;
-  }
-
-  for (const side of [-1, 1]) {
-    const flank = relativePos(0, side);
-    const npc = npcAt(flank.col, flank.row);
-    if (npc) {
-      openNPCDialogue(npc);
-      return;
+  for (const npc of currentNPCs) {
+    if (Math.abs(npc.col-player.col)+Math.abs(npc.row-player.row) <= 1) {
+      openNPCDialogue(npc); return;
     }
   }
-
-  showToast('Face a door, chest, stair, or NPC, then interact.');
+  showToast('Nothing here. Try moving closer to doors or NPCs.');
 }
 
 function handleStairs() {
@@ -1749,22 +1155,15 @@ function handleStairs() {
 // ============================================================
 //  MOVEMENT
 // ============================================================
-function turnPlayer(delta) {
+function tryMove(dc, dr) {
   if (dialogueOpen) return;
-  player.dir = (player.dir + delta + 4) % 4;
-  updateFacingHud();
-  Sound.click();
-}
-
-function tryStep(distance) {
-  if (dialogueOpen) return;
-  const f = dirVec();
-  const nc = player.col + f.dc * distance;
-  const nr = player.row + f.dr * distance;
-  if (blocksMovementAt(nc, nr)) return;
+  const nc = player.col+dc, nr = player.row+dr;
+  if (nc<0||nr<0||nc>=MAP_W||nr>=MAP_H) return;
+  const tile = mapState[nr][nc];
+  if (tile===T.WALL||tile===T.DOOR_C||tile===T.CHEST_C) return;
+  for (const npc of currentNPCs) if (npc.col===nc&&npc.row===nr) return;
   Sound.step();
-  player.col = nc;
-  player.row = nr;
+  player.col=nc; player.row=nr;
 }
 
 // ============================================================
@@ -1805,10 +1204,10 @@ function loop(ts) {
   const dt = ts - lastTime;
   if (dt > MOVE_COOLDOWN) {
     lastTime = ts;
-    if (keys['ArrowLeft'])      turnPlayer(-1);
-    else if (keys['ArrowRight']) turnPlayer(1);
-    else if (keys['ArrowUp'])    tryStep(1);
-    else if (keys['ArrowDown'])  tryStep(-1);
+    if (keys['ArrowUp'])    tryMove(0,-1);
+    if (keys['ArrowDown'])  tryMove(0, 1);
+    if (keys['ArrowLeft'])  tryMove(-1,0);
+    if (keys['ArrowRight']) tryMove( 1,0);
   }
   Particles.update();
   render();
