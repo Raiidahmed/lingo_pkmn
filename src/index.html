@@ -4817,15 +4817,26 @@ async function submitAccountAuth(intent) {
   // PIN/password protection deferred; for now always authenticate using default PIN 0000.
   const effectivePassword = '0000';
   accountSession.usedDefaultPin = false;
+
+  const loginUrl = (API || '') + '/api/account/login';
+  let stage = 'request';
+
   setAuthMessage(intent === 'create' ? 'Creating save...' : 'Loading save...');
   try {
-    const response = await fetch(API + '/api/account/login', {
+    stage = 'fetch';
+    const response = await fetch(loginUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: rawName, password: effectivePassword, intent })
     });
+
+    stage = 'json';
     const payload = await response.json();
+
+    stage = 'validate';
     if (!response.ok || !payload.ok) throw new Error(payload && payload.error ? payload.error : 'Account request failed.');
+
+    stage = 'apply';
     accountSession.token = payload.token || '';
     safeStorageSet(ACCOUNT_TOKEN_KEY, accountSession.token);
     updateAccountSessionFromPayload(payload);
@@ -4834,7 +4845,9 @@ async function submitAccountAuth(intent) {
     showScreen('screen-status');
     return true;
   } catch (err) {
-    setAuthMessage(err instanceof Error ? err.message : 'Could not load that save.');
+    const msg = (err instanceof Error ? err.message : 'Could not load that save.');
+    console.warn('submitAccountAuth failed', { stage, loginUrl, msg, intent });
+    setAuthMessage((stage && stage !== 'request' ? `Login failed (${stage}): ` : '') + msg);
     return false;
   }
 }
