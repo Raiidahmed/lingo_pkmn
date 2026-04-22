@@ -540,8 +540,15 @@ function normalizeApiBase(base) {
 
 function validateApiBase(base) {
   if (!base || typeof base !== 'string') return '';
-  // Relative paths are fine.
-  if (base.startsWith('/') || base.startsWith('./')) return base;
+  // Relative paths: validate by resolving against current origin.
+  if (base.startsWith('/') || base.startsWith('./')) {
+    try {
+      new URL(base, window.location.origin);
+      return base;
+    } catch (e) {
+      return '';
+    }
+  }
   // Absolute URL must parse.
   try { new URL(base); return base; } catch (e) { return ''; }
 }
