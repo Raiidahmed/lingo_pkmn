@@ -543,7 +543,14 @@ function resolveApiBase() {
   let storageOverride = '';
   try { storageOverride = localStorage.getItem('lingoLeaderboardApiBase') || ''; } catch (e) { /* ignore */ }
 
-  const queryOverride = new URLSearchParams(window.location.search).get('leaderboardApi') || '';
+  // iOS/Safari can throw a “string did not match the expected pattern” error on malformed query strings.
+  let queryOverride = '';
+  try {
+    queryOverride = new URLSearchParams(window.location.search).get('leaderboardApi') || '';
+  } catch (e) {
+    queryOverride = '';
+  }
+
   const globalOverride = (typeof window.LINGO_LEADERBOARD_API_BASE === 'string')
     ? window.LINGO_LEADERBOARD_API_BASE
     : '';
