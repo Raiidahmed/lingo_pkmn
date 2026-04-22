@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>LingoDungeon</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/src/favicon.png?v=3"/>
   <link rel="icon" type="image/svg+xml" href="/src/favicon.svg?v=3"/>
@@ -28,6 +28,7 @@
       width: 100%; max-width: 100%;
       display: flex; justify-content: space-between; align-items: center;
       padding: 8px 12px;
+      padding-top: max(8px, env(safe-area-inset-top, 8px));
       font-size: 0.6rem; color: #fff;
       background: #000; border-bottom: 3px solid #fff;
       flex-shrink: 0;
@@ -50,11 +51,16 @@
       margin-right: 4px;
     }
     #sound-btn:hover { background: #fff; color: #000; }
+    @media (max-width: 430px) {
+      #hud { padding-left: 6px; padding-right: 6px; gap: 4px; }
+      #hud .title { font-size: 0.5rem; letter-spacing: 1px; }
+      #quit-btn, #sound-btn { padding: 4px 7px; font-size: 0.44rem; letter-spacing: 0; }
+    }
 
     /* ── Canvas wrap ── */
     #game-wrap {
       position: relative; flex: 1; width: 100%; max-width: 100%;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: flex-start; justify-content: center;
       overflow: hidden; background: #000;
     }
     canvas {
@@ -138,7 +144,7 @@
 
     /* ── Overlay screens ── */
     .screen {
-      display: none; position: absolute; inset: 0;
+      display: none; position: fixed; inset: 0;
       background: #000;
       flex-direction: column; align-items: center; justify-content: center;
       z-index: 50; padding: 24px 20px; text-align: center;
@@ -220,8 +226,19 @@
     .stat-box .val { font-size: 1.1rem; color: #fff; font-weight: bold; }
     .stat-box .lbl { font-size: 0.48rem; color: #888; margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
 
+    /* ── Mobile controls container (below canvas on touch devices) ── */
+    #mobile-controls {
+      display: none;
+      position: relative;
+      width: 100%; height: 150px;
+      background: #000;
+      border-top: 1px solid #222;
+      flex-shrink: 0;
+    }
+
     /* ── Touch controls — coarse-pointer (touch) devices only ── */
     @media (pointer: coarse) {
+      #mobile-controls { display: block; }
       #dpad { display: grid; }
       #action-btn { display: flex; }
     }
@@ -251,20 +268,6 @@
 <!-- Game Canvas -->
 <div id="game-wrap">
   <canvas id="canvas"></canvas>
-
-  <div id="dpad">
-    <div></div>
-    <div class="dpad-btn" id="btn-up">▲</div>
-    <div></div>
-    <div class="dpad-btn" id="btn-left">◀</div>
-    <div class="dpad-btn center"></div>
-    <div class="dpad-btn" id="btn-right">▶</div>
-    <div></div>
-    <div class="dpad-btn" id="btn-down">▼</div>
-    <div></div>
-  </div>
-
-  <div id="action-btn">TALK</div>
   <div id="toast"></div>
 
   <div id="dialogue">
@@ -333,6 +336,21 @@
   </div>
 
 </div><!-- end game-wrap -->
+
+<div id="mobile-controls">
+  <div id="dpad">
+    <div></div>
+    <div class="dpad-btn" id="btn-up">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-left">◀</div>
+    <div class="dpad-btn center"></div>
+    <div class="dpad-btn" id="btn-right">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="btn-down">▼</div>
+    <div></div>
+  </div>
+  <div id="action-btn">TALK</div>
+</div>
 
 <script>
 // ============================================================
@@ -671,16 +689,16 @@ const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('game-wrap');
 
 function resizeCanvas() {
-  const maxW = Math.min(wrap.clientWidth, 480);
-  const maxH = Math.min(wrap.clientHeight, 520);
-  const s = Math.max(1, Math.min(
-    Math.floor(maxW / (MAP_W * TILE)),
-    Math.floor(maxH / (MAP_H * TILE))
-  ));
-  canvas.width  = MAP_W * TILE;
-  canvas.height = MAP_H * TILE;
-  canvas.style.width  = (MAP_W * TILE * s) + 'px';
-  canvas.style.height = (MAP_H * TILE * s) + 'px';
+  const viewW = MAP_W * TILE;
+  const viewH = MAP_H * TILE;
+  const availW = wrap.clientWidth;
+  const availH = wrap.clientHeight;
+  const raw = Math.min(availW / viewW, availH / viewH);
+  const s = raw >= 1 ? Math.min(Math.floor(raw), 2) : Math.max(raw, 0.4);
+  canvas.width  = viewW;
+  canvas.height = viewH;
+  canvas.style.width  = Math.round(viewW * s) + 'px';
+  canvas.style.height = Math.round(viewH * s) + 'px';
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
