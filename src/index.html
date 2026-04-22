@@ -1296,53 +1296,68 @@ const Sound = {
   enabled: (() => { try { return localStorage.getItem('lingoSound') !== 'off'; } catch(e) { return true; } })(),
   ctx: null,
   unlocked: false,
+  _pending: [],
+  _stepEnd: 0,
   init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) { this.ctx = null; }
+    }
+    return this.ctx;
+  },
+  _drain() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const queue = this._pending;
+    this._pending = [];
+    for (let i = 0; i < queue.length; i++) {
+      try { queue[i](this.ctx); } catch(e) {}
     }
   },
-  _runWhenReady(fn) {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    if (ctx.state === 'running') { fn(); return; }
-    if (typeof ctx.resume === 'function') {
-      let done = false;
-      const p = ctx.resume();
-      if (p && typeof p.then === 'function') {
-        p.then(() => { if (!done) { done = true; fn(); } }).catch(() => {});
-      }
-      // Fallback: if resume() didn't return a thenable but state flipped, run now.
-      if (ctx.state === 'running' && !done) { done = true; fn(); }
-    }
-  },
-  play(freq, duration, type='sine', vol=0.08) {
+  // Schedule a sound: run synchronously if ctx is running (keeps us inside
+  // the iOS gesture tick), otherwise queue and retry once unlock resumes it.
+  _schedule(fn) {
     if (!this.enabled) return;
     if (!this.ctx) { try { this.init(); } catch(e) {} }
     if (!this.ctx) return;
     const ctx = this.ctx;
-    this._runWhenReady(() => {
+    if (ctx.state === 'running') {
+      try { fn(ctx); } catch(e) {}
+      return;
+    }
+    if (this._pending.length < 8) this._pending.push(fn);
+    if (typeof ctx.resume === 'function') {
       try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = type;
-        const t = ctx.currentTime;
-        gain.gain.setValueAtTime(vol, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-        osc.start(t);
-        osc.stop(t + duration);
-      } catch(e) { /* ignore */ }
+        const p = ctx.resume();
+        if (p && typeof p.then === 'function') {
+          p.then(() => this._drain()).catch(() => {});
+        }
+      } catch(e) {}
+      if (ctx.state === 'running') this._drain();
+    }
+  },
+  play(freq, duration, type='sine', vol=0.08) {
+    this._schedule(ctx => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = type;
+      const t = ctx.currentTime;
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      osc.start(t);
+      osc.stop(t + duration);
     });
   },
   unlock() {
     try { this.init(); } catch(e) {}
     if (!this.ctx) return;
     const ctx = this.ctx;
+    // Prime with a silent buffer + osc synchronously inside the gesture —
+    // required on iOS Safari for subsequent play() to actually emit audio.
     try {
-      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume();
-      // Prime with a silent buffer source — required on iOS Safari.
       const buffer = ctx.createBuffer(1, 1, 22050);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
@@ -1350,8 +1365,6 @@ const Sound = {
       const when = typeof ctx.currentTime === 'number' ? ctx.currentTime : 0;
       source.start(when);
       source.stop(when + 0.001);
-      // Also prime a near-silent oscillator — some iOS versions need a real
-      // sound source kicked inside the gesture before play() works.
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       gain.gain.value = 0.0001;
@@ -1359,8 +1372,16 @@ const Sound = {
       gain.connect(ctx.destination);
       osc.start(when);
       osc.stop(when + 0.02);
-      this.unlocked = true;
-    } catch(e) { /* ignore */ }
+    } catch(e) {}
+    if (typeof ctx.resume === 'function' && ctx.state !== 'running') {
+      try {
+        const p = ctx.resume();
+        if (p && typeof p.then === 'function') {
+          p.then(() => { this.unlocked = true; this._drain(); }).catch(() => {});
+        }
+      } catch(e) {}
+    }
+    if (ctx.state === 'running') { this.unlocked = true; this._drain(); }
   },
   correct() { this.play(523.25, 0.3, 'sine', 0.1); },
   wrong()   { this.play(220, 0.4, 'sawtooth', 0.08); },
@@ -1370,45 +1391,40 @@ const Sound = {
   click()   { this.play(440, 0.1, 'sine', 0.05); },
 
   step() {
-    if (!this.enabled || !this.ctx) return;
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
+    if (!this.enabled) return;
+    if (!this.ctx) { try { this.init(); } catch(e) {} }
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
     if (this._stepEnd && now < this._stepEnd) return;
     const dur = 0.045;
     this._stepEnd = now + dur;
-    this._runWhenReady(() => {
-      try {
-        const t = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = 120; osc.type = 'triangle';
-        gain.gain.setValueAtTime(0.07, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-        osc.start(t); osc.stop(t + dur);
-      } catch(e) {}
+    this._schedule(ctx => {
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 120; osc.type = 'triangle';
+      gain.gain.setValueAtTime(0.07, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur);
     });
   },
 
   select() {
-    if (!this.enabled || !this.ctx) return;
-    const ctx = this.ctx;
-    this._runWhenReady(() => {
-      try {
-        const t = ctx.currentTime;
-        const o1 = ctx.createOscillator(), g1 = ctx.createGain();
-        o1.connect(g1); g1.connect(ctx.destination);
-        o1.frequency.value = 880; o1.type = 'sine';
-        g1.gain.setValueAtTime(0.08, t);
-        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-        o1.start(t); o1.stop(t + 0.07);
-        const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-        o2.connect(g2); g2.connect(ctx.destination);
-        o2.frequency.value = 1320; o2.type = 'sine';
-        g2.gain.setValueAtTime(0.07, t + 0.06);
-        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-        o2.start(t + 0.06); o2.stop(t + 0.16);
-      } catch(e) {}
+    this._schedule(ctx => {
+      const t = ctx.currentTime;
+      const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+      o1.connect(g1); g1.connect(ctx.destination);
+      o1.frequency.value = 880; o1.type = 'sine';
+      g1.gain.setValueAtTime(0.08, t);
+      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+      o1.start(t); o1.stop(t + 0.07);
+      const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.frequency.value = 1320; o2.type = 'sine';
+      g2.gain.setValueAtTime(0.07, t + 0.06);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      o2.start(t + 0.06); o2.stop(t + 0.16);
     });
   },
 };
@@ -1417,10 +1433,11 @@ function unlockAudioFromGesture() {
   Sound.unlock();
 }
 
-document.addEventListener('touchstart', unlockAudioFromGesture, { once: true, passive: true });
-document.addEventListener('pointerdown', unlockAudioFromGesture, { once: true, passive: true });
-document.addEventListener('click', unlockAudioFromGesture, { once: true });
-document.addEventListener('keydown', unlockAudioFromGesture, { once: true });
+document.addEventListener('touchstart', unlockAudioFromGesture, { passive: true });
+document.addEventListener('touchend',   unlockAudioFromGesture, { passive: true });
+document.addEventListener('pointerdown', unlockAudioFromGesture, { passive: true });
+document.addEventListener('click', unlockAudioFromGesture);
+document.addEventListener('keydown', unlockAudioFromGesture);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
 
 (function() {
