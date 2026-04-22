@@ -89,6 +89,9 @@
       transition: background 0.1s, color 0.1s;
     }
     .choice-btn:hover:not(:disabled) { background: #fff; color: #000; }
+    .choice-btn.selected:not(:disabled), .choice-btn:focus-visible:not(:disabled) {
+      background: #fff; color: #000; outline: 2px solid #fff; outline-offset: 2px;
+    }
     .choice-btn.correct { background: #fff; color: #000; border-color: #fff; }
     .choice-btn.wrong   { background: #111; border-color: #555; color: #555; }
     .choice-btn.eliminated { opacity: 0.2; cursor: not-allowed; text-decoration: line-through; }
@@ -251,6 +254,32 @@
       text-transform: uppercase;
       margin-bottom: 16px;
     }
+
+    /* ── Audio gate modal ── */
+    #audio-gate {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.94);
+      align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    #audio-gate.active { display: flex; }
+    #audio-gate .ag-box {
+      background: #000; border: 3px solid #fff;
+      padding: 26px 22px 24px;
+      max-width: 360px; width: 100%;
+      text-align: center;
+    }
+    #audio-gate h2 {
+      font-size: clamp(0.8rem, 4.4vw, 1.05rem);
+      color: #fff; letter-spacing: 3px;
+      margin-bottom: 14px; text-transform: uppercase;
+    }
+    #audio-gate p {
+      color: #bbb; font-size: 0.58rem;
+      line-height: 2; margin-bottom: 16px;
+    }
+    #audio-gate .big-btn { margin-top: 6px; width: 100%; }
+    #audio-gate .ghost-btn { margin-top: 10px; width: 100%; }
   </style>
 </head>
 <body>
@@ -350,6 +379,16 @@
     <div></div>
   </div>
   <div id="action-btn">TALK</div>
+</div>
+
+<!-- AUDIO GATE MODAL (iPhone Safari requires an explicit gesture) -->
+<div id="audio-gate" aria-hidden="true" role="dialog" aria-labelledby="audio-gate-title">
+  <div class="ag-box">
+    <h2 id="audio-gate-title">Enable Sound?</h2>
+    <p>Tap ENABLE SOUND to turn on game audio.<br/>Or continue without sound.</p>
+    <button class="big-btn" id="audio-enable-btn" type="button">Enable Sound ▶</button>
+    <button class="ghost-btn" id="audio-mute-btn" type="button">Play Muted</button>
+  </div>
 </div>
 
 <script>
@@ -672,6 +711,8 @@ let dialogueOpen = false;
 let pendingLock = null;
 let pendingNPC = null;
 let npcDialogueIdx = 0;
+let selectedChoiceIdx = -1;
+let pendingStartName = '';
 let attemptCounts = {}; // lockKey -> attempt count
 let scoreSubmitWarned = false;
 
@@ -996,6 +1037,184 @@ const dlgSpeaker = document.getElementById('dlg-speaker');
 const dlgText    = document.getElementById('dlg-text');
 const dlgChoices = document.getElementById('dlg-choices');
 const continueBtn= document.getElementById('continue-btn');
+const soundBtn   = document.getElementById('sound-btn');
+const startBtn   = document.getElementById('start-btn');
+const nameInput  = document.getElementById('name-input');
+const audioGate  = document.getElementById('audio-gate');
+const audioEnableBtn = document.getElementById('audio-enable-btn');
+const audioMuteBtn   = document.getElementById('audio-mute-btn');
+
+function getChoiceButtons() {
+  return Array.from(dlgChoices.querySelectorAll('.choice-btn'));
+}
+
+function syncDialogueSelection() {
+  const btns = getChoiceButtons();
+  btns.forEach((btn, idx) => {
+    const selected = idx === selectedChoiceIdx && !btn.disabled;
+    btn.classList.toggle('selected', selected);
+    if (selected) btn.focus({ preventScroll: true });
+  });
+  if (!btns.length && continueBtn.style.display !== 'none') {
+    continueBtn.focus({ preventScroll: true });
+  }
+}
+
+function setDialogueSelection(idx) {
+  const btns = getChoiceButtons();
+  if (!btns.length) {
+    selectedChoiceIdx = -1;
+    syncDialogueSelection();
+    return;
+  }
+  const enabled = btns.map((btn, i) => btn.disabled ? -1 : i).filter(i => i >= 0);
+  if (!enabled.length) {
+    selectedChoiceIdx = -1;
+    syncDialogueSelection();
+    return;
+  }
+  if (!Number.isInteger(idx) || idx < 0 || idx >= btns.length || btns[idx].disabled) {
+    selectedChoiceIdx = enabled[0];
+  } else {
+    selectedChoiceIdx = idx;
+  }
+  syncDialogueSelection();
+}
+
+function moveDialogueSelection(delta) {
+  const btns = getChoiceButtons();
+  const enabled = btns.map((btn, i) => btn.disabled ? -1 : i).filter(i => i >= 0);
+  if (!enabled.length) return;
+  const currentPos = enabled.indexOf(selectedChoiceIdx);
+  const startPos = currentPos >= 0 ? currentPos : 0;
+  const nextPos = (startPos + delta + enabled.length) % enabled.length;
+  selectedChoiceIdx = enabled[nextPos];
+  syncDialogueSelection();
+}
+
+function activateDialogueSelection() {
+  const btns = getChoiceButtons();
+  if (btns.length && selectedChoiceIdx >= 0 && btns[selectedChoiceIdx] && !btns[selectedChoiceIdx].disabled) {
+    btns[selectedChoiceIdx].click();
+    return true;
+  }
+  if (continueBtn.style.display !== 'none') {
+    continueBtn.click();
+    return true;
+  }
+  return false;
+}
+
+function handleDialogueKeydown(e) {
+  if (!dialogueOpen) return false;
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+    moveDialogueSelection(-1);
+    return true;
+  }
+  if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+    moveDialogueSelection(1);
+    return true;
+  }
+  if (e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4') {
+    const idx = Number(e.key) - 1;
+    const btns = getChoiceButtons();
+    if (btns[idx] && !btns[idx].disabled) {
+      setDialogueSelection(idx);
+      btns[idx].click();
+      return true;
+    }
+  }
+  if (e.key === 'a' || e.key === 'A' || e.key === 'b' || e.key === 'B' || e.key === 'c' || e.key === 'C' || e.key === 'd' || e.key === 'D') {
+    const idx = e.key.toLowerCase().charCodeAt(0) - 97;
+    const btns = getChoiceButtons();
+    if (btns[idx] && !btns[idx].disabled) {
+      setDialogueSelection(idx);
+      btns[idx].click();
+      return true;
+    }
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    return activateDialogueSelection();
+  }
+  if (e.key === 'Escape' && continueBtn.style.display !== 'none') {
+    continueBtn.click();
+    return true;
+  }
+  return false;
+}
+
+function isLikelyIOS() {
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function shouldRequireAudioGate() {
+  return Sound.enabled && isLikelyIOS() && !Sound.ready;
+}
+
+function syncSoundButton() {
+  soundBtn.textContent = Sound.enabled ? 'SFX ON' : 'SFX OFF';
+  soundBtn.style.color = Sound.enabled ? '' : '#555';
+}
+
+function openAudioGate() {
+  audioGate.classList.add('active');
+  audioGate.setAttribute('aria-hidden', 'false');
+  audioEnableBtn.focus({ preventScroll: true });
+}
+
+function closeAudioGate() {
+  audioGate.classList.remove('active');
+  audioGate.setAttribute('aria-hidden', 'true');
+}
+
+function beginGameFromTitle(nameVal) {
+  playerName = nameVal;
+  totalXP = 0;
+  scoreSubmitWarned = false;
+  sessionStartTime = Date.now();
+  loadLevel(0);
+}
+
+function requestStartFromTitle() {
+  let nameVal = nameInput.value.trim();
+  nameVal = nameVal.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16);
+  if (!nameVal) {
+    nameInput.focus();
+    return;
+  }
+  if (shouldRequireAudioGate()) {
+    pendingStartName = nameVal;
+    openAudioGate();
+    return;
+  }
+  beginGameFromTitle(nameVal);
+}
+
+function confirmAudioAndStart() {
+  pendingStartName = pendingStartName || nameInput.value.trim() || 'Hero';
+  Sound.enabled = true;
+  syncSoundButton();
+  try { localStorage.setItem('lingoSound', 'on'); } catch(e) {}
+  Sound.unlock();
+  Sound.ready = true;
+  Sound.click();
+  closeAudioGate();
+  beginGameFromTitle(pendingStartName.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16) || 'Hero');
+  pendingStartName = '';
+}
+
+function continueMutedStart() {
+  Sound.enabled = false;
+  Sound.ready = false;
+  syncSoundButton();
+  try { localStorage.setItem('lingoSound', 'off'); } catch(e) {}
+  closeAudioGate();
+  const nextName = pendingStartName || nameInput.value.trim() || 'Hero';
+  beginGameFromTitle(nextName.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16) || 'Hero');
+  pendingStartName = '';
+}
 
 function openNPCDialogue(npc) {
   pendingNPC = npc; npcDialogueIdx = 0; dialogueOpen = true;
@@ -1005,9 +1224,11 @@ function showNPCLine() {
   dlgSpeaker.textContent = pendingNPC.name.toUpperCase();
   dlgText.textContent = pendingNPC.dialogue[npcDialogueIdx];
   dlgChoices.innerHTML = '';
+  selectedChoiceIdx = -1;
   continueBtn.style.display = 'block';
   continueBtn.textContent = npcDialogueIdx < pendingNPC.dialogue.length-1 ? 'Next ▶' : 'Close X';
   dlgEl.style.display = 'block';
+  syncDialogueSelection();
 }
 
 continueBtn.addEventListener('click', () => {
@@ -1038,6 +1259,7 @@ function renderChallenge(ch, lockKey) {
 
   continueBtn.style.display = 'none';
   dlgChoices.innerHTML = '';
+  selectedChoiceIdx = -1;
 
   const wrongIndices = ch.choices.map((_,i) => i).filter(i => i !== ch.answer);
   let eliminated = [];
@@ -1047,6 +1269,7 @@ function renderChallenge(ch, lockKey) {
   ch.choices.forEach((c, i) => {
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
+    btn.type = 'button';
     if (eliminated.includes(i)) {
       btn.className += ' eliminated';
       btn.disabled = true;
@@ -1057,12 +1280,15 @@ function renderChallenge(ch, lockKey) {
   });
 
   dlgEl.style.display = 'block';
+  setDialogueSelection(0);
 }
 
 function handleAnswer(idx, ch, lockKey) {
   Sound.select();
+  selectedChoiceIdx = -1;
   const btns = dlgChoices.querySelectorAll('.choice-btn');
   btns.forEach(b => b.disabled = true);
+  syncDialogueSelection();
   totalAttempts++;
 
   if (idx === ch.answer) {
@@ -1085,6 +1311,7 @@ function handleAnswer(idx, ch, lockKey) {
     continueBtn.textContent = 'Continue ▶';
     dlgChoices.innerHTML = '';
     pendingLock = null; pendingNPC = null;
+    syncDialogueSelection();
 
   } else {
     attemptCounts[lockKey] = (attemptCounts[lockKey] || 0) + 1;
@@ -1112,6 +1339,7 @@ function closeDialogue() {
   dlgEl.style.display = 'none';
   dialogueOpen = false;
   pendingLock = null; pendingNPC = null;
+  selectedChoiceIdx = -1;
 }
 
 // ============================================================
@@ -1188,9 +1416,20 @@ function tryMove(dc, dr) {
 //  INPUT
 // ============================================================
 document.addEventListener('keydown', e => {
+  if (audioGate.classList.contains('active')) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      continueMutedStart();
+    }
+    return;
+  }
+  if (handleDialogueKeydown(e)) {
+    e.preventDefault();
+    return;
+  }
   keys[e.key] = true;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
-  if (e.key===' '||e.key==='Enter') interact();
+  if (!dialogueOpen && (e.key===' '||e.key==='Enter')) interact();
 });
 document.addEventListener('keyup', e => { keys[e.key]=false; });
 
@@ -1296,6 +1535,7 @@ const Sound = {
   enabled: (() => { try { return localStorage.getItem('lingoSound') !== 'off'; } catch(e) { return true; } })(),
   ctx: null,
   unlocked: false,
+  ready: false,
   _pending: [],
   _stepEnd: 0,
   init() {
@@ -1429,6 +1669,8 @@ const Sound = {
   },
 };
 
+if (!Sound.enabled || !isLikelyIOS()) Sound.ready = true;
+
 function unlockAudioFromGesture() {
   Sound.unlock();
 }
@@ -1440,44 +1682,52 @@ document.addEventListener('click', unlockAudioFromGesture);
 document.addEventListener('keydown', unlockAudioFromGesture);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
 
-(function() {
-  const btn = document.getElementById('sound-btn');
-  function syncBtn() {
-    btn.textContent = Sound.enabled ? 'SFX ON' : 'SFX OFF';
-    btn.style.color = Sound.enabled ? '' : '#555';
+syncSoundButton();
+soundBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
+soundBtn.addEventListener('click', () => {
+  Sound.unlock();
+  Sound.enabled = !Sound.enabled;
+  if (!Sound.enabled) {
+    Sound.ready = false;
+    closeAudioGate();
   }
-  syncBtn();
-  btn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
-  btn.addEventListener('click', () => {
+  try { localStorage.setItem('lingoSound', Sound.enabled ? 'on' : 'off'); } catch(e) {}
+  syncSoundButton();
+  if (Sound.enabled) {
+    if (!isLikelyIOS()) Sound.ready = true;
     Sound.unlock();
-    Sound.enabled = !Sound.enabled;
-    try { localStorage.setItem('lingoSound', Sound.enabled ? 'on' : 'off'); } catch(e) {}
-    syncBtn();
-    if (Sound.enabled) { Sound.unlock(); Sound.click(); }
-  });
-})();
+    Sound.click();
+  }
+});
 
 // ============================================================
 //  START BUTTON
 // ============================================================
-const startBtn = document.getElementById('start-btn');
 startBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
 startBtn.addEventListener('click', () => {
   Sound.unlock();
   Sound.click();
-  let nameVal = document.getElementById('name-input').value.trim();
-  nameVal = nameVal.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16);
-  if (!nameVal) { document.getElementById('name-input').focus(); return; }
-  playerName = nameVal;
-  totalXP = 0;
-  scoreSubmitWarned = false;
-  sessionStartTime = Date.now();
-  loadLevel(0);
+  requestStartFromTitle();
 });
 
-document.getElementById('name-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('start-btn').click();
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') startBtn.click();
 });
+
+audioEnableBtn.addEventListener('touchstart', e => {
+  e.preventDefault();
+  confirmAudioAndStart();
+}, { passive: false });
+audioEnableBtn.addEventListener('click', () => {
+  confirmAudioAndStart();
+});
+audioMuteBtn.addEventListener('click', () => {
+  continueMutedStart();
+});
+audioMuteBtn.addEventListener('touchstart', e => {
+  e.preventDefault();
+  continueMutedStart();
+}, { passive: false });
 
 // ============================================================
 //  INIT
