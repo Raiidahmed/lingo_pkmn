@@ -414,7 +414,7 @@
       <div class="lb-header">
         <span style="flex:1">HALL OF FAME</span>
       </div>
-      <div id="lb-list">
+      <div class="leaderboard" id="lb-list" style="margin:0;">
         <div class="lb-header" style="background:transparent; color:#555; font-size:0.5rem; justify-content:center;">Loading scores...</div>
       </div>
     </div>
@@ -438,6 +438,14 @@
       <p class="subtle-note">Pick where to begin, or continue from where you left off.</p>
       <div style="margin-top:6px;">
         <select id="level-selector" style="width:100%; background:#111; color:#fff; border:1px solid #555; padding:10px 12px; border-radius:10px;"></select>
+      </div>
+      <div id="resume-toggle" style="margin-top:10px; display:none;">
+        <p class="subtle-note" style="margin-bottom:6px;">You have a saved position in this dungeon.</p>
+        <div style="display:flex; gap:0; border:2px solid #fff;">
+          <button type="button" id="resume-mode-resume" style="flex:1; padding:10px 8px; background:#fff; color:#000; border:none; font-family:'Press Start 2P',monospace; font-size:0.5rem; letter-spacing:1px; cursor:pointer;">RESUME</button>
+          <button type="button" id="resume-mode-restart" style="flex:1; padding:10px 8px; background:#000; color:#fff; border:none; border-left:2px solid #fff; font-family:'Press Start 2P',monospace; font-size:0.5rem; letter-spacing:1px; cursor:pointer;">RESTART</button>
+        </div>
+        <p class="subtle-note" id="resume-mode-note" style="margin-top:6px; font-size:0.45rem;">Resume: continue where you quit. Restart: reset the selected level.</p>
       </div>
     </div>
     <div class="status-panel">
@@ -4698,6 +4706,17 @@ function currentStatusPayload(reason = 'manual') {
 }
 
 function currentSnapshotPayload() {
+  // Preserve mid-level state so a quit can resume exactly where the player left off.
+  const playerCopy = (player && typeof player === 'object')
+    ? { col: player.col, row: player.row, dir: Number.isInteger(player.dir) ? player.dir : 0 }
+    : { col: 7, row: 10, dir: 0 };
+  const safeMapState = Array.isArray(mapState) ? mapState.map(r => Array.isArray(r) ? r.slice() : []) : [];
+  const safeLocksState = {};
+  try {
+    Object.entries(locksState || {}).forEach(([k, v]) => {
+      if (v && typeof v === 'object') safeLocksState[k] = { ...v };
+    });
+  } catch (e) {}
   return {
     playerName,
     currentLevelIdx,
@@ -4705,7 +4724,14 @@ function currentSnapshotPayload() {
     xp,
     challengesPassed,
     totalAttempts,
-    player,
+    player: playerCopy,
+    mapState: safeMapState,
+    locksState: safeLocksState,
+    attemptCounts: { ...(attemptCounts || {}) },
+    missedChallengeQueue: Array.isArray(missedChallengeQueue) ? missedChallengeQueue.slice() : [],
+    missedChallengeCursor: Number.isInteger(missedChallengeCursor) ? missedChallengeCursor : 0,
+    lockChallengeOverrides: { ...(lockChallengeOverrides || {}) },
+    levelElapsedMs: Math.max(0, Date.now() - (levelStartTime || Date.now())),
     levelName: LEVELS[currentLevelIdx] ? LEVELS[currentLevelIdx].name : 'The Entrance Hall',
     savedAt: new Date().toISOString(),
   };
@@ -4789,6 +4815,16 @@ function populateLevelSelector() {
     if (i === currentIdx) opt.selected = true;
     sel.appendChild(opt);
   }
+
+  // Show resume/restart toggle only if there's a resumable mid-level snapshot.
+  const toggle = document.getElementById('resume-toggle');
+  if (toggle) {
+    const resumable = !!(snap && snap.mapState && snap.locksState && snap.player);
+    toggle.style.display = resumable ? 'block' : 'none';
+    if (typeof setResumeMode === 'function') {
+      setResumeMode(resumable ? 'resume' : 'restart');
+    }
+  }
 }
 
 function restoreSavedRun() {
@@ -4804,7 +4840,52 @@ function restoreSavedRun() {
   playerName = snapshot.playerName || (accountSession.profile && accountSession.profile.name) || playerName;
   totalXP = Number.isFinite(Number(snapshot.totalXP)) ? Math.max(0, Math.floor(Number(snapshot.totalXP))) : 0;
   sessionStartTime = Date.now();
-  loadLevel(Number.isInteger(snapshot.currentLevelIdx) ? snapshot.currentLevelIdx : 0);
+  const idx = Number.isInteger(snapshot.currentLevelIdx) ? snapshot.currentLevelIdx : 0;
+
+  // If the snapshot has enough mid-level state, rehydrate instead of a fresh loadLevel.
+  if (snapshot.mapState && snapshot.locksState && snapshot.player && LEVELS[idx]) {
+    loadLevel(idx);
+    applyMidLevelSnapshot(snapshot);
+    return;
+  }
+  loadLevel(idx);
+}
+
+function applyMidLevelSnapshot(snapshot) {
+  try {
+    if (Array.isArray(snapshot.mapState) && snapshot.mapState.length) {
+      mapState = snapshot.mapState.map(r => Array.isArray(r) ? r.slice() : []);
+    }
+    if (snapshot.locksState && typeof snapshot.locksState === 'object') {
+      const rebuilt = {};
+      Object.entries(snapshot.locksState).forEach(([k, v]) => {
+        if (v && typeof v === 'object') rebuilt[k] = { ...v };
+      });
+      // Only replace if the rebuilt set matches the level's expected lock keys; otherwise fall back.
+      if (Object.keys(rebuilt).length) locksState = rebuilt;
+    }
+    if (snapshot.player && typeof snapshot.player === 'object') {
+      const c = Number(snapshot.player.col);
+      const r = Number(snapshot.player.row);
+      if (Number.isInteger(c) && Number.isInteger(r)) {
+        player = { col: c, row: r, dir: Number.isInteger(snapshot.player.dir) ? snapshot.player.dir : 0 };
+      }
+    }
+    if (Number.isFinite(Number(snapshot.xp))) xp = Math.max(0, Math.floor(Number(snapshot.xp)));
+    if (Number.isFinite(Number(snapshot.challengesPassed))) challengesPassed = Math.max(0, Math.floor(Number(snapshot.challengesPassed)));
+    if (Number.isFinite(Number(snapshot.totalAttempts))) totalAttempts = Math.max(0, Math.floor(Number(snapshot.totalAttempts)));
+    if (snapshot.attemptCounts && typeof snapshot.attemptCounts === 'object') attemptCounts = { ...snapshot.attemptCounts };
+    if (Array.isArray(snapshot.missedChallengeQueue)) missedChallengeQueue = snapshot.missedChallengeQueue.slice();
+    if (Number.isInteger(snapshot.missedChallengeCursor)) missedChallengeCursor = snapshot.missedChallengeCursor;
+    if (snapshot.lockChallengeOverrides && typeof snapshot.lockChallengeOverrides === 'object') lockChallengeOverrides = { ...snapshot.lockChallengeOverrides };
+    // Rewind level clock by the elapsed time so level timer remains accurate.
+    const elapsed = Math.max(0, Number(snapshot.levelElapsedMs) || 0);
+    levelStartTime = Date.now() - elapsed;
+    document.getElementById('xp-val').textContent = String(xp);
+    render();
+  } catch (e) {
+    console.warn('applyMidLevelSnapshot failed:', e);
+  }
 }
 
 async function submitAccountAuth(intent) {
@@ -4944,7 +5025,7 @@ function renderLeaderboard(result, containerId) {
   }
 
   const frag = document.createDocumentFragment();
-  scores.slice(0, 5).forEach((s, i) => {
+  scores.forEach((s, i) => {
     const row = document.createElement('div');
     row.className = 'lb-row';
 
@@ -5819,6 +5900,39 @@ createSaveBtn.addEventListener('click', async () => {
   pendingAuthMode = 'create';
   await requestStartFromTitle('create');
 });
+let resumeMode = 'resume'; // 'resume' or 'restart'
+
+function setResumeMode(mode) {
+  resumeMode = (mode === 'restart') ? 'restart' : 'resume';
+  const resumeBtn = document.getElementById('resume-mode-resume');
+  const restartBtn = document.getElementById('resume-mode-restart');
+  if (resumeBtn && restartBtn) {
+    const active = 'background:#fff; color:#000;';
+    const inactive = 'background:#000; color:#fff;';
+    const common = 'flex:1; padding:10px 8px; border:none; font-family:"Press Start 2P",monospace; font-size:0.5rem; letter-spacing:1px; cursor:pointer;';
+    resumeBtn.style.cssText = common + (resumeMode === 'resume' ? active : inactive);
+    restartBtn.style.cssText = common + 'border-left:2px solid #fff;' + (resumeMode === 'restart' ? active : inactive);
+  }
+  const sel = document.getElementById('level-selector');
+  if (sel) sel.disabled = (resumeMode === 'resume');
+  const note = document.getElementById('resume-mode-note');
+  if (note) {
+    note.textContent = resumeMode === 'resume'
+      ? 'Resume: continue from exactly where you quit.'
+      : 'Restart: start the selected level fresh (XP kept, position reset).';
+  }
+}
+
+function hasResumableSnapshot() {
+  const snap = accountSession && accountSession.save && accountSession.save.snapshot;
+  return !!(snap && typeof snap === 'object' && snap.mapState && snap.locksState && snap.player && Number.isInteger(snap.currentLevelIdx));
+}
+
+const resumeBtnEl = document.getElementById('resume-mode-resume');
+const restartBtnEl = document.getElementById('resume-mode-restart');
+if (resumeBtnEl) resumeBtnEl.addEventListener('click', () => { Sound.click(); setResumeMode('resume'); });
+if (restartBtnEl) restartBtnEl.addEventListener('click', () => { Sound.click(); setResumeMode('restart'); });
+
 statusStartBtn.addEventListener('click', () => {
   Sound.unlock();
   Sound.click();
@@ -5830,16 +5944,24 @@ statusStartBtn.addEventListener('click', () => {
     return;
   }
 
+  const resumable = hasResumableSnapshot();
   const sel = document.getElementById('level-selector');
-  const idx = sel ? Math.max(0, Math.min(LEVELS.length - 1, Number(sel.value))) : 0;
-
   const snap = accountSession && accountSession.save && accountSession.save.snapshot && typeof accountSession.save.snapshot === 'object'
     ? accountSession.save.snapshot
     : null;
 
   playerName = pendingStartName;
-  totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
   sessionStartTime = Date.now();
+
+  if (resumable && resumeMode === 'resume') {
+    totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
+    restoreSavedRun();
+    return;
+  }
+
+  // Restart / no resumable snapshot: fresh load of selected level.
+  const idx = sel ? Math.max(0, Math.min(LEVELS.length - 1, Number(sel.value))) : 0;
+  totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
   loadLevel(idx);
 });
 statusLogoutBtn.addEventListener('click', () => {
