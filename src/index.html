@@ -290,7 +290,9 @@
       width: 100%; max-width: 320px;
       margin: 12px 0;
       border: 2px solid #fff;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      max-height: 260px;
     }
     .lb-header {
       background: #111; padding: 8px 12px;
@@ -403,7 +405,7 @@
     <h2>QUICK VOCAB WINS. DRAMATIC DOORS. BIGER WORD BAG ENERGY.</h2>
     <p>Sign in to resume your save or create a new one.<br/>Your word bank, story progress, and run state travel with you.</p>
     <input type="text" id="name-input" maxlength="24" placeholder="SAVE NAME" autocomplete="username" spellcheck="false"/>
-    <input type="password" id="password-input" maxlength="128" placeholder="PIN (DEFAULT 0000)" value="0000" autocomplete="current-password" spellcheck="false"/>
+    <input type="password" id="password-input" maxlength="128" placeholder="PIN (DEFAULT 0000)" autocomplete="current-password" spellcheck="false"/>
     <div class="auth-actions">
       <button class="big-btn" id="start-btn">Resume Save ▶</button>
       <button class="ghost-btn" id="create-save-btn" type="button">Create Save</button>
@@ -4829,7 +4831,7 @@ async function logoutAccount() {
   safeStorageSet(ACCOUNT_TOKEN_KEY, '');
   accountSession = { token: '', profile: null, save: null, wordBank: [] };
   pendingAuthMode = 'resume';
-  document.getElementById('password-input').value = '0000';
+  document.getElementById('password-input').value = '';
   setAuthMessage('Use PIN 0000 unless you want to change it later.');
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
@@ -4840,7 +4842,7 @@ async function logoutAccount() {
 // ============================================================
 async function fetchLeaderboard() {
   try {
-    const r = await fetch(API + '/scores');
+    const r = await fetch(API + '/scores?limit=200');
     if (!r.ok) throw new Error();
     const scores = await r.json();
     if (!Array.isArray(scores)) throw new Error();
