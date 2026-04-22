@@ -1463,10 +1463,32 @@ window.addEventListener('keydown', e => {
 }, true);
 window.addEventListener('keyup', e => { keys[e.key]=false; }, true);
 
+function handleTouchMenuNav(keyName) {
+  if (audioGate.classList.contains('active')) return true;
+  if (!dialogueOpen) return false;
+  if (keyName === 'ArrowUp' || keyName === 'ArrowLeft') {
+    moveDialogueSelection(-1);
+    return true;
+  }
+  if (keyName === 'ArrowDown' || keyName === 'ArrowRight') {
+    moveDialogueSelection(1);
+    return true;
+  }
+  return false;
+}
+
 function dpadBind(id, keyName) {
   const btn = document.getElementById(id);
-  const press   = e => { e.preventDefault(); Sound.unlock(); keys[keyName] = true; };
-  const release = e => { e.preventDefault(); keys[keyName] = false; };
+  const press = e => {
+    e.preventDefault();
+    Sound.unlock();
+    if (handleTouchMenuNav(keyName)) return;
+    keys[keyName] = true;
+  };
+  const release = e => {
+    e.preventDefault();
+    keys[keyName] = false;
+  };
   btn.addEventListener('touchstart',  press,   { passive: false });
   btn.addEventListener('touchend',    release, { passive: false });
   btn.addEventListener('touchcancel', release, { passive: false });
@@ -1480,17 +1502,22 @@ dpadBind('btn-left',  'ArrowLeft');
 dpadBind('btn-right', 'ArrowRight');
 
 const actionBtn = document.getElementById('action-btn');
-actionBtn.addEventListener('touchstart', e => {
-  e.preventDefault();
+function handleActionPress(e) {
+  if (e) e.preventDefault();
   Sound.unlock();
   Sound.click();
+  if (audioGate.classList.contains('active')) {
+    confirmAudioAndStart();
+    return;
+  }
+  if (dialogueOpen) {
+    activateDialogueSelection();
+    return;
+  }
   interact();
-}, { passive: false });
-actionBtn.addEventListener('click', () => {
-  Sound.unlock();
-  Sound.click();
-  interact();
-});
+}
+actionBtn.addEventListener('touchstart', handleActionPress, { passive: false });
+actionBtn.addEventListener('click', handleActionPress);
 
 // ============================================================
 //  GAME LOOP
