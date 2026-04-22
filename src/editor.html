@@ -71,6 +71,25 @@
       font-weight: bold;
     }
     #export-btn:hover { filter: brightness(1.1); }
+    #import-btn, #validate-btn, #reset-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    #import-btn:hover, #validate-btn:hover, #reset-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    #reset-btn:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
 
     /* ---- TABS ---- */
     .tab { display: none; padding: 16px; }
@@ -186,6 +205,41 @@
     .level-meta-row input {
       flex: 1;
       min-width: 0;
+    }
+    #npc-placement, #lock-summary {
+      width: 100%;
+    }
+    #npc-placement h3, #lock-summary h3 {
+      color: var(--accent);
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    #npc-select {
+      width: 100%;
+    }
+    #lock-summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .lock-summary-item {
+      background: #0d0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 8px;
+      font-size: 0.68rem;
+      line-height: 1.5;
+    }
+    .lock-summary-item strong { color: var(--accent); }
+    .lock-summary-item.bad { border-color: var(--red); color: #ffb3b3; }
+    .lock-summary-empty {
+      color: var(--muted);
+      font-size: 0.7rem;
+      line-height: 1.6;
     }
 
     /* ---- NPC / CONTENT EDITORS ---- */
@@ -349,6 +403,30 @@
       min-height: 200px;
       max-height: 40vh;
     }
+    #import-input {
+      width: 100%;
+      min-height: 240px;
+      background: #0a0a10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      color: var(--text);
+      font-size: 0.74rem;
+      line-height: 1.5;
+    }
+    #validate-output {
+      flex: 1;
+      overflow: auto;
+      background: #0a0a10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.72rem;
+      color: var(--text);
+      white-space: pre-wrap;
+      min-height: 220px;
+      line-height: 1.6;
+    }
     .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
     .modal-btns button {
       padding: 7px 16px;
@@ -382,7 +460,10 @@
   <button class="tab-btn active" data-tab="map">MAP</button>
   <button class="tab-btn" data-tab="npcs">NPCs</button>
   <button class="tab-btn" data-tab="challenges">CHALLENGES</button>
+  <button id="validate-btn">VALIDATE</button>
+  <button id="import-btn">IMPORT JSON</button>
   <button id="export-btn">EXPORT JSON</button>
+  <button id="reset-btn">RESET</button>
 </div>
 
 <!-- ===================== MAP TAB ===================== -->
@@ -416,6 +497,16 @@
           <label for="level-name-input">Name</label>
           <input id="level-name-input" type="text" value="Custom Level"/>
         </div>
+      </div>
+      <hr class="divider"/>
+      <div id="npc-placement">
+        <h3>NPC PLACE</h3>
+        <select id="npc-select"></select>
+      </div>
+      <hr class="divider"/>
+      <div id="lock-summary">
+        <h3>LOCKS</h3>
+        <div id="lock-summary-list"></div>
       </div>
       <hr class="divider"/>
       <div id="map-info">
@@ -456,6 +547,29 @@
     <div class="modal-btns">
       <button id="copy-btn">Copy to Clipboard</button>
       <button id="close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="import-modal">
+  <div id="export-box">
+    <h2>IMPORT LEVEL JSON</h2>
+    <p>Paste a single level object, an object with <code>LEVELS</code>, or a raw array of levels. The first level will be loaded into the editor.</p>
+    <textarea id="import-input" spellcheck="false"></textarea>
+    <div class="modal-btns">
+      <button id="import-apply-btn">Import</button>
+      <button id="import-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="validate-modal">
+  <div id="export-box">
+    <h2>VALIDATION REPORT</h2>
+    <p>Checks the current level for missing challenge links, out-of-bounds entities, duplicate IDs, and required data.</p>
+    <pre id="validate-output"></pre>
+    <div class="modal-btns">
+      <button id="validate-close-btn">Close</button>
     </div>
   </div>
 </div>
@@ -528,24 +642,28 @@ const DEFAULT_CHALLENGES = [
     prompt: "The door is locked! A sign reads:\n\"Como te llamas?\" means...",
     choices: ["What time is it?", "What is your name?", "Where are you going?", "How old are you?"],
     answer: 1,
+    hint: "Think about asking someone's name...",
     reward: "Correcto! 'Como te llamas?' means 'What is your name?' The door creaks open.",
   },
   {
     prompt: "This door has a riddle:\nHow do you say 'Thank you' in Spanish?",
     choices: ["Por favor", "De nada", "Gracias", "Perdon"],
     answer: 2,
+    hint: "The Sage mentioned this word...",
     reward: "Muy bien! 'Gracias' means 'Thank you.' The door swings open!",
   },
   {
     prompt: "The final door glows with magic runes:\nWhat does 'Buenos dias' mean?",
     choices: ["Good night", "Good afternoon", "Goodbye", "Good morning"],
     answer: 3,
+    hint: "'Dias' relates to the word 'day'...",
     reward: "Excelente! 'Buenos dias' means 'Good morning.' You may pass!",
   },
   {
     prompt: "A locked chest! It whispers:\n\"Translate: The cat is small.\"\nChoose the correct Spanish:",
     choices: ["El perro es grande.", "El gato es pequeno.", "La casa es bonita.", "El libro es nuevo."],
     answer: 1,
+    hint: "'Gato' means cat, 'pequeno' means small...",
     reward: "Perfecto! 'El gato es pequeno' -- The cat is small. The chest opens!",
   },
 ];
@@ -568,6 +686,19 @@ let npcsData     = load('ld_npcs',       JSON.parse(JSON.stringify(DEFAULT_NPCS)
 let challengeData= load('ld_challenges', JSON.parse(JSON.stringify(DEFAULT_CHALLENGES)));
 let playerStart  = load('ld_player',     { col: 7, row: 10 });
 let levelMeta    = load('ld_level_meta', DEFAULT_LEVEL_META);
+
+function normalizeChallenge(ch, idx = 0) {
+  const sourceChoices = Array.isArray(ch?.choices) ? ch.choices.slice(0, 4) : [];
+  while (sourceChoices.length < 4) sourceChoices.push(`Choice ${sourceChoices.length + 1}`);
+  const parsedAnswer = Number.parseInt(ch?.answer, 10);
+  return {
+    prompt: typeof ch?.prompt === 'string' ? ch.prompt : `Challenge ${idx + 1}`,
+    choices: sourceChoices.map(choice => typeof choice === 'string' ? choice : String(choice ?? '')),
+    answer: Number.isFinite(parsedAnswer) && parsedAnswer >= 0 && parsedAnswer < 4 ? parsedAnswer : 0,
+    hint: typeof ch?.hint === 'string' ? ch.hint : '',
+    reward: typeof ch?.reward === 'string' ? ch.reward : 'Correct! You may pass.'
+  };
+}
 
 function saveAll() {
   save('ld_map',        mapData);
@@ -622,6 +753,8 @@ levelNameInput.addEventListener('input', () => {
   saveAll();
 });
 
+challengeData = challengeData.map((ch, idx) => normalizeChallenge(ch, idx));
+
 // Build palette
 const palette = document.getElementById('tile-palette');
 TILE_TYPES.forEach(t => {
@@ -654,13 +787,15 @@ document.getElementById('tool-player').addEventListener('click', () => setTool('
 document.getElementById('map-fill-walls').addEventListener('click', () => {
   for (let c = 0; c < MAP_W; c++) { mapData[0][c] = 1; mapData[MAP_H-1][c] = 1; }
   for (let r = 0; r < MAP_H; r++) { mapData[r][0] = 1; mapData[r][MAP_W-1] = 1; }
+  sanitizeLockAssignments();
   saveAll(); renderMapCanvas();
 });
 document.getElementById('map-clear').addEventListener('click', () => {
   if (!confirm('Clear the entire map to floors?')) return;
   mapData = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(0));
   locksData = {};
-  saveAll(); renderMapCanvas();
+  sanitizeLockAssignments();
+  saveAll(); renderMapCanvas(); renderChallenges();
 });
 
 function cellFromEvent(e) {
@@ -676,7 +811,6 @@ function applyTool(col, row) {
   if (col < 0 || row < 0 || col >= MAP_W || row >= MAP_H) return;
   if (activeTool === 'paint') {
     mapData[row][col] = activeTile;
-    // If placing a door or chest, register a lock entry
     if (activeTile === 2 || activeTile === 4) {
       const key = `${col},${row}`;
       if (!locksData[key]) {
@@ -684,19 +818,18 @@ function applyTool(col, row) {
         locksData[key] = { type, challengeId: 0 };
       }
     } else {
-      // Remove lock if tile changed away from door/chest
       const key = `${col},${row}`;
       if (locksData[key]) delete locksData[key];
     }
-    saveAll(); renderMapCanvas();
+    sanitizeLockAssignments();
+    saveAll(); renderMapCanvas(); renderChallenges();
   } else if (activeTool === 'npc') {
-    // Cycle NPC placement - pick from existing NPCs
-    const name = prompt('NPC id to place here (existing ids: ' + npcsData.map(n=>n.id).join(', ') + ')');
-    if (!name) return;
-    const npc = npcsData.find(n => n.id === name);
-    if (!npc) { alert('NPC not found'); return; }
+    const npcSelect = document.getElementById('npc-select');
+    const selectedIdx = Number.parseInt(npcSelect.value, 10);
+    const npc = npcsData[selectedIdx];
+    if (!npc) { alert('Pick an NPC from the map tools panel first.'); return; }
     npc.col = col; npc.row = row;
-    saveAll(); renderMapCanvas();
+    saveAll(); renderNPCs(); renderMapCanvas();
   } else if (activeTool === 'player') {
     playerStart = { col, row };
     saveAll(); renderMapCanvas();
@@ -727,6 +860,136 @@ canvas.addEventListener('touchmove', e => {
   if (isPainting) applyTool(...Object.values(cellFromEvent(t)));
 }, { passive: false });
 canvas.addEventListener('touchend', () => isPainting = false);
+
+function syncNpcSelect() {
+  const select = document.getElementById('npc-select');
+  const previous = select.value;
+  select.innerHTML = npcsData.length
+    ? npcsData.map((npc, idx) => `<option value="${idx}">${npc.id} (${npc.name})</option>`).join('')
+    : '<option value="">No NPCs available</option>';
+  if (!npcsData.length) {
+    select.value = '';
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  if ([...select.options].some(option => option.value === previous)) select.value = previous;
+}
+
+function sanitizeLockAssignments() {
+  const maxIdx = Math.max(challengeData.length - 1, 0);
+  Object.entries(locksData).forEach(([key, lock]) => {
+    const [col, row] = key.split(',').map(Number);
+    const tile = mapData[row]?.[col];
+    if (!Number.isFinite(col) || !Number.isFinite(row) || (tile !== 2 && tile !== 4)) {
+      delete locksData[key];
+      return;
+    }
+    lock.type = tile === 2 ? 'door' : 'chest';
+    const parsed = Number.parseInt(lock.challengeId, 10);
+    lock.challengeId = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), maxIdx) : 0;
+  });
+}
+
+function getValidationIssues() {
+  const issues = [];
+  const npcIds = new Set();
+  const stairs = [];
+  npcsData.forEach((npc, idx) => {
+    if (!npc.id || !npc.id.trim()) issues.push(`NPC #${idx + 1} is missing an id.`);
+    const normalizedId = (npc.id || '').trim().toLowerCase();
+    if (normalizedId) {
+      if (npcIds.has(normalizedId)) issues.push(`NPC id "${npc.id}" is duplicated.`);
+      npcIds.add(normalizedId);
+    }
+    if (!Number.isInteger(npc.col) || !Number.isInteger(npc.row) || npc.col < 0 || npc.row < 0 || npc.col >= MAP_W || npc.row >= MAP_H) {
+      issues.push(`NPC "${npc.id || idx + 1}" is out of bounds.`);
+    }
+    if (mapData[npc.row]?.[npc.col] === 1) issues.push(`NPC "${npc.id || idx + 1}" is inside a wall.`);
+  });
+  challengeData.forEach((ch, idx) => {
+    if (!ch.prompt.trim()) issues.push(`Challenge #${idx + 1} is missing a prompt.`);
+    if (!Array.isArray(ch.choices) || ch.choices.length !== 4) issues.push(`Challenge #${idx + 1} must have exactly 4 choices.`);
+    if (!Number.isInteger(ch.answer) || ch.answer < 0 || ch.answer > 3) issues.push(`Challenge #${idx + 1} has an invalid correct-answer index.`);
+    if (!ch.reward.trim()) issues.push(`Challenge #${idx + 1} is missing reward text.`);
+  });
+  Object.entries(locksData).forEach(([key, lock]) => {
+    const [col, row] = key.split(',').map(Number);
+    const tile = mapData[row]?.[col];
+    if (tile !== 2 && tile !== 4) issues.push(`Lock ${key} has no matching door/chest tile.`);
+    if (!challengeData[lock.challengeId]) issues.push(`Lock ${key} points to missing challenge #${lock.challengeId}.`);
+  });
+  for (let row = 0; row < MAP_H; row++) {
+    for (let col = 0; col < MAP_W; col++) {
+      if (mapData[row][col] === 6) stairs.push(`${col},${row}`);
+    }
+  }
+  if (stairs.length === 0) issues.push('Level has no stairs tile.');
+  if (stairs.length > 1) issues.push(`Level has multiple stairs tiles: ${stairs.join(', ')}.`);
+  if (!Number.isInteger(playerStart.col) || !Number.isInteger(playerStart.row) || playerStart.col < 0 || playerStart.row < 0 || playerStart.col >= MAP_W || playerStart.row >= MAP_H) {
+    issues.push('Player start is out of bounds.');
+  }
+  if (mapData[playerStart.row]?.[playerStart.col] === 1) issues.push('Player start is inside a wall.');
+  return issues;
+}
+
+function renderLockSummary() {
+  const list = document.getElementById('lock-summary-list');
+  const entries = Object.entries(locksData).sort((a, b) => {
+    const [ac, ar] = a[0].split(',').map(Number);
+    const [bc, br] = b[0].split(',').map(Number);
+    return ar - br || ac - bc;
+  });
+  if (!entries.length) {
+    list.innerHTML = '<div class="lock-summary-empty">No locked doors or chests yet.</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([key, lock]) => {
+    const challenge = challengeData[lock.challengeId];
+    const bad = !challenge;
+    const label = challenge ? `Challenge #${lock.challengeId + 1}` : `Missing challenge #${lock.challengeId}`;
+    return `<div class="lock-summary-item${bad ? ' bad' : ''}"><strong>${lock.type.toUpperCase()}</strong> at ${key}<br/>${label}</div>`;
+  }).join('');
+}
+
+function applyImportedLevel(level) {
+  mapData = Array.isArray(level.map) ? level.map.map(row => Array.isArray(row) ? row.map(v => Number.parseInt(v, 10) || 0) : Array(MAP_W).fill(0)) : DEFAULT_MAP.map(r => [...r]);
+  mapData = mapData.slice(0, MAP_H);
+  while (mapData.length < MAP_H) mapData.push(Array(MAP_W).fill(0));
+  mapData = mapData.map(row => {
+    const next = row.slice(0, MAP_W);
+    while (next.length < MAP_W) next.push(0);
+    return next;
+  });
+  locksData = JSON.parse(JSON.stringify(level.locks || {}));
+  npcsData = Array.isArray(level.npcs) ? level.npcs.map((npc, idx) => ({
+    id: typeof npc?.id === 'string' ? npc.id : `npc${idx + 1}`,
+    col: Number.isFinite(Number(npc?.col)) ? Math.trunc(Number(npc.col)) : 0,
+    row: Number.isFinite(Number(npc?.row)) ? Math.trunc(Number(npc.row)) : 0,
+    color: typeof npc?.color === 'string' ? npc.color : '#aaaaff',
+    label: typeof npc?.label === 'string' ? npc.label.slice(0, 2) : 'N',
+    name: typeof npc?.name === 'string' ? npc.name : `NPC ${idx + 1}`,
+    dialogue: Array.isArray(npc?.dialogue) && npc.dialogue.length ? npc.dialogue.map(line => String(line)) : ['Hello, adventurer!']
+  })) : [];
+  challengeData = Array.isArray(level.challenges) ? level.challenges.map((ch, idx) => normalizeChallenge(ch, idx)) : [];
+  if (!challengeData.length) challengeData = JSON.parse(JSON.stringify(DEFAULT_CHALLENGES)).map((ch, idx) => normalizeChallenge(ch, idx));
+  playerStart = {
+    col: Number.isFinite(Number(level.playerStart?.col)) ? Math.trunc(Number(level.playerStart.col)) : 7,
+    row: Number.isFinite(Number(level.playerStart?.row)) ? Math.trunc(Number(level.playerStart.row)) : 10
+  };
+  levelMeta = {
+    id: Number.isFinite(Number(level.id)) ? Math.trunc(Number(level.id)) : 0,
+    name: typeof level.name === 'string' && level.name.trim() ? level.name : DEFAULT_LEVEL_META.name
+  };
+  levelIdInput.value = levelMeta.id;
+  levelNameInput.value = levelMeta.name;
+  sanitizeLockAssignments();
+  saveAll();
+  syncNpcSelect();
+  renderNPCs();
+  renderChallenges();
+  renderMapCanvas();
+}
 
 function renderMapCanvas() {
   canvas.width  = MAP_W * TILE_SIZE;
@@ -872,7 +1135,7 @@ function renderNPCs() {
     btn.addEventListener('click', () => {
       if (!confirm('Delete this NPC?')) return;
       npcsData.splice(+btn.dataset.idx, 1);
-      saveAll(); renderNPCs();
+      saveAll(); syncNpcSelect(); renderNPCs(); renderMapCanvas();
     });
   });
 }
@@ -883,7 +1146,7 @@ document.getElementById('add-npc-btn').addEventListener('click', () => {
     label: 'N', name: 'New NPC',
     dialogue: ['Hello, adventurer!']
   });
-  saveAll(); renderNPCs();
+  saveAll(); syncNpcSelect(); renderNPCs(); renderMapCanvas();
 });
 
 // ============================================================
@@ -921,6 +1184,10 @@ function renderChallenges() {
       <div style="color:var(--muted);font-size:0.7rem;margin:8px 0 4px;">CHOICES &nbsp;<span style="color:var(--green);">(select radio = correct answer)</span></div>
       <div class="choices-grid" id="choices-${idx}">
         ${choicesHtml}
+      </div>
+      <div class="field-row" style="margin-top:10px;">
+        <label>Hint</label>
+        <textarea data-ch="${idx}" data-field="hint">${ch.hint || ''}</textarea>
       </div>
       <div class="field-row" style="margin-top:10px;">
         <label>Reward</label>
@@ -962,22 +1229,28 @@ function renderChallenges() {
   list.querySelectorAll('select[data-ch]').forEach(sel => {
     sel.addEventListener('change', () => {
       const chIdx = +sel.dataset.ch;
-      // Remove this challenge from any lock that previously had it
-      Object.values(locksData).forEach(lock => {
-        if (lock.challengeId === chIdx) lock.challengeId = 0;
+      Object.entries(locksData).forEach(([key, lock]) => {
+        if (key !== sel.value && lock.challengeId === chIdx) lock.challengeId = 0;
       });
-      // Assign to selected lock
       if (sel.value && locksData[sel.value]) {
         locksData[sel.value].challengeId = chIdx;
       }
+      sanitizeLockAssignments();
       saveAll();
+      renderLockSummary();
     });
   });
   list.querySelectorAll('.card-del').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!confirm('Delete this challenge?')) return;
-      challengeData.splice(+btn.dataset.idx, 1);
-      saveAll(); renderChallenges();
+      const removedIdx = +btn.dataset.idx;
+      challengeData.splice(removedIdx, 1);
+      Object.values(locksData).forEach(lock => {
+        if (lock.challengeId === removedIdx) lock.challengeId = 0;
+        else if (lock.challengeId > removedIdx) lock.challengeId -= 1;
+      });
+      sanitizeLockAssignments();
+      saveAll(); renderChallenges(); renderMapCanvas();
     });
   });
 }
@@ -987,34 +1260,35 @@ document.getElementById('add-challenge-btn').addEventListener('click', () => {
     prompt: 'New challenge prompt...',
     choices: ['Choice A', 'Choice B', 'Choice C', 'Choice D'],
     answer: 0,
+    hint: '',
     reward: 'Correct! You may pass.'
   });
-  saveAll(); renderChallenges();
+  sanitizeLockAssignments();
+  saveAll(); renderChallenges(); renderMapCanvas();
 });
 
 // ============================================================
-//  EXPORT
+//  EXPORT / IMPORT / VALIDATE
 // ============================================================
-document.getElementById('export-btn').addEventListener('click', () => {
+function buildLevelOutput() {
   const parsedLevelId = Number.parseInt(levelIdInput.value, 10);
   const levelId = Number.isFinite(parsedLevelId) ? parsedLevelId : 0;
   const levelName = levelNameInput.value.trim() || DEFAULT_LEVEL_META.name;
   levelMeta = { id: levelId, name: levelName };
   saveAll();
-
-  const output = {
-    LEVELS: [
-      {
-        id: levelId,
-        name: levelName,
-        playerStart: playerStart,
-        map: mapData,
-        locks: locksData,
-        npcs: npcsData,
-        challenges: challengeData
-      }
-    ]
+  return {
+    id: levelId,
+    name: levelName,
+    playerStart,
+    map: mapData,
+    locks: locksData,
+    npcs: npcsData,
+    challenges: challengeData.map((ch, idx) => normalizeChallenge(ch, idx))
   };
+}
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const output = { LEVELS: [buildLevelOutput()] };
   document.getElementById('export-output').textContent = JSON.stringify(output, null, 2);
   document.getElementById('export-modal').classList.add('open');
 });
@@ -1031,12 +1305,71 @@ document.getElementById('close-modal-btn').addEventListener('click', () => {
   document.getElementById('export-modal').classList.remove('open');
 });
 
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-input').value = '';
+  document.getElementById('import-modal').classList.add('open');
+});
+
+document.getElementById('import-close-btn').addEventListener('click', () => {
+  document.getElementById('import-modal').classList.remove('open');
+});
+
+document.getElementById('import-apply-btn').addEventListener('click', () => {
+  const raw = document.getElementById('import-input').value.trim();
+  if (!raw) {
+    alert('Paste level JSON first.');
+    return;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    let level = null;
+    if (Array.isArray(parsed)) level = parsed[0];
+    else if (parsed && Array.isArray(parsed.LEVELS)) level = parsed.LEVELS[0];
+    else level = parsed;
+    if (!level || typeof level !== 'object') throw new Error('No level object found.');
+    applyImportedLevel(level);
+    document.getElementById('import-modal').classList.remove('open');
+  } catch (err) {
+    alert('Import failed: ' + err.message);
+  }
+});
+
+document.getElementById('validate-btn').addEventListener('click', () => {
+  sanitizeLockAssignments();
+  const issues = getValidationIssues();
+  document.getElementById('validate-output').textContent = issues.length
+    ? ['Issues found:', ...issues.map(issue => `- ${issue}`)].join('\n')
+    : 'No blocking issues found. The current level looks consistent.';
+  document.getElementById('validate-modal').classList.add('open');
+  renderLockSummary();
+});
+
+document.getElementById('validate-close-btn').addEventListener('click', () => {
+  document.getElementById('validate-modal').classList.remove('open');
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (!confirm('Reset the editor to the default starter level?')) return;
+  applyImportedLevel({
+    id: DEFAULT_LEVEL_META.id,
+    name: DEFAULT_LEVEL_META.name,
+    playerStart: { col: 7, row: 10 },
+    map: DEFAULT_MAP,
+    locks: DEFAULT_LOCKS,
+    npcs: DEFAULT_NPCS,
+    challenges: DEFAULT_CHALLENGES
+  });
+});
+
 // ============================================================
 //  INIT
 // ============================================================
+sanitizeLockAssignments();
+syncNpcSelect();
 renderMapCanvas();
 renderNPCs();
 renderChallenges();
+renderLockSummary();
 </script>
 </body>
 </html>
