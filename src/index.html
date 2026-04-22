@@ -437,6 +437,14 @@
       <p class="subtle-note">Your learned words should feel like a bag of useful items you can keep collecting.</p>
       <div class="wordbank-list" id="status-wordbank"></div>
     </div>
+
+    <div id="pin-change" style="display:none; width:100%; max-width:360px; margin-top:10px;">
+      <div style="color:#fff; font-weight:bold; letter-spacing:1px; margin-bottom:8px;">SET A NEW PIN (RECOMMENDED)</div>
+      <input type="password" id="new-pin-input" maxlength="128" placeholder="NEW PIN" autocomplete="new-password" spellcheck="false"/>
+      <div class="screen-actions" style="margin-top:10px; max-width:360px;">
+        <button class="big-btn" id="set-pin-btn" type="button">Update PIN ▶</button>
+      </div>
+    </div>
     <div class="screen-actions">
       <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
       <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
@@ -4339,6 +4347,7 @@ let accountSession = {
   profile: null,
   save: null,
   wordBank: [],
+  usedDefaultPin: false,
 };
 const LOCK_TARGETS_BY_LEVEL = [4, 5, 6, 7, 7, 7, 7, 7, 8, 9];
 
@@ -4701,9 +4710,19 @@ function renderStatusScreen() {
   document.getElementById('status-floor').textContent = String((status.storyProgress || snapshot.currentLevelIdx || 0) + 1);
   document.getElementById('status-resume').textContent = status.hasActiveRun ? 'Resume previous run' : 'Fresh start available';
   document.getElementById('status-subtitle').textContent = profile.name ? profile.name.toUpperCase() : 'WELCOME BACK';
-  document.getElementById('status-msg').textContent = status.hasActiveRun
+  let baseMsg = status.hasActiveRun
     ? 'Your latest run is waiting. Review your word bag, then continue.'
     : 'Your save is ready. You can start clean or dive back in after the next checkpoint.';
+
+  if (accountSession.usedDefaultPin) {
+    baseMsg += ' For security, please set a new PIN (not 0000).';
+    const pinChange = document.getElementById('pin-change');
+    if (pinChange) pinChange.style.display = 'block';
+  } else {
+    const pinChange = document.getElementById('pin-change');
+    if (pinChange) pinChange.style.display = 'none';
+  }
+  document.getElementById('status-msg').textContent = baseMsg;
 
   const list = document.getElementById('status-wordbank');
   list.textContent = '';
@@ -4749,6 +4768,7 @@ async function submitAccountAuth(intent) {
     return false;
   }
   const effectivePassword = password || '0000';
+  accountSession.usedDefaultPin = effectivePassword === '0000';
   setAuthMessage(intent === 'create' ? 'Creating save...' : 'Loading save...');
   try {
     const response = await fetch(API + '/api/account/login', {
@@ -5735,6 +5755,12 @@ statusStartBtn.addEventListener('click', () => {
   Sound.unlock();
   Sound.click();
   pendingStartName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
+  if (accountSession.usedDefaultPin) {
+    const pinChange = document.getElementById('pin-change');
+    if (pinChange) pinChange.style.display = 'block';
+    showToast('Set a new PIN so your save is not stuck to 0000.', 3500);
+    return;
+  }
   if (shouldRequireAudioGate()) {
     openAudioGate();
     return;
@@ -5747,6 +5773,39 @@ statusLogoutBtn.addEventListener('click', () => {
   Sound.click();
   logoutAccount();
 });
+
+const pinChangeBtn = document.getElementById('set-pin-btn');
+if (pinChangeBtn) {
+  pinChangeBtn.addEventListener('click', async () => {
+    try {
+      Sound.click();
+      const newPinInput = document.getElementById('new-pin-input');
+      const newPin = (newPinInput && newPinInput.value ? newPinInput.value : '').trim();
+      if (!newPin) {
+        showToast('Enter a new PIN.', 2000);
+        return;
+      }
+      const response = await fetch(API + '/api/account/set-pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ newPassword: newPin }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) throw new Error(payload && payload.error ? payload.error : 'Could not update PIN.');
+      updateAccountSessionFromPayload(payload);
+      accountSession.usedDefaultPin = false;
+      const pinChange = document.getElementById('pin-change');
+      if (pinChange) pinChange.style.display = 'none';
+      renderStatusScreen();
+      showToast('PIN updated. You are good to go.', 2400);
+    } catch (e) {
+      showToast(e && e.message ? e.message : 'PIN update failed.', 3000);
+    }
+  });
+}
 
 nameInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') startBtn.click();

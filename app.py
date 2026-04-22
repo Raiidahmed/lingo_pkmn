@@ -257,6 +257,36 @@ def _require_user_by_session(db_path: str) -> tuple[sqlite3.Connection | None, s
     return conn, user_row, (True, "")
 
 
+def _migrate_leaderboard_names_to_accounts(db_path: str) -> None:
+    # Create account rows for any existing leaderboard names so /scores is account-only.
+    # Uses default PIN "0000" for migrated accounts.
+    now = _utc_now()
+    with _account_connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT name_norm, MAX(name) AS name FROM scores GROUP BY name_norm"
+        ).fetchall()
+        for row in rows:
+            name_norm = str(row["name_norm"])
+            name = str(row["name"])
+            if not name_norm:
+                continue
+            try:
+                safe_name = _sanitize_account_name(name)
+            except ValidationError:
+                # Fall back to normalized name (still should be safe-ish).
+                safe_name = name_norm[:MAX_ACCOUNT_NAME_LEN] or 'Player'
+
+            # Ensure user exists with default PIN.
+            salt_hex, hash_hex = _hash_password('0000')
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO users (name, name_norm, password_salt, password_hash, session_token, created_at, updated_at)
+                VALUES (?, ?, ?, ?, NULL, ?, ?)
+                """,
+                (safe_name, name_norm, salt_hex, hash_hex, now, now),
+            )
+
+
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, static_folder=None)
 
@@ -274,6 +304,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     leaderboard_db = LeaderboardDB(db_path)
     leaderboard_db.init_db()
     _init_account_db(db_path)
+    _migrate_leaderboard_names_to_accounts(db_path)
 
     app.config["LEADERBOARD_DB_PATH"] = db_path
     app.config["LEADERBOARD_ADMIN_TOKEN"] = admin_token
@@ -308,6 +339,30 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         scores = app.config["LEADERBOARD_DB"].get_top_scores(limit=limit)
         return jsonify(scores)
 
+    def _ensure_account_for_leaderboard_name(db_path: str, leaderboard_name: str) -> None:
+        # Any score submission should map to an account.
+        now = _utc_now()
+        try:
+            safe_name = _sanitize_account_name(leaderboard_name)
+        except ValidationError:
+            safe_name = 'Player'
+        name_norm = _normalize_account_name(safe_name)
+        with _account_connect(db_path) as conn:
+            user_row = conn.execute(
+                "SELECT id FROM users WHERE name_norm = ?",
+                (name_norm,),
+            ).fetchone()
+            if user_row:
+                return
+            salt_hex, hash_hex = _hash_password('0000')
+            conn.execute(
+                """
+                INSERT INTO users (name, name_norm, password_salt, password_hash, session_token, created_at, updated_at)
+                VALUES (?, ?, ?, ?, NULL, ?, ?)
+                """,
+                (safe_name, name_norm, salt_hex, hash_hex, now, now),
+            )
+
     @app.post("/scores")
     def post_score():
         try:
@@ -320,6 +375,14 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             result = app.config["LEADERBOARD_DB"].upsert_score(payload, source="api")
         except ValidationError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
+
+        # Ensure the player name is an account (default PIN 0000).
+        try:
+            _ensure_account_for_leaderboard_name(app.config["LEADERBOARD_DB_PATH"], str(result.get("name", "")))
+        except Exception:
+            # Don't block scoring if migration fails.
+            pass
+
         return jsonify({"ok": True, "stored": result})
 
     @app.post("/admin/dedupe")
@@ -486,6 +549,41 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             bundle = _load_account_bundle(conn, user_row)
             conn.commit()
 
+        conn.close()
+        return jsonify({"ok": True, **bundle})
+
+    @app.post("/api/account/set-pin")
+    def account_set_pin():
+        conn, user_row, state = _require_user_by_session(app.config["LEADERBOARD_DB_PATH"])
+        ok, error = state
+        if not ok or conn is None or user_row is None:
+            return jsonify({"ok": False, "error": error}), 403
+
+        try:
+            payload = request.get_json(force=False, silent=False)
+        except BadRequest:
+            return jsonify({"ok": False, "error": "Invalid JSON body."}), 400
+        if payload is None:
+            payload = {}
+
+        try:
+            new_password = _sanitize_password(payload.get("newPassword", None))
+        except ValidationError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+
+        salt_hex, hash_hex = _hash_password(new_password)
+        now = _utc_now()
+        with conn:
+            conn.execute(
+                "UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ? WHERE id = ?",
+                (salt_hex, hash_hex, now, int(user_row["id"])),
+            )
+            user_row = conn.execute(
+                "SELECT * FROM users WHERE id = ?",
+                (int(user_row["id"]),),
+            ).fetchone()
+            bundle = _load_account_bundle(conn, user_row)
+            conn.commit()
         conn.close()
         return jsonify({"ok": True, **bundle})
 
