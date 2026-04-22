@@ -1301,37 +1301,64 @@ const Sound = {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
   },
+  _runWhenReady(fn) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    if (ctx.state === 'running') { fn(); return; }
+    if (typeof ctx.resume === 'function') {
+      let done = false;
+      const p = ctx.resume();
+      if (p && typeof p.then === 'function') {
+        p.then(() => { if (!done) { done = true; fn(); } }).catch(() => {});
+      }
+      // Fallback: if resume() didn't return a thenable but state flipped, run now.
+      if (ctx.state === 'running' && !done) { done = true; fn(); }
+    }
+  },
   play(freq, duration, type='sine', vol=0.08) {
-    if (!this.enabled || !this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = type;
-      gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-      osc.start();
-      osc.stop(this.ctx.currentTime + duration);
-    } catch(e) { /* ignore */ }
+    if (!this.enabled) return;
+    if (!this.ctx) { try { this.init(); } catch(e) {} }
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    this._runWhenReady(() => {
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = type;
+        const t = ctx.currentTime;
+        gain.gain.setValueAtTime(vol, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+        osc.start(t);
+        osc.stop(t + duration);
+      } catch(e) { /* ignore */ }
+    });
   },
   unlock() {
-    this.init();
+    try { this.init(); } catch(e) {}
     if (!this.ctx) return;
+    const ctx = this.ctx;
     try {
-      if (this.ctx.state === 'suspended') this.ctx.resume();
-      const buffer = this.ctx.createBuffer(1, 1, 22050);
-      const source = this.ctx.createBufferSource();
-      const gain = this.ctx.createGain();
-      gain.gain.value = 0.0001;
+      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume();
+      // Prime with a silent buffer source — required on iOS Safari.
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(gain);
-      gain.connect(this.ctx.destination);
-      const when = typeof this.ctx.currentTime === 'number' ? this.ctx.currentTime : 0;
+      source.connect(ctx.destination);
+      const when = typeof ctx.currentTime === 'number' ? ctx.currentTime : 0;
       source.start(when);
       source.stop(when + 0.001);
+      // Also prime a near-silent oscillator — some iOS versions need a real
+      // sound source kicked inside the gesture before play() works.
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(when);
+      osc.stop(when + 0.02);
       this.unlocked = true;
     } catch(e) { /* ignore */ }
   },
@@ -1344,40 +1371,45 @@ const Sound = {
 
   step() {
     if (!this.enabled || !this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    const now = this.ctx.currentTime;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
     if (this._stepEnd && now < this._stepEnd) return;
     const dur = 0.045;
     this._stepEnd = now + dur;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.frequency.value = 120; osc.type = 'triangle';
-      gain.gain.setValueAtTime(0.07, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-      osc.start(now); osc.stop(now + dur);
-    } catch(e) {}
+    this._runWhenReady(() => {
+      try {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 120; osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.07, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.start(t); osc.stop(t + dur);
+      } catch(e) {}
+    });
   },
 
   select() {
     if (!this.enabled || !this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    const t = this.ctx.currentTime;
-    try {
-      const o1 = this.ctx.createOscillator(), g1 = this.ctx.createGain();
-      o1.connect(g1); g1.connect(this.ctx.destination);
-      o1.frequency.value = 880; o1.type = 'sine';
-      g1.gain.setValueAtTime(0.08, t);
-      g1.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-      o1.start(t); o1.stop(t + 0.07);
-      const o2 = this.ctx.createOscillator(), g2 = this.ctx.createGain();
-      o2.connect(g2); g2.connect(this.ctx.destination);
-      o2.frequency.value = 1320; o2.type = 'sine';
-      g2.gain.setValueAtTime(0.07, t + 0.06);
-      g2.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-      o2.start(t + 0.06); o2.stop(t + 0.16);
-    } catch(e) {}
+    const ctx = this.ctx;
+    this._runWhenReady(() => {
+      try {
+        const t = ctx.currentTime;
+        const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+        o1.connect(g1); g1.connect(ctx.destination);
+        o1.frequency.value = 880; o1.type = 'sine';
+        g1.gain.setValueAtTime(0.08, t);
+        g1.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+        o1.start(t); o1.stop(t + 0.07);
+        const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.frequency.value = 1320; o2.type = 'sine';
+        g2.gain.setValueAtTime(0.07, t + 0.06);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+        o2.start(t + 0.06); o2.stop(t + 0.16);
+      } catch(e) {}
+    });
   },
 };
 
