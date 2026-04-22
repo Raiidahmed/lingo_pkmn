@@ -1037,6 +1037,8 @@ const dlgSpeaker = document.getElementById('dlg-speaker');
 const dlgText    = document.getElementById('dlg-text');
 const dlgChoices = document.getElementById('dlg-choices');
 const continueBtn= document.getElementById('continue-btn');
+dlgEl.tabIndex = -1;
+continueBtn.type = 'button';
 const soundBtn   = document.getElementById('sound-btn');
 const startBtn   = document.getElementById('start-btn');
 const nameInput  = document.getElementById('name-input');
@@ -1048,16 +1050,28 @@ function getChoiceButtons() {
   return Array.from(dlgChoices.querySelectorAll('.choice-btn'));
 }
 
+function focusDialogueControl() {
+  requestAnimationFrame(() => {
+    const btns = getChoiceButtons();
+    if (selectedChoiceIdx >= 0 && btns[selectedChoiceIdx] && !btns[selectedChoiceIdx].disabled) {
+      btns[selectedChoiceIdx].focus({ preventScroll: true });
+      return;
+    }
+    if (!btns.length && continueBtn.style.display !== 'none') {
+      continueBtn.focus({ preventScroll: true });
+      return;
+    }
+    dlgEl.focus({ preventScroll: true });
+  });
+}
+
 function syncDialogueSelection() {
   const btns = getChoiceButtons();
   btns.forEach((btn, idx) => {
     const selected = idx === selectedChoiceIdx && !btn.disabled;
     btn.classList.toggle('selected', selected);
-    if (selected) btn.focus({ preventScroll: true });
   });
-  if (!btns.length && continueBtn.style.display !== 'none') {
-    continueBtn.focus({ preventScroll: true });
-  }
+  focusDialogueControl();
 }
 
 function setDialogueSelection(idx) {
@@ -1231,6 +1245,9 @@ function showNPCLine() {
   syncDialogueSelection();
 }
 
+continueBtn.addEventListener('focus', () => {
+  selectedChoiceIdx = -1;
+});
 continueBtn.addEventListener('click', () => {
   Sound.click();
   if (pendingNPC) {
@@ -1276,6 +1293,15 @@ function renderChallenge(ch, lockKey) {
     }
     btn.textContent = ['A','B','C','D'][i] + ') ' + c;
     btn.addEventListener('click', () => handleAnswer(i, ch, lockKey));
+    btn.addEventListener('focus', () => {
+      if (!btn.disabled) {
+        selectedChoiceIdx = i;
+        btn.classList.add('selected');
+      }
+    });
+    btn.addEventListener('mouseenter', () => {
+      if (!btn.disabled) setDialogueSelection(i);
+    });
     dlgChoices.appendChild(btn);
   });
 
@@ -1415,7 +1441,7 @@ function tryMove(dc, dr) {
 // ============================================================
 //  INPUT
 // ============================================================
-document.addEventListener('keydown', e => {
+window.addEventListener('keydown', e => {
   if (audioGate.classList.contains('active')) {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -1423,15 +1449,19 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
-  if (handleDialogueKeydown(e)) {
+  if (dialogueOpen && handleDialogueKeydown(e)) {
     e.preventDefault();
+    e.stopPropagation();
     return;
   }
   keys[e.key] = true;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
-  if (!dialogueOpen && (e.key===' '||e.key==='Enter')) interact();
-});
-document.addEventListener('keyup', e => { keys[e.key]=false; });
+  if (!dialogueOpen && (e.key===' '||e.key==='Enter')) {
+    e.preventDefault();
+    interact();
+  }
+}, true);
+window.addEventListener('keyup', e => { keys[e.key]=false; }, true);
 
 function dpadBind(id, keyName) {
   const btn = document.getElementById(id);
