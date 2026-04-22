@@ -403,12 +403,12 @@
     <h2>QUICK VOCAB WINS. DRAMATIC DOORS. BIGER WORD BAG ENERGY.</h2>
     <p>Sign in to resume your save or create a new one.<br/>Your word bank, story progress, and run state travel with you.</p>
     <input type="text" id="name-input" maxlength="24" placeholder="SAVE NAME" autocomplete="username" spellcheck="false"/>
-    <input type="password" id="password-input" maxlength="128" placeholder="PASSWORD OR PIN" autocomplete="current-password" spellcheck="false"/>
+    <input type="password" id="password-input" maxlength="128" placeholder="PIN (DEFAULT 0000)" value="0000" autocomplete="current-password" spellcheck="false"/>
     <div class="auth-actions">
       <button class="big-btn" id="start-btn">Resume Save ▶</button>
       <button class="ghost-btn" id="create-save-btn" type="button">Create Save</button>
     </div>
-    <p id="auth-msg">Sign in to continue your story, word bank, and latest run.</p>
+    <p id="auth-msg">Use PIN 0000 unless you want to change it later.</p>
     <div style="margin-top:20px; width:100%; max-width:320px;">
       <div class="lb-header">
         <span style="flex:1">HALL OF FAME</span>
@@ -4748,17 +4748,13 @@ async function submitAccountAuth(intent) {
     nameInput.focus();
     return false;
   }
-  if (!password) {
-    setAuthMessage('Add a password or PIN so your save can resume later.');
-    passwordInput.focus();
-    return false;
-  }
+  const effectivePassword = password || '0000';
   setAuthMessage(intent === 'create' ? 'Creating save...' : 'Loading save...');
   try {
     const response = await fetch(API + '/api/account/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: rawName, password, intent })
+      body: JSON.stringify({ name: rawName, password: effectivePassword, intent })
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) throw new Error(payload && payload.error ? payload.error : 'Account request failed.');
@@ -4813,14 +4809,10 @@ async function logoutAccount() {
   safeStorageSet(ACCOUNT_TOKEN_KEY, '');
   accountSession = { token: '', profile: null, save: null, wordBank: [] };
   pendingAuthMode = 'resume';
-  document.getElementById('password-input').value = '';
-  setAuthMessage('Signed out. Sign in to continue your story, word bank, and latest run.');
+  document.getElementById('password-input').value = '0000';
+  setAuthMessage('Use PIN 0000 unless you want to change it later.');
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
-}
-  const s = Math.floor(ms/1000);
-  if (s < 60) return s + 's';
-  return Math.floor(s/60) + 'm ' + (s%60) + 's';
 }
 
 // ============================================================
@@ -5261,29 +5253,12 @@ function handleAnswer(idx, ch, lockKey) {
   totalAttempts++;
 
   if (idx === ch.answer) {
-     btns[idx].classList.add('correct');
-     dlgText.textContent = ch.revisit
-       ? ch.reward + '\n\nThe dungeon grudgingly admits you learned it this time.'
-       : ch.reward;
-     addXP(20);
-+    accountSession.wordBank = mergeWordBankWithChallenge(ch);
-     challengesPassed++;
-     Sound.doorOpen();
-     if (locksState[lockKey].type === 'chest') Sound.chest();
-@@
-     continueBtn.style.display = 'block';
-     continueBtn.textContent = 'Continue ▶';
-     dlgChoices.innerHTML = '';
-     pendingLock = null; pendingNPC = null;
-     syncDialogueSelection();
-+    saveAccountProgress('challenge_cleared');
- 
-   } else {
     btns[idx].classList.add('correct');
     dlgText.textContent = ch.revisit
       ? ch.reward + '\n\nThe dungeon grudgingly admits you learned it this time.'
       : ch.reward;
     addXP(20);
+    accountSession.wordBank = mergeWordBankWithChallenge(ch);
     challengesPassed++;
     Sound.doorOpen();
     if (locksState[lockKey].type === 'chest') Sound.chest();
@@ -5301,7 +5276,7 @@ function handleAnswer(idx, ch, lockKey) {
     dlgChoices.innerHTML = '';
     pendingLock = null; pendingNPC = null;
     syncDialogueSelection();
-
+    saveAccountProgress('challenge_cleared');
   } else {
     const challengeId = Number.isInteger(ch.baseId) ? ch.baseId : locksState[lockKey].challengeId;
     if (!ch.revisit) queueMissedChallenge(challengeId);
@@ -5392,12 +5367,7 @@ function handleStairs() {
       showScreen('screen-win');
     });
   } else {
-+    saveAccountProgress('level_complete');
-     document.getElementById('lc-title').textContent = 'LEVEL COMPLETE!';
-     document.getElementById('nextlevel-btn').style.display = 'block';
-     showScreen('screen-levelcomplete');
-   }
- }
+    saveAccountProgress('level_complete');
     document.getElementById('lc-title').textContent = 'LEVEL COMPLETE!';
     document.getElementById('nextlevel-btn').style.display = 'block';
     showScreen('screen-levelcomplete');

@@ -126,8 +126,11 @@ def _normalize_account_name(name: str) -> str:
 
 
 def _sanitize_password(value: Any) -> str:
+    if value is None:
+        value = "0000"
     if not isinstance(value, str):
         raise ValidationError("Invalid password: must be a string.")
+    value = value or "0000"
     if len(value) < 4:
         raise ValidationError("Invalid password: must be at least 4 characters.")
     if len(value) > MAX_PASSWORD_LEN:
@@ -373,9 +376,18 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                 ).fetchone()
                 created = True
             else:
-                if not _verify_password(password, str(user_row["password_salt"]), str(user_row["password_hash"])):
+                stored_salt = str(user_row["password_salt"])
+                stored_hash = str(user_row["password_hash"])
+                default_salt, default_hash = _hash_password("0000", stored_salt)
+                accepts_default_pin = hmac.compare_digest(default_hash, stored_hash)
+                if not _verify_password(password, stored_salt, stored_hash):
                     conn.rollback()
-                    return jsonify({"ok": False, "error": "Wrong password for that save."}), 403
+                    return jsonify({"ok": False, "error": "Wrong PIN for that save."}), 403
+                if accepts_default_pin and password == "0000":
+                    conn.execute(
+                        "UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ? WHERE id = ?",
+                        (stored_salt, stored_hash, now, int(user_row["id"])),
+                    )
                 conn.execute(
                     "UPDATE users SET name = ?, updated_at = ? WHERE id = ?",
                     (name, now, int(user_row["id"])),
