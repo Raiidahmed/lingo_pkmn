@@ -1196,7 +1196,7 @@ document.addEventListener('keyup', e => { keys[e.key]=false; });
 
 function dpadBind(id, keyName) {
   const btn = document.getElementById(id);
-  const press   = e => { e.preventDefault(); keys[keyName] = true; };
+  const press   = e => { e.preventDefault(); Sound.unlock(); keys[keyName] = true; };
   const release = e => { e.preventDefault(); keys[keyName] = false; };
   btn.addEventListener('touchstart',  press,   { passive: false });
   btn.addEventListener('touchend',    release, { passive: false });
@@ -1211,8 +1211,17 @@ dpadBind('btn-left',  'ArrowLeft');
 dpadBind('btn-right', 'ArrowRight');
 
 const actionBtn = document.getElementById('action-btn');
-actionBtn.addEventListener('touchstart', e => { e.preventDefault(); Sound.click(); interact(); }, { passive: false });
-actionBtn.addEventListener('click', () => { Sound.click(); interact(); });
+actionBtn.addEventListener('touchstart', e => {
+  e.preventDefault();
+  Sound.unlock();
+  Sound.click();
+  interact();
+}, { passive: false });
+actionBtn.addEventListener('click', () => {
+  Sound.unlock();
+  Sound.click();
+  interact();
+});
 
 // ============================================================
 //  GAME LOOP
@@ -1235,7 +1244,10 @@ function loop(ts) {
 // ============================================================
 //  QUIT BUTTON
 // ============================================================
-document.getElementById('quit-btn').addEventListener('click', () => {
+const quitBtn = document.getElementById('quit-btn');
+quitBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
+quitBtn.addEventListener('click', () => {
+  Sound.unlock();
   Sound.click();
   const elapsed = fmtTime(Date.now() - levelStartTime);
   document.getElementById('quit-levelname').textContent = LEVELS[currentLevelIdx].name;
@@ -1283,6 +1295,7 @@ document.getElementById('lc-quit-btn').addEventListener('click', () => {
 const Sound = {
   enabled: (() => { try { return localStorage.getItem('lingoSound') !== 'off'; } catch(e) { return true; } })(),
   ctx: null,
+  unlocked: false,
   init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1306,7 +1319,21 @@ const Sound = {
   },
   unlock() {
     this.init();
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    if (!this.ctx) return;
+    try {
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const buffer = this.ctx.createBuffer(1, 1, 22050);
+      const source = this.ctx.createBufferSource();
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0.0001;
+      source.buffer = buffer;
+      source.connect(gain);
+      gain.connect(this.ctx.destination);
+      const when = typeof this.ctx.currentTime === 'number' ? this.ctx.currentTime : 0;
+      source.start(when);
+      source.stop(when + 0.001);
+      this.unlocked = true;
+    } catch(e) { /* ignore */ }
   },
   correct() { this.play(523.25, 0.3, 'sine', 0.1); },
   wrong()   { this.play(220, 0.4, 'sawtooth', 0.08); },
@@ -1354,8 +1381,14 @@ const Sound = {
   },
 };
 
-document.addEventListener('click', () => Sound.unlock(), { once: true });
-document.addEventListener('keydown', () => Sound.unlock(), { once: true });
+function unlockAudioFromGesture() {
+  Sound.unlock();
+}
+
+document.addEventListener('touchstart', unlockAudioFromGesture, { once: true, passive: true });
+document.addEventListener('pointerdown', unlockAudioFromGesture, { once: true, passive: true });
+document.addEventListener('click', unlockAudioFromGesture, { once: true });
+document.addEventListener('keydown', unlockAudioFromGesture, { once: true });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
 
 (function() {
@@ -1365,7 +1398,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) Soun
     btn.style.color = Sound.enabled ? '' : '#555';
   }
   syncBtn();
+  btn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
   btn.addEventListener('click', () => {
+    Sound.unlock();
     Sound.enabled = !Sound.enabled;
     try { localStorage.setItem('lingoSound', Sound.enabled ? 'on' : 'off'); } catch(e) {}
     syncBtn();
@@ -1376,7 +1411,10 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) Soun
 // ============================================================
 //  START BUTTON
 // ============================================================
-document.getElementById('start-btn').addEventListener('click', () => {
+const startBtn = document.getElementById('start-btn');
+startBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
+startBtn.addEventListener('click', () => {
+  Sound.unlock();
   Sound.click();
   let nameVal = document.getElementById('name-input').value.trim();
   nameVal = nameVal.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16);
