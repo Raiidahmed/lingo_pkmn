@@ -539,6 +539,14 @@ function normalizeApiBase(base) {
   return base.trim().replace(/\/+$/, '');
 }
 
+function validateApiBase(base) {
+  if (!base || typeof base !== 'string') return '';
+  // Relative paths are fine.
+  if (base.startsWith('/') || base.startsWith('./')) return base;
+  // Absolute URL must parse.
+  try { new URL(base); return base; } catch (e) { return ''; }
+}
+
 function resolveApiBase() {
   let storageOverride = '';
   try { storageOverride = localStorage.getItem('lingoLeaderboardApiBase') || ''; } catch (e) { /* ignore */ }
@@ -555,10 +563,12 @@ function resolveApiBase() {
     ? window.LINGO_LEADERBOARD_API_BASE
     : '';
 
-  return normalizeApiBase(globalOverride)
+  const candidate = normalizeApiBase(globalOverride)
     || normalizeApiBase(queryOverride)
     || normalizeApiBase(storageOverride)
     || DEFAULT_API;
+
+  return validateApiBase(candidate);
 }
 
 const API = resolveApiBase();
