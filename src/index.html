@@ -185,14 +185,105 @@
     .ghost-btn:hover { border-color: #fff; color: #fff; }
 
     /* ── Name input ── */
-    #name-input {
+    #name-input, #password-input {
       background: #000; border: 2px solid #fff; color: #fff;
       padding: 12px 16px;
       font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.75rem;
       text-align: center; width: 220px; margin: 12px 0 16px;
       outline: none; text-transform: uppercase;
     }
-    #name-input:focus { background: #111; }
+    #name-input:focus, #password-input:focus { background: #111; }
+    #password-input {
+      margin-top: 0;
+      text-transform: none;
+    }
+    .auth-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .auth-actions .big-btn,
+    .auth-actions .ghost-btn {
+      flex: 1 1 140px;
+      margin-top: 0;
+    }
+    #auth-msg {
+      min-height: 2.4em;
+      max-width: 360px;
+      margin-top: 12px;
+      color: #aaa;
+      font-size: 0.52rem;
+      line-height: 1.8;
+    }
+    .status-panel {
+      width: 100%;
+      max-width: 360px;
+      border: 2px solid #fff;
+      padding: 12px;
+      margin: 12px 0;
+      background: #050505;
+      text-align: left;
+    }
+    .status-panel h3 {
+      font-size: 0.55rem;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 0.5rem;
+      line-height: 1.7;
+      color: #ddd;
+    }
+    .status-line span:last-child {
+      color: #fff;
+      text-align: right;
+    }
+    .wordbank-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .word-chip {
+      border: 1px solid #fff;
+      padding: 8px 10px;
+      font-size: 0.46rem;
+      line-height: 1.6;
+      color: #fff;
+      background: #000;
+    }
+    .word-chip strong {
+      color: #bbb;
+      margin-left: 6px;
+    }
+    .screen-actions {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 320px;
+      align-items: stretch;
+    }
+    .screen-actions .big-btn,
+    .screen-actions .ghost-btn {
+      width: 100%;
+    }
+    .subtle-note {
+      color: #777;
+      font-size: 0.48rem;
+      line-height: 1.9;
+      max-width: 360px;
+      margin-top: 8px;
+    }
 
     /* ── Leaderboard ── */
     .leaderboard {
@@ -309,10 +400,15 @@
   <!-- TITLE SCREEN -->
   <div id="screen-title" class="screen active">
     <h1>LINGO DUNGEON</h1>
-    <h2>LEARN SPANISH. SURVIVE TEN DRAMATIC FLOORS.</h2>
-    <p>Enter your name to begin your adventure.<br/>Unlock doors and chests by answering Spanish challenges.</p>
-    <input type="text" id="name-input" maxlength="16" placeholder="YOUR NAME..." autocomplete="off" spellcheck="false"/>
-    <button class="big-btn" id="start-btn">Enter Dungeon ▶</button>
+    <h2>QUICK VOCAB WINS. DRAMATIC DOORS. BIGER WORD BAG ENERGY.</h2>
+    <p>Sign in to resume your save or create a new one.<br/>Your word bank, story progress, and run state travel with you.</p>
+    <input type="text" id="name-input" maxlength="24" placeholder="SAVE NAME" autocomplete="username" spellcheck="false"/>
+    <input type="password" id="password-input" maxlength="128" placeholder="PASSWORD OR PIN" autocomplete="current-password" spellcheck="false"/>
+    <div class="auth-actions">
+      <button class="big-btn" id="start-btn">Resume Save ▶</button>
+      <button class="ghost-btn" id="create-save-btn" type="button">Create Save</button>
+    </div>
+    <p id="auth-msg">Sign in to continue your story, word bank, and latest run.</p>
     <div style="margin-top:20px; width:100%; max-width:320px;">
       <div class="lb-header">
         <span style="flex:1">HALL OF FAME</span>
@@ -320,6 +416,30 @@
       <div id="lb-list">
         <div class="lb-header" style="background:transparent; color:#555; font-size:0.5rem; justify-content:center;">Loading scores...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- STATUS SCREEN -->
+  <div id="screen-status" class="screen">
+    <h1>STATUS SCREEN</h1>
+    <h2 id="status-subtitle">WELCOME BACK</h2>
+    <p id="status-msg">Your save is loaded. Review your progress before entering the dungeon.</p>
+    <div class="status-panel">
+      <h3>Save Snapshot</h3>
+      <div class="status-line"><span>Save</span><span id="status-player">-</span></div>
+      <div class="status-line"><span>Story</span><span id="status-story">New run</span></div>
+      <div class="status-line"><span>Total XP</span><span id="status-xp">0</span></div>
+      <div class="status-line"><span>Best floor</span><span id="status-floor">1</span></div>
+      <div class="status-line"><span>Resume</span><span id="status-resume">Fresh start</span></div>
+    </div>
+    <div class="status-panel">
+      <h3>Word Bank</h3>
+      <p class="subtle-note">Your learned words should feel like a bag of useful items you can keep collecting.</p>
+      <div class="wordbank-list" id="status-wordbank"></div>
+    </div>
+    <div class="screen-actions">
+      <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
+      <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
     </div>
   </div>
 
@@ -425,192 +545,12 @@ function resolveApiBase() {
 }
 
 const API = resolveApiBase();
+const ACCOUNT_TOKEN_KEY = 'lingoAccountTokenV1';
+const WORD_BANK_LIMIT = 10;
 
 // ============================================================
 //  LEVEL DATA
 // ============================================================
-const MAP_ENTRANCE = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,2,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,4,0,0,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,1,1,2,1,1,1,1,1,1,1,2,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,6,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const MAP_CROSSROADS_LITE = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-  [1,0,1,0,1,0,1,0,1,0,1,1,0,1,1],
-  [1,0,1,0,2,0,1,0,2,0,0,0,0,0,1],
-  [1,0,1,0,1,0,1,0,1,0,1,1,4,0,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-  [1,1,2,1,1,1,1,2,1,1,1,1,0,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,1,0,1,1,0,1,0,1,0,1],
-  [1,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
-  [1,0,1,0,0,1,0,0,0,0,1,0,0,0,1],
-  [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const MAP_CROSSROADS_MID = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-  [1,0,1,0,1,0,1,0,1,0,1,1,0,1,1],
-  [1,0,1,0,2,0,1,0,2,0,0,0,0,0,1],
-  [1,0,1,0,1,0,1,0,1,0,1,1,4,0,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-  [1,1,2,1,1,1,1,2,1,1,1,1,2,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,1,0,1,1,0,1,0,1,0,1],
-  [1,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
-  [1,0,1,0,0,1,0,0,0,0,1,0,0,0,1],
-  [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const MAP_CROSSROADS = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-  [1,0,1,0,1,0,1,0,1,0,1,1,0,1,1],
-  [1,0,1,0,2,0,1,0,2,0,0,0,0,0,1],
-  [1,0,1,0,1,0,1,0,1,0,1,1,4,0,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-  [1,1,2,1,1,1,1,2,1,1,1,1,2,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,1,0,1,1,0,1,0,1,0,1],
-  [1,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
-  [1,0,1,0,0,1,4,0,0,0,1,0,0,0,1],
-  [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const MAP_KEEP_LITE = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
-  [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
-  [1,0,1,0,2,0,0,0,1,0,2,0,1,0,1],
-  [1,0,0,0,1,1,1,0,1,0,1,0,0,0,1],
-  [1,1,2,1,1,0,0,0,2,0,1,1,2,1,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
-  [1,1,1,0,1,0,1,0,1,4,1,0,1,0,1],
-  [1,0,0,0,2,0,1,0,0,0,1,0,0,0,1],
-  [1,0,0,0,0,0,0,6,0,0,0,0,0,4,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const MAP_KEEP = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
-  [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
-  [1,0,1,0,2,0,0,0,1,0,2,0,1,0,1],
-  [1,0,0,0,1,1,1,0,1,0,1,0,0,0,1],
-  [1,1,2,1,1,0,0,0,2,0,1,1,2,1,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
-  [1,1,1,0,1,0,1,0,1,4,1,0,1,0,1],
-  [1,0,0,0,2,0,1,0,2,0,1,0,0,0,1],
-  [1,0,0,0,0,0,0,6,0,0,0,0,0,4,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const MAP_KEEP_PLUS = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,4,0,0,1,0,0,0,0,0,1,0,0,0,1],
-  [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
-  [1,0,1,0,2,0,0,0,1,0,2,0,1,0,1],
-  [1,0,0,0,1,1,1,0,1,0,1,0,0,0,1],
-  [1,1,2,1,1,0,0,0,2,0,1,1,2,1,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
-  [1,1,1,0,1,0,1,0,1,4,1,0,1,0,1],
-  [1,0,0,0,2,0,1,0,2,0,1,0,0,0,1],
-  [1,0,0,0,0,0,0,6,0,0,0,0,0,4,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const LOCKS_ENTRANCE = {
-  '6,3':  { type:'door',  challengeId:0 },
-  '3,6':  { type:'door',  challengeId:1 },
-  '11,6': { type:'door',  challengeId:2 },
-  '10,4': { type:'chest', challengeId:3 },
-};
-
-const LOCKS_CROSSROADS_LITE = {
-  '4,3':  { type:'door',  challengeId:0 },
-  '8,3':  { type:'door',  challengeId:1 },
-  '2,6':  { type:'door',  challengeId:2 },
-  '7,6':  { type:'door',  challengeId:3 },
-  '12,4': { type:'chest', challengeId:4 },
-};
-
-const LOCKS_CROSSROADS_MID = {
-  '4,3':  { type:'door',  challengeId:0 },
-  '8,3':  { type:'door',  challengeId:1 },
-  '2,6':  { type:'door',  challengeId:2 },
-  '7,6':  { type:'door',  challengeId:3 },
-  '12,6': { type:'door',  challengeId:4 },
-  '12,4': { type:'chest', challengeId:5 },
-};
-
-const LOCKS_CROSSROADS = {
-  '4,3':  { type:'door',  challengeId:0 },
-  '8,3':  { type:'door',  challengeId:1 },
-  '2,6':  { type:'door',  challengeId:2 },
-  '7,6':  { type:'door',  challengeId:3 },
-  '12,6': { type:'door',  challengeId:4 },
-  '12,4': { type:'chest', challengeId:5 },
-  '6,10': { type:'chest', challengeId:6 },
-};
-
-const LOCKS_KEEP_LITE = {
-  '4,3':  { type:'door',  challengeId:0 },
-  '10,3': { type:'door',  challengeId:1 },
-  '2,5':  { type:'door',  challengeId:2 },
-  '8,5':  { type:'door',  challengeId:3 },
-  '12,5': { type:'door',  challengeId:4 },
-  '4,10': { type:'door',  challengeId:5 },
-  '9,9':  { type:'chest', challengeId:6 },
-  '13,11':{ type:'chest', challengeId:7 },
-};
-
-const LOCKS_KEEP = {
-  '4,3':  { type:'door',  challengeId:0 },
-  '10,3': { type:'door',  challengeId:1 },
-  '2,5':  { type:'door',  challengeId:2 },
-  '8,5':  { type:'door',  challengeId:3 },
-  '12,5': { type:'door',  challengeId:4 },
-  '4,10': { type:'door',  challengeId:5 },
-  '8,10': { type:'door',  challengeId:6 },
-  '9,9':  { type:'chest', challengeId:7 },
-  '13,11':{ type:'chest', challengeId:8 },
-};
-
-const LOCKS_KEEP_PLUS = {
-  '1,1':  { type:'chest', challengeId:0 },
-  '4,3':  { type:'door',  challengeId:1 },
-  '10,3': { type:'door',  challengeId:2 },
-  '2,5':  { type:'door',  challengeId:3 },
-  '8,5':  { type:'door',  challengeId:4 },
-  '12,5': { type:'door',  challengeId:5 },
-  '4,10': { type:'door',  challengeId:6 },
-  '8,10': { type:'door',  challengeId:7 },
-  '9,9':  { type:'chest', challengeId:8 },
-  '13,11':{ type:'chest', challengeId:9 },
-};
-
 const LEVELS = [
   {
     "id": 0,
@@ -4388,51 +4328,55 @@ let pendingNPC = null;
 let npcDialogueIdx = 0;
 let selectedChoiceIdx = -1;
 let pendingStartName = '';
+let pendingAuthMode = 'resume';
 let attemptCounts = {}; // lockKey -> attempt count
 let missedChallengeQueue = []; // FIFO unique challenge IDs missed this level
 let missedChallengeCursor = 0; // deterministic assignment pointer for late-lock rematches
 let lockChallengeOverrides = {}; // lockKey -> challengeId when rematch mode reassigns a lock
 let scoreSubmitWarned = false;
+let accountSession = {
+  token: '',
+  profile: null,
+  save: null,
+  wordBank: [],
+};
+const LOCK_TARGETS_BY_LEVEL = [4, 5, 6, 7, 7, 7, 7, 7, 8, 9];
 
 function remainingLocks() {
   return Object.values(locksState).filter(l => !l.unlocked).length;
 }
 
-function remainingLockKeysInOrder() {
-  return lockOrder.filter(key => locksState[key] && !locksState[key].unlocked);
-}
-
 function queueMissedChallenge(challengeId) {
   if (!Number.isInteger(challengeId)) return;
   if (missedChallengeQueue.includes(challengeId)) return;
-  if (Object.values(revisitAssignments).includes(challengeId)) return;
+  if (Object.values(lockChallengeOverrides).includes(challengeId)) return;
   missedChallengeQueue.push(challengeId);
 }
 
 function maybeAssignRevisitChallenge(lockKey) {
-  if (Object.prototype.hasOwnProperty.call(revisitAssignments, lockKey)) {
-    return revisitAssignments[lockKey];
+  if (Object.prototype.hasOwnProperty.call(lockChallengeOverrides, lockKey)) {
+    return lockChallengeOverrides[lockKey];
   }
 
-  const remaining = remainingLockKeysInOrder();
-  if (!missedChallengeQueue.length || remaining.length === 0) return null;
-
-  const targetCount = Math.min(2, remaining.length, Math.max(1, missedChallengeQueue.length));
-  const targetLocks = remaining.slice(-targetCount);
-  if (!targetLocks.includes(lockKey)) return null;
-
-  const challengeId = missedChallengeQueue.shift();
+  if (remainingLocks() > 2 || !missedChallengeQueue.length) return null;
+  const queueIdx = missedChallengeCursor % missedChallengeQueue.length;
+  const challengeId = missedChallengeQueue[queueIdx];
   if (!Number.isInteger(challengeId)) return null;
-  revisitAssignments[lockKey] = challengeId;
+  lockChallengeOverrides[lockKey] = challengeId;
+  missedChallengeCursor++;
+  attemptCounts[lockKey] = 0;
   return challengeId;
 }
 
 function getChallengeForLock(lockKey) {
   const lock = locksState[lockKey];
+  if (!lock) return null;
   const revisitId = maybeAssignRevisitChallenge(lockKey);
   const challengeId = Number.isInteger(revisitId) ? revisitId : lock.challengeId;
+  const challenge = currentChallenges[challengeId];
+  if (!challenge) return null;
   return {
-    ...currentChallenges[challengeId],
+    ...challenge,
     baseId: challengeId,
     revisit: Number.isInteger(revisitId),
   };
@@ -4622,6 +4566,263 @@ function fmtTime(ms) {
   return Math.floor(s/60) + 'm ' + (s%60) + 's';
 }
 
+function safeStorageGet(key) {
+  try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    if (!value) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch (e) {}
+}
+
+function authHeaders() {
+  return accountSession.token ? { Authorization: 'Bearer ' + accountSession.token } : {};
+}
+
+function defaultWordBank() {
+  return [
+    { key: 'hola', text: 'hola', gloss: 'hello', source: 'starter pack' },
+    { key: 'gracias', text: 'gracias', gloss: 'thanks', source: 'starter pack' },
+    { key: 'puerta', text: 'puerta', gloss: 'door', source: 'starter pack' },
+  ];
+}
+
+function mergeWordBankWithChallenge(ch) {
+  const next = Array.isArray(accountSession.wordBank) ? [...accountSession.wordBank] : [];
+  if (!ch || typeof ch.prompt !== 'string') return next.slice(0, WORD_BANK_LIMIT);
+  const prompt = ch.prompt.replace(/\s+/g, ' ').trim();
+  const reward = typeof ch.reward === 'string' ? ch.reward.replace(/\s+/g, ' ').trim() : '';
+  const words = [];
+  const quoted = reward.match(/“([^”]+)”|"([^"]+)"|'([^']+)'/g);
+  if (quoted && quoted.length) {
+    quoted.forEach(fragment => {
+      const clean = fragment.replace(/[“”"']/g, '').trim();
+      if (clean) words.push(clean);
+    });
+  }
+  if (!words.length) {
+    const vocabish = prompt.match(/\b[a-záéíóúñü]{3,}\b/ig) || [];
+    vocabish.slice(0, 2).forEach(word => words.push(word.toLowerCase()));
+  }
+  words.forEach((word, idx) => {
+    const key = word.toLowerCase().replace(/[^a-z0-9áéíóúñü]+/gi, '_').slice(0, 32);
+    if (!key) return;
+    if (next.some(item => item.key === key)) return;
+    next.unshift({
+      key,
+      text: word,
+      gloss: idx === 0 ? 'recent pickup' : 'useful phrase',
+      source: LEVELS[currentLevelIdx] ? LEVELS[currentLevelIdx].name : 'dungeon',
+    });
+  });
+  return next.slice(0, WORD_BANK_LIMIT);
+}
+
+function updateAccountSessionFromPayload(payload) {
+  accountSession.profile = payload && payload.profile ? payload.profile : null;
+  accountSession.save = payload && payload.save ? payload.save : null;
+  accountSession.wordBank = Array.isArray(payload && payload.word_bank) ? payload.word_bank : [];
+}
+
+function setAuthMessage(msg) {
+  const el = document.getElementById('auth-msg');
+  if (el) el.textContent = msg;
+}
+
+function currentStoryLabel() {
+  if (accountSession.save && accountSession.save.status && accountSession.save.status.storyLabel) {
+    return accountSession.save.status.storyLabel;
+  }
+  if (LEVELS[currentLevelIdx]) return LEVELS[currentLevelIdx].name;
+  return 'New run';
+}
+
+function currentStatusPayload(reason = 'manual') {
+  return {
+    storyLabel: currentStoryLabel(),
+    storyProgress: currentLevelIdx + 1,
+    totalXP,
+    wordCount: Array.isArray(accountSession.wordBank) ? accountSession.wordBank.length : 0,
+    hasActiveRun: currentLevelIdx > 0 || totalXP > 0 || challengesPassed > 0,
+    levelLabel: LEVELS[currentLevelIdx] ? LEVELS[currentLevelIdx].name : 'The Entrance Hall',
+    updatedReason: reason,
+  };
+}
+
+function currentSnapshotPayload() {
+  return {
+    playerName,
+    currentLevelIdx,
+    totalXP,
+    xp,
+    challengesPassed,
+    totalAttempts,
+    player,
+    levelName: LEVELS[currentLevelIdx] ? LEVELS[currentLevelIdx].name : 'The Entrance Hall',
+    savedAt: new Date().toISOString(),
+  };
+}
+
+async function saveAccountProgress(reason = 'manual') {
+  if (!accountSession.token) return null;
+  try {
+    const response = await fetch(API + '/api/account/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(),
+      },
+      body: JSON.stringify({
+        snapshot: currentSnapshotPayload(),
+        status: currentStatusPayload(reason),
+        word_bank: accountSession.wordBank,
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload && payload.error ? payload.error : 'Could not save progress.');
+    updateAccountSessionFromPayload(payload);
+    return payload;
+  } catch (err) {
+    console.warn('Save progress failed:', err);
+    return null;
+  }
+}
+
+function renderStatusScreen() {
+  const profile = accountSession.profile || {};
+  const save = accountSession.save || {};
+  const status = save.status || {};
+  const snapshot = save.snapshot || {};
+  document.getElementById('status-player').textContent = profile.name || playerName || 'Hero';
+  document.getElementById('status-story').textContent = status.storyLabel || snapshot.levelName || 'Fresh start';
+  document.getElementById('status-xp').textContent = String(status.totalXP || snapshot.totalXP || 0);
+  document.getElementById('status-floor').textContent = String((status.storyProgress || snapshot.currentLevelIdx || 0) + 1);
+  document.getElementById('status-resume').textContent = status.hasActiveRun ? 'Resume previous run' : 'Fresh start available';
+  document.getElementById('status-subtitle').textContent = profile.name ? profile.name.toUpperCase() : 'WELCOME BACK';
+  document.getElementById('status-msg').textContent = status.hasActiveRun
+    ? 'Your latest run is waiting. Review your word bag, then continue.'
+    : 'Your save is ready. You can start clean or dive back in after the next checkpoint.';
+
+  const list = document.getElementById('status-wordbank');
+  list.textContent = '';
+  const words = (Array.isArray(accountSession.wordBank) && accountSession.wordBank.length)
+    ? accountSession.wordBank.slice(0, WORD_BANK_LIMIT)
+    : defaultWordBank();
+  words.forEach(item => {
+    const chip = document.createElement('div');
+    chip.className = 'word-chip';
+    const textNode = document.createElement('span');
+    textNode.textContent = item.text || 'word';
+    const glossNode = document.createElement('strong');
+    glossNode.textContent = item.gloss || 'kept';
+    chip.appendChild(textNode);
+    chip.appendChild(glossNode);
+    list.appendChild(chip);
+  });
+}
+
+function restoreSavedRun() {
+  const save = accountSession.save;
+  const snapshot = save && save.snapshot;
+  if (!snapshot || typeof snapshot !== 'object') {
+    totalXP = 0;
+    playerName = (accountSession.profile && accountSession.profile.name) || playerName;
+    sessionStartTime = Date.now();
+    loadLevel(0);
+    return;
+  }
+  playerName = snapshot.playerName || (accountSession.profile && accountSession.profile.name) || playerName;
+  totalXP = Number.isFinite(Number(snapshot.totalXP)) ? Math.max(0, Math.floor(Number(snapshot.totalXP))) : 0;
+  sessionStartTime = Date.now();
+  loadLevel(Number.isInteger(snapshot.currentLevelIdx) ? snapshot.currentLevelIdx : 0);
+}
+
+async function submitAccountAuth(intent) {
+  const rawName = nameInput.value.trim().replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24);
+  const passwordInput = document.getElementById('password-input');
+  const password = passwordInput.value;
+  if (!rawName) {
+    setAuthMessage('Enter a save name first.');
+    nameInput.focus();
+    return false;
+  }
+  if (!password) {
+    setAuthMessage('Add a password or PIN so your save can resume later.');
+    passwordInput.focus();
+    return false;
+  }
+  setAuthMessage(intent === 'create' ? 'Creating save...' : 'Loading save...');
+  try {
+    const response = await fetch(API + '/api/account/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: rawName, password, intent })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload && payload.error ? payload.error : 'Account request failed.');
+    accountSession.token = payload.token || '';
+    safeStorageSet(ACCOUNT_TOKEN_KEY, accountSession.token);
+    updateAccountSessionFromPayload(payload);
+    playerName = rawName;
+    passwordInput.value = '';
+    renderStatusScreen();
+    showScreen('screen-status');
+    return true;
+  } catch (err) {
+    setAuthMessage(err instanceof Error ? err.message : 'Could not load that save.');
+    return false;
+  }
+}
+
+async function maybeResumeStoredSession() {
+  const token = safeStorageGet(ACCOUNT_TOKEN_KEY);
+  if (!token) return false;
+  try {
+    const response = await fetch(API + '/api/account/me', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error();
+    accountSession.token = token;
+    updateAccountSessionFromPayload(payload);
+    playerName = payload && payload.profile && payload.profile.name ? payload.profile.name : playerName;
+    renderStatusScreen();
+    showScreen('screen-status');
+    setAuthMessage('');
+    return true;
+  } catch (e) {
+    safeStorageSet(ACCOUNT_TOKEN_KEY, '');
+    accountSession.token = '';
+    return false;
+  }
+}
+
+async function logoutAccount() {
+  try {
+    if (accountSession.token) {
+      await fetch(API + '/api/account/logout', {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+    }
+  } catch (e) {
+    console.warn('Logout failed:', e);
+  }
+  safeStorageSet(ACCOUNT_TOKEN_KEY, '');
+  accountSession = { token: '', profile: null, save: null, wordBank: [] };
+  pendingAuthMode = 'resume';
+  document.getElementById('password-input').value = '';
+  setAuthMessage('Signed out. Sign in to continue your story, word bank, and latest run.');
+  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
+  showScreen('screen-title');
+}
+  const s = Math.floor(ms/1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s/60) + 'm ' + (s%60) + 's';
+}
+
 // ============================================================
 //  LEADERBOARD
 // ============================================================
@@ -4726,8 +4927,20 @@ function loadLevel(idx) {
   player = { ...lvl.playerStart };
   mapState = lvl.map.map(r => [...r]);
   locksState = {};
-  Object.entries(lvl.locks).forEach(([k,v]) => {
-    locksState[k] = { ...v, unlocked: false };
+  const lockEntries = Object.entries(lvl.locks);
+  const targetLockCount = Math.min(
+    lockEntries.length,
+    Number.isInteger(LOCK_TARGETS_BY_LEVEL[idx]) ? LOCK_TARGETS_BY_LEVEL[idx] : lockEntries.length
+  );
+  lockEntries.forEach(([k, v], lockIdx) => {
+    const [col, row] = k.split(',').map(Number);
+    if (lockIdx < targetLockCount) {
+      locksState[k] = { ...v, unlocked: false };
+      return;
+    }
+    if (Number.isInteger(row) && Number.isInteger(col) && mapState[row] && typeof mapState[row][col] !== 'undefined') {
+      mapState[row][col] = T.FLOOR;
+    }
   });
   currentNPCs = lvl.npcs;
   currentChallenges = lvl.challenges;
@@ -4762,7 +4975,11 @@ dlgEl.tabIndex = -1;
 continueBtn.type = 'button';
 const soundBtn   = document.getElementById('sound-btn');
 const startBtn   = document.getElementById('start-btn');
+const createSaveBtn = document.getElementById('create-save-btn');
+const statusStartBtn = document.getElementById('status-start-btn');
+const statusLogoutBtn = document.getElementById('status-logout-btn');
 const nameInput  = document.getElementById('name-input');
+const passwordInput  = document.getElementById('password-input');
 const audioGate  = document.getElementById('audio-gate');
 const audioEnableBtn = document.getElementById('audio-enable-btn');
 const audioMuteBtn   = document.getElementById('audio-mute-btn');
@@ -4904,31 +5121,27 @@ function closeAudioGate() {
   audioGate.setAttribute('aria-hidden', 'true');
 }
 
-function beginGameFromTitle(nameVal) {
+function beginGameFromTitle(nameVal, options = {}) {
+  const { resume = false } = options;
   playerName = nameVal;
-  totalXP = 0;
   scoreSubmitWarned = false;
   sessionStartTime = Date.now();
-  loadLevel(0);
+  if (!resume) {
+    totalXP = 0;
+    loadLevel(0);
+  } else {
+    restoreSavedRun();
+  }
 }
 
-function requestStartFromTitle() {
-  let nameVal = nameInput.value.trim();
-  nameVal = nameVal.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16);
-  if (!nameVal) {
-    nameInput.focus();
-    return;
-  }
-  if (shouldRequireAudioGate()) {
-    pendingStartName = nameVal;
-    openAudioGate();
-    return;
-  }
-  beginGameFromTitle(nameVal);
+async function requestStartFromTitle(mode = pendingAuthMode || 'resume') {
+  pendingAuthMode = mode;
+  const authenticated = await submitAccountAuth(mode);
+  if (!authenticated) return;
 }
 
 function confirmAudioAndStart() {
-  pendingStartName = pendingStartName || nameInput.value.trim() || 'Hero';
+  pendingStartName = pendingStartName || playerName || nameInput.value.trim() || 'Hero';
   Sound.enabled = true;
   syncSoundButton();
   try { localStorage.setItem('lingoSound', 'on'); } catch(e) {}
@@ -4936,7 +5149,9 @@ function confirmAudioAndStart() {
   Sound.ready = true;
   Sound.click();
   closeAudioGate();
-  beginGameFromTitle(pendingStartName.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16) || 'Hero');
+  beginGameFromTitle((pendingStartName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
+    resume: Boolean(accountSession.save && accountSession.save.snapshot)
+  });
   pendingStartName = '';
 }
 
@@ -4946,8 +5161,10 @@ function continueMutedStart() {
   syncSoundButton();
   try { localStorage.setItem('lingoSound', 'off'); } catch(e) {}
   closeAudioGate();
-  const nextName = pendingStartName || nameInput.value.trim() || 'Hero';
-  beginGameFromTitle(nextName.replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 16) || 'Hero');
+  const nextName = pendingStartName || playerName || nameInput.value.trim() || 'Hero';
+  beginGameFromTitle((nextName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
+    resume: Boolean(accountSession.save && accountSession.save.snapshot)
+  });
   pendingStartName = '';
 }
 
@@ -4980,6 +5197,7 @@ continueBtn.addEventListener('click', () => {
 
 function openChallenge(lockKey) {
   const ch = getChallengeForLock(lockKey);
+  if (!ch) return;
   pendingLock = lockKey;
   dialogueOpen = true;
   if (!attemptCounts[lockKey]) attemptCounts[lockKey] = 0;
@@ -5043,6 +5261,24 @@ function handleAnswer(idx, ch, lockKey) {
   totalAttempts++;
 
   if (idx === ch.answer) {
+     btns[idx].classList.add('correct');
+     dlgText.textContent = ch.revisit
+       ? ch.reward + '\n\nThe dungeon grudgingly admits you learned it this time.'
+       : ch.reward;
+     addXP(20);
++    accountSession.wordBank = mergeWordBankWithChallenge(ch);
+     challengesPassed++;
+     Sound.doorOpen();
+     if (locksState[lockKey].type === 'chest') Sound.chest();
+@@
+     continueBtn.style.display = 'block';
+     continueBtn.textContent = 'Continue ▶';
+     dlgChoices.innerHTML = '';
+     pendingLock = null; pendingNPC = null;
+     syncDialogueSelection();
++    saveAccountProgress('challenge_cleared');
+ 
+   } else {
     btns[idx].classList.add('correct');
     dlgText.textContent = ch.revisit
       ? ch.reward + '\n\nThe dungeon grudgingly admits you learned it this time.'
@@ -5145,17 +5381,23 @@ function handleStairs() {
   postScore(currentLevelIdx);
 
   if (currentLevelIdx >= LEVELS.length - 1) {
-    document.getElementById('win-msg').textContent = "Incredible! You've mastered all " + LEVELS.length + " levels.";
+    document.getElementById('win-msg').textContent = `Incredible! You cleared all ${LEVELS.length} levels and survived every dramatic grammar goblin.`;
     document.getElementById('win-xp').textContent = totalXP;
     document.getElementById('win-time').textContent = fmtTime(Date.now() - sessionStartTime);
-    document.getElementById('win-msg').textContent = `Incredible! You cleared all ${LEVELS.length} levels and survived every dramatic grammar goblin.`;
     document.getElementById('lc-title').textContent = 'YOU WIN!';
     document.getElementById('nextlevel-btn').style.display = 'none';
+    saveAccountProgress('game_won');
     fetchLeaderboard().then(scores => {
       renderLeaderboard(scores, 'win-lb');
       showScreen('screen-win');
     });
   } else {
++    saveAccountProgress('level_complete');
+     document.getElementById('lc-title').textContent = 'LEVEL COMPLETE!';
+     document.getElementById('nextlevel-btn').style.display = 'block';
+     showScreen('screen-levelcomplete');
+   }
+ }
     document.getElementById('lc-title').textContent = 'LEVEL COMPLETE!';
     document.getElementById('nextlevel-btn').style.display = 'block';
     showScreen('screen-levelcomplete');
@@ -5289,25 +5531,36 @@ quitBtn.addEventListener('click', () => {
   document.getElementById('quit-challenges').textContent = challengesPassed;
   document.getElementById('quit-time').textContent = elapsed;
   document.getElementById('quit-attempts').textContent = totalAttempts;
+  saveAccountProgress('quit_to_menu');
   postScore(currentLevelIdx);
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'quit-lb'));
   showScreen('screen-quit');
 });
 
-document.getElementById('quit-play-again').addEventListener('click', () => {
-  Sound.click();
-  totalXP = 0; playerName = 'Hero';
+function resetToTitle() {
+  totalXP = 0;
+  xp = 0;
+  challengesPassed = 0;
+  totalAttempts = 0;
+  playerName = (accountSession.profile && accountSession.profile.name) || 'Hero';
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
+  if (accountSession.token) {
+    renderStatusScreen();
+    showScreen('screen-status');
+    return;
+  }
   showScreen('screen-title');
   document.getElementById('name-input').value = '';
+}
+
+document.getElementById('quit-play-again').addEventListener('click', () => {
+  Sound.click();
+  resetToTitle();
 });
 
 document.getElementById('win-play-again').addEventListener('click', () => {
   Sound.click();
-  totalXP = 0;
-  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
-  showScreen('screen-title');
-  document.getElementById('name-input').value = '';
+  resetToTitle();
 });
 
 document.getElementById('nextlevel-btn').addEventListener('click', () => {
@@ -5317,10 +5570,7 @@ document.getElementById('nextlevel-btn').addEventListener('click', () => {
 
 document.getElementById('lc-quit-btn').addEventListener('click', () => {
   Sound.click();
-  totalXP = 0;
-  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
-  showScreen('screen-title');
-  document.getElementById('name-input').value = '';
+  resetToTitle();
 });
 
 // ============================================================
@@ -5499,13 +5749,39 @@ soundBtn.addEventListener('click', () => {
 //  START BUTTON
 // ============================================================
 startBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
-startBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', async () => {
   Sound.unlock();
   Sound.click();
-  requestStartFromTitle();
+  pendingAuthMode = 'resume';
+  await requestStartFromTitle('resume');
+});
+createSaveBtn.addEventListener('click', async () => {
+  Sound.unlock();
+  Sound.click();
+  pendingAuthMode = 'create';
+  await requestStartFromTitle('create');
+});
+statusStartBtn.addEventListener('click', () => {
+  Sound.unlock();
+  Sound.click();
+  pendingStartName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
+  if (shouldRequireAudioGate()) {
+    openAudioGate();
+    return;
+  }
+  beginGameFromTitle(pendingStartName, {
+    resume: Boolean(accountSession.save && accountSession.save.snapshot)
+  });
+});
+statusLogoutBtn.addEventListener('click', () => {
+  Sound.click();
+  logoutAccount();
 });
 
 nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') startBtn.click();
+});
+passwordInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') startBtn.click();
 });
 
@@ -5529,8 +5805,12 @@ audioMuteBtn.addEventListener('touchstart', e => {
 // ============================================================
 loadLevel(0);
 fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
-showScreen('screen-title');
-requestAnimationFrame(loop);
+Promise.resolve(maybeResumeStoredSession()).finally(() => {
+  if (!document.getElementById('screen-status').classList.contains('active')) {
+    showScreen('screen-title');
+  }
+  requestAnimationFrame(loop);
+});
 </script>
 </body>
 </html>

@@ -1,5 +1,10 @@
+import hashlib
 import hmac
+import json
 import os
+import re
+import secrets
+import sqlite3
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -7,6 +12,11 @@ from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import BadRequest
 
 from backend.leaderboard_api.db import DEFAULT_DB_PATH, LeaderboardDB, ValidationError
+
+
+MAX_ACCOUNT_NAME_LEN = 24
+MAX_PASSWORD_LEN = 128
+MAX_WORD_BANK_ITEMS = 60
 
 
 def _parse_limit(raw_limit: Any, default: int = 50) -> int:
@@ -37,6 +47,213 @@ def _require_admin(expected_token: str) -> Tuple[bool, str]:
     return True, ""
 
 
+def _account_connect(db_path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(db_path, timeout=30.0)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+
+def _init_account_db(db_path: str) -> None:
+    with _account_connect(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                name_norm TEXT NOT NULL UNIQUE,
+                password_salt TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                session_token TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_session_token ON users(session_token) WHERE session_token IS NOT NULL"
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_saves (
+                user_id INTEGER PRIMARY KEY,
+                snapshot_json TEXT,
+                status_json TEXT,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_word_bank (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                word_key TEXT NOT NULL,
+                text TEXT NOT NULL,
+                gloss TEXT,
+                source TEXT,
+                added_at TEXT NOT NULL,
+                UNIQUE(user_id, word_key),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+
+
+def _utc_now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _sanitize_account_name(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValidationError("Invalid account name: must be a string.")
+    no_tags = re.sub(r"<[^>]*>", "", value)
+    printable = "".join(ch for ch in no_tags if ch.isprintable())
+    collapsed = " ".join(printable.split()).strip()
+    safe = "".join(ch for ch in collapsed if ch.isalnum() or ch in " _-.")
+    safe = safe.strip()
+    if not safe:
+        raise ValidationError("Invalid account name: must contain at least one visible character.")
+    return safe[:MAX_ACCOUNT_NAME_LEN]
+
+
+def _normalize_account_name(name: str) -> str:
+    return name.casefold()
+
+
+def _sanitize_password(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValidationError("Invalid password: must be a string.")
+    if len(value) < 4:
+        raise ValidationError("Invalid password: must be at least 4 characters.")
+    if len(value) > MAX_PASSWORD_LEN:
+        raise ValidationError("Invalid password: too long.")
+    return value
+
+
+def _hash_password(password: str, salt_hex: str | None = None) -> tuple[str, str]:
+    salt = bytes.fromhex(salt_hex) if salt_hex else secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
+    return salt.hex(), digest.hex()
+
+
+def _verify_password(password: str, salt_hex: str, hash_hex: str) -> bool:
+    _, digest_hex = _hash_password(password, salt_hex)
+    return hmac.compare_digest(digest_hex, hash_hex)
+
+
+def _extract_session_token() -> str:
+    auth = request.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return request.headers.get("X-Session-Token", "").strip()
+
+
+def _sanitize_status_payload(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    clean: dict[str, Any] = {}
+    for key in ("storyLabel", "storyProgress", "totalXP", "wordCount", "hasActiveRun", "levelLabel", "updatedReason"):
+        value = payload.get(key)
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            clean[key] = value
+    return clean
+
+
+def _sanitize_snapshot_payload(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValidationError("Invalid save snapshot: expected an object.")
+    return payload
+
+
+def _sanitize_word_bank(payload: Any) -> list[dict[str, str]]:
+    if not isinstance(payload, list):
+        return []
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for raw in payload[:MAX_WORD_BANK_ITEMS]:
+        if not isinstance(raw, dict):
+            continue
+        key = str(raw.get("key", "")).strip().lower()[:64]
+        text = str(raw.get("text", "")).strip()[:48]
+        gloss = str(raw.get("gloss", "")).strip()[:80]
+        source = str(raw.get("source", "")).strip()[:48]
+        if not key or not text or key in seen:
+            continue
+        seen.add(key)
+        items.append({"key": key, "text": text, "gloss": gloss, "source": source})
+    return items
+
+
+def _load_account_bundle(conn: sqlite3.Connection, user_row: sqlite3.Row) -> dict[str, Any]:
+    save_row = conn.execute(
+        "SELECT snapshot_json, status_json, updated_at FROM user_saves WHERE user_id = ?",
+        (int(user_row["id"]),),
+    ).fetchone()
+    word_rows = conn.execute(
+        "SELECT word_key, text, gloss, source, added_at FROM user_word_bank WHERE user_id = ? ORDER BY added_at DESC, id DESC LIMIT ?",
+        (int(user_row["id"]), MAX_WORD_BANK_ITEMS),
+    ).fetchall()
+
+    save_payload = None
+    if save_row:
+        snapshot = None
+        status = {}
+        if save_row["snapshot_json"]:
+            try:
+                snapshot = json.loads(str(save_row["snapshot_json"]))
+            except json.JSONDecodeError:
+                snapshot = None
+        if save_row["status_json"]:
+            try:
+                status = json.loads(str(save_row["status_json"]))
+            except json.JSONDecodeError:
+                status = {}
+        save_payload = {
+            "snapshot": snapshot,
+            "status": status,
+            "updated_at": str(save_row["updated_at"]),
+        }
+
+    return {
+        "profile": {
+            "name": str(user_row["name"]),
+            "created_at": str(user_row["created_at"]),
+            "updated_at": str(user_row["updated_at"]),
+        },
+        "save": save_payload,
+        "word_bank": [
+            {
+                "key": str(row["word_key"]),
+                "text": str(row["text"]),
+                "gloss": str(row["gloss"] or ""),
+                "source": str(row["source"] or ""),
+                "added_at": str(row["added_at"]),
+            }
+            for row in word_rows
+        ],
+    }
+
+
+def _require_user_by_session(db_path: str) -> tuple[sqlite3.Connection | None, sqlite3.Row | None, tuple[bool, str]]:
+    token = _extract_session_token()
+    if not token:
+        return None, None, (False, "Missing session token.")
+    conn = _account_connect(db_path)
+    user_row = conn.execute(
+        "SELECT * FROM users WHERE session_token = ?",
+        (token,),
+    ).fetchone()
+    if not user_row:
+        conn.close()
+        return None, None, (False, "Invalid session token.")
+    return conn, user_row, (True, "")
+
+
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, static_folder=None)
 
@@ -53,6 +270,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     leaderboard_db = LeaderboardDB(db_path)
     leaderboard_db.init_db()
+    _init_account_db(db_path)
 
     app.config["LEADERBOARD_DB_PATH"] = db_path
     app.config["LEADERBOARD_ADMIN_TOKEN"] = admin_token
@@ -108,6 +326,170 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             return jsonify({"ok": False, "error": error}), 403
         result = app.config["LEADERBOARD_DB"].dedupe_all()
         return jsonify({"ok": True, **result})
+
+    @app.post("/api/account/login")
+    def account_login():
+        try:
+            payload = request.get_json(force=False, silent=False)
+        except BadRequest:
+            return jsonify({"ok": False, "error": "Invalid JSON body."}), 400
+        if payload is None:
+            payload = {}
+        try:
+            name = _sanitize_account_name(payload.get("name", ""))
+            password = _sanitize_password(payload.get("password", ""))
+        except ValidationError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+
+        intent = str(payload.get("intent", "resume")).strip().lower() or "resume"
+        if intent not in {"create", "resume"}:
+            intent = "resume"
+
+        now = _utc_now()
+        name_norm = _normalize_account_name(name)
+        with _account_connect(app.config["LEADERBOARD_DB_PATH"]) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            user_row = conn.execute(
+                "SELECT * FROM users WHERE name_norm = ?",
+                (name_norm,),
+            ).fetchone()
+            created = False
+
+            if user_row is None:
+                if intent == "resume":
+                    conn.rollback()
+                    return jsonify({"ok": False, "error": "No save found for that name yet."}), 404
+                salt_hex, hash_hex = _hash_password(password)
+                cur = conn.execute(
+                    """
+                    INSERT INTO users (name, name_norm, password_salt, password_hash, session_token, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (name, name_norm, salt_hex, hash_hex, None, now, now),
+                )
+                user_row = conn.execute(
+                    "SELECT * FROM users WHERE id = ?",
+                    (int(cur.lastrowid),),
+                ).fetchone()
+                created = True
+            else:
+                if not _verify_password(password, str(user_row["password_salt"]), str(user_row["password_hash"])):
+                    conn.rollback()
+                    return jsonify({"ok": False, "error": "Wrong password for that save."}), 403
+                conn.execute(
+                    "UPDATE users SET name = ?, updated_at = ? WHERE id = ?",
+                    (name, now, int(user_row["id"])),
+                )
+                user_row = conn.execute(
+                    "SELECT * FROM users WHERE id = ?",
+                    (int(user_row["id"]),),
+                ).fetchone()
+
+            token = secrets.token_urlsafe(24)
+            conn.execute(
+                "UPDATE users SET session_token = ?, updated_at = ? WHERE id = ?",
+                (token, now, int(user_row["id"])),
+            )
+            user_row = conn.execute(
+                "SELECT * FROM users WHERE id = ?",
+                (int(user_row["id"]),),
+            ).fetchone()
+            bundle = _load_account_bundle(conn, user_row)
+            conn.commit()
+
+        return jsonify({"ok": True, "created": created, "token": token, **bundle})
+
+    @app.get("/api/account/me")
+    def account_me():
+        conn, user_row, state = _require_user_by_session(app.config["LEADERBOARD_DB_PATH"])
+        ok, error = state
+        if not ok or conn is None or user_row is None:
+            return jsonify({"ok": False, "error": error}), 403
+        with conn:
+            bundle = _load_account_bundle(conn, user_row)
+        conn.close()
+        return jsonify({"ok": True, **bundle})
+
+    @app.post("/api/account/save")
+    def account_save():
+        conn, user_row, state = _require_user_by_session(app.config["LEADERBOARD_DB_PATH"])
+        ok, error = state
+        if not ok or conn is None or user_row is None:
+            return jsonify({"ok": False, "error": error}), 403
+
+        try:
+            payload = request.get_json(force=False, silent=False)
+        except BadRequest:
+            conn.close()
+            return jsonify({"ok": False, "error": "Invalid JSON body."}), 400
+        if payload is None:
+            payload = {}
+
+        try:
+            snapshot = _sanitize_snapshot_payload(payload.get("snapshot", {}))
+        except ValidationError as exc:
+            conn.close()
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        status_payload = _sanitize_status_payload(payload.get("status", {}))
+        word_bank = _sanitize_word_bank(payload.get("word_bank", []))
+        now = _utc_now()
+
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(
+                """
+                INSERT INTO user_saves (user_id, snapshot_json, status_json, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    snapshot_json = excluded.snapshot_json,
+                    status_json = excluded.status_json,
+                    updated_at = excluded.updated_at
+                """,
+                (int(user_row["id"]), json.dumps(snapshot), json.dumps(status_payload), now),
+            )
+            conn.execute("DELETE FROM user_word_bank WHERE user_id = ?", (int(user_row["id"]),))
+            for item in word_bank:
+                conn.execute(
+                    """
+                    INSERT INTO user_word_bank (user_id, word_key, text, gloss, source, added_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        int(user_row["id"]),
+                        item["key"],
+                        item["text"],
+                        item.get("gloss", ""),
+                        item.get("source", ""),
+                        now,
+                    ),
+                )
+            conn.execute(
+                "UPDATE users SET updated_at = ? WHERE id = ?",
+                (now, int(user_row["id"])),
+            )
+            user_row = conn.execute(
+                "SELECT * FROM users WHERE id = ?",
+                (int(user_row["id"]),),
+            ).fetchone()
+            bundle = _load_account_bundle(conn, user_row)
+            conn.commit()
+
+        conn.close()
+        return jsonify({"ok": True, **bundle})
+
+    @app.post("/api/account/logout")
+    def account_logout():
+        conn, user_row, state = _require_user_by_session(app.config["LEADERBOARD_DB_PATH"])
+        ok, error = state
+        if not ok or conn is None or user_row is None:
+            return jsonify({"ok": False, "error": error}), 403
+        with conn:
+            conn.execute(
+                "UPDATE users SET session_token = NULL, updated_at = ? WHERE id = ?",
+                (_utc_now(), int(user_row["id"])),
+            )
+        conn.close()
+        return jsonify({"ok": True})
 
     return app
 
