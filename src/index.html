@@ -35,14 +35,6 @@
       letter-spacing: 1px;
     }
     #hud .title { color: #fff; font-weight: bold; letter-spacing: 3px; }
-    #hud .meta {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      text-align: center;
-    }
     #hud .xp { color: #ddd; }
     #quit-btn {
       background: #000; border: 2px solid #fff; color: #fff;
@@ -62,7 +54,6 @@
     @media (max-width: 430px) {
       #hud { padding-left: 6px; padding-right: 6px; gap: 4px; }
       #hud .title { font-size: 0.5rem; letter-spacing: 1px; }
-      #hud .meta { gap: 4px; }
       #quit-btn, #sound-btn { padding: 4px 7px; font-size: 0.44rem; letter-spacing: 0; }
     }
 
@@ -264,15 +255,6 @@
       margin-bottom: 16px;
     }
 
-    /* ── Streak callout ── */
-    .streak-callout {
-      background: #000; border: 2px solid #fff;
-      padding: 6px 16px; font-size: 0.52rem;
-      color: #fff; letter-spacing: 2px; text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    #streak-hud { color: #aaa; margin-left: 6px; }
-
     /* ── Audio gate modal ── */
     #audio-gate {
       display: none; position: fixed; inset: 0;
@@ -305,11 +287,7 @@
 <!-- HUD -->
 <div id="hud">
   <span class="title">LINGO DUNGEON</span>
-  <div class="meta">
-    <span class="xp">XP: <span id="xp-val">0</span></span>
-    <span class="xp" id="streak-hud">STREAK: <span id="streak-val">0</span></span>
-    <span class="xp" id="goal-hud">TODAY: <span id="goal-val">0/1 FLOOR</span></span>
-  </div>
+  <span class="xp">XP: <span id="xp-val">0</span></span>
   <div style="display:flex;gap:4px;align-items:center">
     <button id="sound-btn">SFX ON</button>
     <button id="quit-btn">QUIT</button>
@@ -331,15 +309,10 @@
   <!-- TITLE SCREEN -->
   <div id="screen-title" class="screen active">
     <h1>LINGO DUNGEON</h1>
-    <h2>SPANISH PRACTICE FOR BUSY ADULTS</h2>
-    <div class="streak-callout" id="title-streak">STREAK: 0 DAYS</div>
-    <p id="title-goal-copy">Take a focused 5-minute dungeon run.<br/>Clear 1 floor, learn useful Spanish, and keep your streak alive.</p>
-    <div class="stat-grid" style="max-width:320px; margin-top:0; margin-bottom:8px;">
-      <div class="stat-box"><div class="val" id="title-best-run">0</div><div class="lbl">BEST RUN XP</div></div>
-      <div class="stat-box"><div class="val" id="title-goal-progress">0/1</div><div class="lbl">TODAY'S GOAL</div></div>
-    </div>
+    <h2>LEARN SPANISH. SURVIVE THE DARK.</h2>
+    <p>Enter your name to begin your adventure.<br/>Unlock doors and chests by answering Spanish challenges.</p>
     <input type="text" id="name-input" maxlength="16" placeholder="YOUR NAME..." autocomplete="off" spellcheck="false"/>
-    <button class="big-btn" id="start-btn">Start 5-Min Run ▶</button>
+    <button class="big-btn" id="start-btn">Enter Dungeon ▶</button>
     <div style="margin-top:20px; width:100%; max-width:320px;">
       <div class="lb-header">
         <span style="flex:1">HALL OF FAME</span>
@@ -354,7 +327,6 @@
   <div id="screen-levelcomplete" class="screen">
     <h1 id="lc-title">LEVEL COMPLETE!</h1>
     <div class="level-badge" id="lc-levelname">The Entrance Hall</div>
-    <div class="streak-callout" id="lc-streak">STREAK: 0 DAYS • TODAY: 0/1 FLOOR</div>
     <div class="stat-grid">
       <div class="stat-box"><div class="val" id="lc-xp">0</div><div class="lbl">XP EARNED</div></div>
       <div class="stat-box"><div class="val" id="lc-challenges">0</div><div class="lbl">CHALLENGES PASSED</div></div>
@@ -369,7 +341,6 @@
   <div id="screen-win" class="screen">
     <h1>YOU WIN!</h1>
     <h2>DUNGEON CLEARED</h2>
-    <div class="streak-callout" id="win-streak">STREAK: 0 DAYS • TODAY: 0/1 FLOOR</div>
     <p id="win-msg">Incredible! You've mastered all three levels.</p>
     <div class="stat-grid">
       <div class="stat-box"><div class="val" id="win-xp">0</div><div class="lbl">TOTAL XP</div></div>
@@ -383,7 +354,6 @@
   <div id="screen-quit" class="screen">
     <h1>GAME OVER</h1>
     <div class="level-badge" id="quit-levelname">Level 1</div>
-    <div class="streak-callout" id="quit-streak">STREAK: 0 DAYS • TODAY: 0/1 FLOOR</div>
     <div class="stat-grid">
       <div class="stat-box"><div class="val" id="quit-xp">0</div><div class="lbl">XP EARNED</div></div>
       <div class="stat-box"><div class="val" id="quit-challenges">0</div><div class="lbl">CHALLENGES PASSED</div></div>
@@ -745,124 +715,9 @@ let selectedChoiceIdx = -1;
 let pendingStartName = '';
 let attemptCounts = {}; // lockKey -> attempt count
 let scoreSubmitWarned = false;
-const PROGRESS_KEY = 'lingoDailyProgressV1';
-const DAILY_XP_GOAL = 40;
-const DAILY_FLOOR_GOAL = 1;
-let progressState = loadProgressState();
 
 function remainingLocks() {
   return Object.values(locksState).filter(l => !l.unlocked).length;
-}
-
-function getTodayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function loadProgressState() {
-  const todayKey = getTodayKey();
-  const fallback = {
-    streakDays: 0,
-    lastPlayedDayKey: null,
-    completedToday: false,
-    todayFloorClears: 0,
-    todayXP: 0,
-    bestRunXP: 0,
-    runsCompleted: 0,
-    lastRunXP: 0,
-    lastRunAt: null
-  };
-  try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return fallback;
-    if (parsed.lastPlayedDayKey !== todayKey) {
-      parsed.completedToday = false;
-      parsed.todayFloorClears = 0;
-      parsed.todayXP = 0;
-    }
-    return {
-      ...fallback,
-      ...parsed,
-      completedToday: !!parsed.completedToday,
-      todayFloorClears: Math.max(0, Number(parsed.todayFloorClears) || 0),
-      todayXP: Math.max(0, Number(parsed.todayXP) || 0),
-      streakDays: Math.max(0, Number(parsed.streakDays) || 0),
-      bestRunXP: Math.max(0, Number(parsed.bestRunXP) || 0),
-      runsCompleted: Math.max(0, Number(parsed.runsCompleted) || 0),
-      lastRunXP: Math.max(0, Number(parsed.lastRunXP) || 0),
-      lastPlayedDayKey: parsed.lastPlayedDayKey || null,
-      lastRunAt: parsed.lastRunAt || null
-    };
-  } catch (e) {
-    return fallback;
-  }
-}
-
-function saveProgressState() {
-  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progressState)); } catch (e) {}
-}
-
-function goalProgressText() {
-  return `${Math.min(progressState.todayFloorClears, DAILY_FLOOR_GOAL)}/${DAILY_FLOOR_GOAL} FLOOR`;
-}
-
-function syncProgressUI() {
-  const streakVal = document.getElementById('streak-val');
-  const goalVal = document.getElementById('goal-val');
-  const titleStreak = document.getElementById('title-streak');
-  const titleBestRun = document.getElementById('title-best-run');
-  const titleGoalProgress = document.getElementById('title-goal-progress');
-  const titleGoalCopy = document.getElementById('title-goal-copy');
-  if (streakVal) streakVal.textContent = progressState.streakDays;
-  if (goalVal) goalVal.textContent = goalProgressText();
-  if (titleStreak) titleStreak.textContent = `STREAK: ${progressState.streakDays} DAY${progressState.streakDays === 1 ? '' : 'S'}`;
-  if (titleBestRun) titleBestRun.textContent = progressState.bestRunXP;
-  if (titleGoalProgress) titleGoalProgress.textContent = `${Math.min(progressState.todayFloorClears, DAILY_FLOOR_GOAL)}/${DAILY_FLOOR_GOAL}`;
-  if (titleGoalCopy) {
-    titleGoalCopy.innerHTML = progressState.completedToday
-      ? 'Today\'s quick run is done.<br/>Jump back in for extra XP, cleaner clears, or leaderboard climbs.'
-      : `Take a focused 5-minute dungeon run.<br/>Clear ${DAILY_FLOOR_GOAL} floor, aim for ${DAILY_XP_GOAL} XP, and keep your streak alive.`;
-  }
-  const streakText = `STREAK: ${progressState.streakDays} DAY${progressState.streakDays === 1 ? '' : 'S'} • TODAY: ${goalProgressText()}`;
-  const lcStreak = document.getElementById('lc-streak');
-  const winStreak = document.getElementById('win-streak');
-  const quitStreak = document.getElementById('quit-streak');
-  if (lcStreak) lcStreak.textContent = streakText;
-  if (winStreak) winStreak.textContent = streakText;
-  if (quitStreak) quitStreak.textContent = streakText;
-}
-
-function markRunStart() {
-  const todayKey = getTodayKey();
-  const prevDay = progressState.lastPlayedDayKey;
-  if (prevDay !== todayKey) {
-    const prevTime = prevDay ? Date.parse(prevDay + 'T00:00:00Z') : NaN;
-    const todayTime = Date.parse(todayKey + 'T00:00:00Z');
-    const diffDays = Number.isFinite(prevTime) ? Math.round((todayTime - prevTime) / 86400000) : null;
-    if (!prevDay) progressState.streakDays = Math.max(progressState.streakDays, 1);
-    else if (diffDays === 1) progressState.streakDays += 1;
-    else progressState.streakDays = 1;
-    progressState.lastPlayedDayKey = todayKey;
-    progressState.completedToday = false;
-    progressState.todayFloorClears = 0;
-    progressState.todayXP = 0;
-    saveProgressState();
-  }
-  syncProgressUI();
-}
-
-function recordFloorClear() {
-  progressState.lastPlayedDayKey = getTodayKey();
-  progressState.todayFloorClears += 1;
-  progressState.todayXP = Math.max(progressState.todayXP, totalXP);
-  progressState.bestRunXP = Math.max(progressState.bestRunXP, totalXP);
-  progressState.runsCompleted += 1;
-  progressState.lastRunXP = totalXP;
-  progressState.lastRunAt = new Date().toISOString();
-  if (progressState.todayFloorClears >= DAILY_FLOOR_GOAL) progressState.completedToday = true;
-  saveProgressState();
-  syncProgressUI();
 }
 const keys = {};
 const MOVE_COOLDOWN = 100; // ms between moves — raise to reduce speed, lower to feel snappier
@@ -1027,12 +882,6 @@ const Particles = {
 function addXP(amount) {
   xp += amount; totalXP += amount;
   document.getElementById('xp-val').textContent = xp;
-  progressState.todayXP = Math.max(progressState.todayXP, totalXP);
-  if (totalXP > progressState.bestRunXP) {
-    progressState.bestRunXP = totalXP;
-    saveProgressState();
-  }
-  syncProgressUI();
   showToast('+' + amount + ' XP!');
   if (amount >= 20) Sound.correct();
   else if (amount > 0) Sound.click();
@@ -1177,7 +1026,7 @@ function loadLevel(idx) {
   showScreen(null);
   resizeCanvas();
   render();
-  showToast(`Floor ${idx + 1}: ${lvl.name}. Today\'s goal: ${goalProgressText()}.`, 3200);
+  showToast('Level ' + (idx+1) + ': ' + lvl.name, 3000);
 }
 
 // ============================================================
@@ -1338,7 +1187,6 @@ function beginGameFromTitle(nameVal) {
   playerName = nameVal;
   totalXP = 0;
   scoreSubmitWarned = false;
-  markRunStart();
   sessionStartTime = Date.now();
   loadLevel(0);
 }
@@ -1550,15 +1398,12 @@ function handleStairs() {
     );
     return;
   }
-  recordFloorClear();
   const elapsed = fmtTime(Date.now() - levelStartTime);
-  const floorGoalDone = progressState.todayFloorClears >= DAILY_FLOOR_GOAL;
   document.getElementById('lc-levelname').textContent = LEVELS[currentLevelIdx].name;
   document.getElementById('lc-xp').textContent = xp;
   document.getElementById('lc-challenges').textContent = challengesPassed;
   document.getElementById('lc-time').textContent = elapsed;
   document.getElementById('lc-attempts').textContent = totalAttempts;
-  document.getElementById('lc-title').textContent = floorGoalDone ? 'DAILY RUN LOCKED IN!' : 'LEVEL COMPLETE!';
   Sound.level();
 
   postScore(currentLevelIdx);
@@ -1566,15 +1411,14 @@ function handleStairs() {
   if (currentLevelIdx >= LEVELS.length - 1) {
     document.getElementById('win-xp').textContent = totalXP;
     document.getElementById('win-time').textContent = fmtTime(Date.now() - sessionStartTime);
-    document.getElementById('win-msg').textContent = floorGoalDone
-      ? `Excellent. Your 5-minute daily run is complete and your streak is now ${progressState.streakDays}.`
-      : 'Incredible! You cleared the dungeon and banked a strong practice run.';
+    document.getElementById('lc-title').textContent = 'YOU WIN!';
     document.getElementById('nextlevel-btn').style.display = 'none';
     fetchLeaderboard().then(scores => {
       renderLeaderboard(scores, 'win-lb');
       showScreen('screen-win');
     });
   } else {
+    document.getElementById('lc-title').textContent = 'LEVEL COMPLETE!';
     document.getElementById('nextlevel-btn').style.display = 'block';
     showScreen('screen-levelcomplete');
   }
@@ -1701,10 +1545,6 @@ quitBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: tru
 quitBtn.addEventListener('click', () => {
   Sound.unlock();
   Sound.click();
-  progressState.todayXP = Math.max(progressState.todayXP, totalXP);
-  progressState.bestRunXP = Math.max(progressState.bestRunXP, totalXP);
-  saveProgressState();
-  syncProgressUI();
   const elapsed = fmtTime(Date.now() - levelStartTime);
   document.getElementById('quit-levelname').textContent = LEVELS[currentLevelIdx].name;
   document.getElementById('quit-xp').textContent = totalXP;
@@ -1719,7 +1559,6 @@ quitBtn.addEventListener('click', () => {
 document.getElementById('quit-play-again').addEventListener('click', () => {
   Sound.click();
   totalXP = 0; playerName = 'Hero';
-  syncProgressUI();
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
   document.getElementById('name-input').value = '';
@@ -1728,7 +1567,6 @@ document.getElementById('quit-play-again').addEventListener('click', () => {
 document.getElementById('win-play-again').addEventListener('click', () => {
   Sound.click();
   totalXP = 0;
-  syncProgressUI();
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
   document.getElementById('name-input').value = '';
@@ -1742,7 +1580,6 @@ document.getElementById('nextlevel-btn').addEventListener('click', () => {
 document.getElementById('lc-quit-btn').addEventListener('click', () => {
   Sound.click();
   totalXP = 0;
-  syncProgressUI();
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
   document.getElementById('name-input').value = '';
@@ -1903,7 +1740,6 @@ document.addEventListener('keydown', unlockAudioFromGesture);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
 
 syncSoundButton();
-syncProgressUI();
 soundBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
 soundBtn.addEventListener('click', () => {
   Sound.unlock();
