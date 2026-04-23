@@ -24,8 +24,8 @@
     }
 
     :root {
-      --accent: #ff0044;
-      --accent-dark: #99002a;
+      --accent: #cc0033;
+      --accent-dark: #7a001f;
     }
 
 
@@ -492,6 +492,13 @@
       text-transform: uppercase;
       margin-bottom: 16px;
     }
+
+    /* Level emphasis */
+    #screen-levelcomplete #lc-title { color: var(--accent); }
+    #screen-levelcomplete #lc-quit-btn { border-color: var(--accent); color: var(--accent); }
+    #screen-levelcomplete #lc-quit-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+    #screen-quit h1 { color: var(--accent); }
+
 
     /* ── Audio gate modal ── */
     #audio-gate {
