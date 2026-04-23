@@ -163,6 +163,43 @@
     .screen h2 { font-size: 0.65rem; color: #bbb; letter-spacing: 3px; margin-bottom: 20px; text-transform: uppercase; }
     .screen p { color: #999; font-size: 0.58rem; margin-bottom: 16px; line-height: 2.2; }
 
+    .screen-shell {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    #screen-title,
+    #screen-status {
+      justify-content: flex-start;
+      padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 18px));
+      padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px));
+    }
+
+    #screen-title h1,
+    #screen-status h1 {
+      font-size: clamp(1rem, 5vw, 1.3rem);
+      margin-bottom: 0;
+    }
+
+    #screen-title h2,
+    #screen-status h2 {
+      font-size: 0.58rem;
+      letter-spacing: 2px;
+      color: #aaa;
+      margin-bottom: 0;
+    }
+
+    .ui-panel {
+      width: 100%;
+      border: 3px solid #fff;
+      background: #000;
+      padding: 18px 16px;
+    }
+
     /* ── Buttons ── */
     .big-btn {
       padding: 14px 32px; background: #fff; color: #000;
@@ -186,60 +223,105 @@
 
     /* ── Name input ── */
     #name-input, #password-input {
-      background: #000; border: 2px solid #fff; color: #fff;
-      padding: 12px 16px;
-      font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.75rem;
-      text-align: center; width: 220px; margin: 12px 0 16px;
+      background: #000; border: 3px solid #fff; color: #fff;
+      padding: 12px;
+      font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.72rem;
+      text-align: center; width: 100%; max-width: 280px; margin: 0 auto 14px;
       outline: none; text-transform: uppercase;
     }
     #name-input:focus, #password-input:focus { background: #111; }
     #password-input {
-      margin-top: 0;
       text-transform: none;
+    }
+    #password-input.auth-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
     }
     .auth-actions {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       width: 100%;
-      max-width: 320px;
+      max-width: 280px;
       justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 4px;
+      flex-direction: column;
+      margin: 0 auto;
     }
     .auth-actions .big-btn,
     .auth-actions .ghost-btn {
-      flex: 1 1 140px;
       margin-top: 0;
+      width: 100%;
     }
     #auth-msg {
       min-height: 2.4em;
-      max-width: 360px;
-      margin-top: 12px;
+      max-width: 280px;
+      margin: 10px auto 0;
       color: #aaa;
       font-size: 0.52rem;
       line-height: 1.8;
     }
+    .title-auth-panel {
+      text-align: center;
+    }
+    .title-auth-panel .subtle-note {
+      margin: 0 auto 12px;
+      max-width: 300px;
+    }
+    .title-leaderboard-panel {
+      padding: 0;
+      overflow: hidden;
+    }
+    .title-leaderboard-panel h3 {
+      padding: 10px 12px;
+      font-size: 0.52rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-bottom: 2px solid #fff;
+      color: #fff;
+      text-align: center;
+      background: #050505;
+    }
+    #screen-title #lb-list {
+      margin: 0;
+      max-width: none;
+      max-height: 220px;
+      border: 0;
+    }
+    #screen-title #lb-list .lb-header {
+      justify-content: center;
+      color: #666;
+      background: transparent;
+    }
+
     .status-panel {
       width: 100%;
-      max-width: 360px;
-      border: 2px solid #fff;
-      padding: 12px;
-      margin: 12px 0;
-      background: #050505;
+      max-width: 440px;
+      border: 3px solid #fff;
+      padding: 14px 14px 12px;
+      margin: 0;
+      background: #000;
       text-align: left;
     }
     .status-panel h3 {
-      font-size: 0.55rem;
-      margin-bottom: 10px;
+      font-size: 0.53rem;
+      margin-bottom: 12px;
       letter-spacing: 2px;
       color: #fff;
       text-transform: uppercase;
+      border-bottom: 1px solid #333;
+      padding-bottom: 8px;
     }
     .status-line {
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 8px;
+      margin-bottom: 9px;
       font-size: 0.5rem;
       line-height: 1.7;
       color: #ddd;
@@ -248,41 +330,98 @@
       color: #fff;
       text-align: right;
     }
+    #level-selector {
+      width: 100%;
+      background: #000;
+      color: #fff;
+      border: 3px solid #fff;
+      padding: 12px;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: 0.57rem;
+      outline: none;
+      margin-top: 8px;
+    }
+    #resume-toggle {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #222;
+    }
+    .resume-mode-controls {
+      display: flex;
+      border: 2px solid #fff;
+      margin-top: 8px;
+    }
+    .resume-mode-btn {
+      flex: 1;
+      padding: 10px 8px;
+      background: #000;
+      color: #fff;
+      border: none;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: 0.5rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+    #resume-mode-restart {
+      border-left: 2px solid #fff;
+    }
     .wordbank-list {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     .word-chip {
-      border: 1px solid #fff;
-      padding: 8px 10px;
+      border: 1px solid #888;
+      padding: 7px 9px;
       font-size: 0.46rem;
       line-height: 1.6;
-      color: #fff;
+      color: #ddd;
       background: #000;
     }
     .word-chip strong {
-      color: #bbb;
+      color: #fff;
       margin-left: 6px;
     }
     .screen-actions {
       display: flex;
       flex-direction: column;
       width: 100%;
-      max-width: 320px;
+      max-width: 280px;
       align-items: stretch;
+      gap: 10px;
+      margin-top: 2px;
     }
     .screen-actions .big-btn,
     .screen-actions .ghost-btn {
       width: 100%;
+      margin-top: 0;
     }
     .subtle-note {
-      color: #777;
+      color: #888;
       font-size: 0.48rem;
-      line-height: 1.9;
-      max-width: 360px;
-      margin-top: 8px;
+      line-height: 1.8;
+      max-width: 380px;
+      margin-top: 0;
+    }
+
+    @media (max-width: 430px) {
+      #screen-title,
+      #screen-status {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .ui-panel,
+      .status-panel {
+        padding: 14px 12px;
+      }
+      #name-input {
+        font-size: 0.62rem;
+      }
+      .auth-actions,
+      .screen-actions {
+        max-width: 100%;
+      }
     }
 
     /* ── Leaderboard ── */
@@ -351,28 +490,41 @@
     /* ── Audio gate modal ── */
     #audio-gate {
       display: none; position: fixed; inset: 0;
-      background: rgba(0, 0, 0, 0.94);
+      background: rgba(0, 0, 0, 0.92);
       align-items: center; justify-content: center;
       z-index: 200; padding: 20px;
     }
     #audio-gate.active { display: flex; }
     #audio-gate .ag-box {
-      background: #000; border: 3px solid #fff;
-      padding: 26px 22px 24px;
-      max-width: 360px; width: 100%;
+      max-width: 400px;
       text-align: center;
     }
-    #audio-gate h2 {
+    #audio-gate-title {
       font-size: clamp(0.8rem, 4.4vw, 1.05rem);
-      color: #fff; letter-spacing: 3px;
-      margin-bottom: 14px; text-transform: uppercase;
+      color: #fff;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
     }
     #audio-gate p {
-      color: #bbb; font-size: 0.58rem;
-      line-height: 2; margin-bottom: 16px;
+      color: #ccc;
+      font-size: 0.56rem;
+      line-height: 2;
+      margin-bottom: 12px;
     }
-    #audio-gate .big-btn { margin-top: 6px; width: 100%; }
-    #audio-gate .ghost-btn { margin-top: 10px; width: 100%; }
+    .audio-gate-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    #audio-gate .big-btn,
+    #audio-gate .ghost-btn {
+      width: 100%;
+      margin-top: 0;
+    }
   </style>
 </head>
 <body>
@@ -401,62 +553,68 @@
 
   <!-- TITLE SCREEN -->
   <div id="screen-title" class="screen active">
-    <h1>LINGO DUNGEON</h1>
-    <h2>QUICK VOCAB WINS. DRAMATIC DOORS. BIGER WORD BAG ENERGY.</h2>
-    <p>Sign in to resume your save or create a new one.<br/>Your word bank, story progress, and run state travel with you.</p>
-    <input type="text" id="name-input" maxlength="24" placeholder="SAVE NAME" autocomplete="username" spellcheck="false"/>
-    <div class="auth-actions">
-      <button class="big-btn" id="start-btn">Resume Save ▶</button>
-      <button class="ghost-btn" id="create-save-btn" type="button">Create Save</button>
-    </div>
-    <p id="auth-msg">Enter your save name, then continue.</p>
-    <div style="margin-top:20px; width:100%; max-width:320px;">
-      <div class="lb-header">
-        <span style="flex:1">HALL OF FAME</span>
+    <div class="screen-shell">
+      <h1>LINGO DUNGEON</h1>
+      <div class="ui-panel title-auth-panel">
+        <h2>Enter Thy Name</h2>
+        <p class="subtle-note">Sign in to resume your save or create a new one. Your word bank, story progress, and run state travel with you.</p>
+        <input type="text" id="name-input" maxlength="24" placeholder="SAVE NAME" autocomplete="username" spellcheck="false"/>
+        <input type="password" id="password-input" class="auth-hidden" maxlength="24" placeholder="PIN" autocomplete="current-password" spellcheck="false"/>
+        <div class="auth-actions">
+          <button class="big-btn" id="start-btn">Resume Save ▶</button>
+          <button class="ghost-btn" id="create-save-btn" type="button">Create Save</button>
+        </div>
+        <p id="auth-msg">Enter your save name, then continue.</p>
       </div>
-      <div class="leaderboard" id="lb-list" style="margin:0;">
-        <div class="lb-header" style="background:transparent; color:#555; font-size:0.5rem; justify-content:center;">Loading scores...</div>
+      <div class="ui-panel title-leaderboard-panel">
+        <h3>Hall of Fame</h3>
+        <div class="leaderboard" id="lb-list">
+          <div class="lb-header">Loading scores...</div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- STATUS SCREEN -->
   <div id="screen-status" class="screen">
-    <h1>STATUS SCREEN</h1>
-    <h2 id="status-subtitle">WELCOME BACK</h2>
-    <p id="status-msg">Your save is loaded. Review your progress before entering the dungeon.</p>
-    <div class="status-panel">
-      <h3>Save Snapshot</h3>
-      <div class="status-line"><span>Save</span><span id="status-player">-</span></div>
-      <div class="status-line"><span>Story</span><span id="status-story">New run</span></div>
-      <div class="status-line"><span>Total XP</span><span id="status-xp">0</span></div>
-      <div class="status-line"><span>Best floor</span><span id="status-floor">1</span></div>
-      <div class="status-line"><span>Resume</span><span id="status-resume">Fresh start</span></div>
-    </div>
-    <div class="status-panel">
-      <h3>Start Level</h3>
-      <p class="subtle-note">Pick where to begin, or continue from where you left off.</p>
-      <div style="margin-top:6px;">
-        <select id="level-selector" style="width:100%; background:#111; color:#fff; border:1px solid #555; padding:10px 12px; border-radius:10px;"></select>
-      </div>
-      <div id="resume-toggle" style="margin-top:10px; display:none;">
-        <p class="subtle-note" style="margin-bottom:6px;">You have a saved position in this dungeon.</p>
-        <div style="display:flex; gap:0; border:2px solid #fff;">
-          <button type="button" id="resume-mode-resume" style="flex:1; padding:10px 8px; background:#fff; color:#000; border:none; font-family:'Press Start 2P',monospace; font-size:0.5rem; letter-spacing:1px; cursor:pointer;">RESUME</button>
-          <button type="button" id="resume-mode-restart" style="flex:1; padding:10px 8px; background:#000; color:#fff; border:none; border-left:2px solid #fff; font-family:'Press Start 2P',monospace; font-size:0.5rem; letter-spacing:1px; cursor:pointer;">RESTART</button>
-        </div>
-        <p class="subtle-note" id="resume-mode-note" style="margin-top:6px; font-size:0.45rem;">Resume: continue where you quit. Restart: reset the selected level.</p>
-      </div>
-    </div>
-    <div class="status-panel">
-      <h3>Word Bank</h3>
-      <p class="subtle-note">Your learned words should feel like a bag of useful items you can keep collecting.</p>
-      <div class="wordbank-list" id="status-wordbank"></div>
-    </div>
+    <div class="screen-shell">
+      <h1>Status</h1>
+      <h2 id="status-subtitle">WELCOME BACK</h2>
+      <p id="status-msg">Your save is loaded. Review your progress before entering the dungeon.</p>
 
-    <div class="screen-actions">
-      <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
-      <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
+      <div class="status-panel ui-panel">
+        <h3>Save Snapshot</h3>
+        <div class="status-line"><span>Save</span><span id="status-player">-</span></div>
+        <div class="status-line"><span>Story</span><span id="status-story">New run</span></div>
+        <div class="status-line"><span>Total XP</span><span id="status-xp">0</span></div>
+        <div class="status-line"><span>Best floor</span><span id="status-floor">1</span></div>
+        <div class="status-line"><span>Resume</span><span id="status-resume">Fresh start</span></div>
+      </div>
+
+      <div class="status-panel ui-panel">
+        <h3>Start Level</h3>
+        <p class="subtle-note">Pick where to begin, or continue from where you left off.</p>
+        <select id="level-selector"></select>
+        <div id="resume-toggle" style="display:none;">
+          <p class="subtle-note">You have a saved position in this dungeon.</p>
+          <div class="resume-mode-controls">
+            <button type="button" id="resume-mode-resume" class="resume-mode-btn">RESUME</button>
+            <button type="button" id="resume-mode-restart" class="resume-mode-btn">RESTART</button>
+          </div>
+          <p class="subtle-note" id="resume-mode-note">Resume: continue where you quit. Restart: reset the selected level.</p>
+        </div>
+      </div>
+
+      <div class="status-panel ui-panel">
+        <h3>Word Bank</h3>
+        <p class="subtle-note">Your learned words should feel like a bag of useful items you can keep collecting.</p>
+        <div class="wordbank-list" id="status-wordbank"></div>
+      </div>
+
+      <div class="screen-actions">
+        <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
+        <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
+      </div>
     </div>
   </div>
 
@@ -520,11 +678,13 @@
 
 <!-- AUDIO GATE MODAL (iPhone Safari requires an explicit gesture) -->
 <div id="audio-gate" aria-hidden="true" role="dialog" aria-labelledby="audio-gate-title">
-  <div class="ag-box">
-    <h2 id="audio-gate-title">Enable Sound?</h2>
-    <p>Tap ENABLE SOUND to turn on game audio.<br/>Or continue without sound.</p>
-    <button class="big-btn" id="audio-enable-btn" type="button">Enable Sound ▶</button>
-    <button class="ghost-btn" id="audio-mute-btn" type="button">Play Muted</button>
+  <div class="ag-box ui-panel">
+    <h2 id="audio-gate-title">Sound?</h2>
+    <p>This dungeon is better with its haunting melodies.</p>
+    <div class="audio-gate-actions">
+      <button class="big-btn" id="audio-enable-btn" type="button">Enable Sound ▶</button>
+      <button class="ghost-btn" id="audio-mute-btn" type="button">Play Muted</button>
+    </div>
   </div>
 </div>
 
