@@ -323,6 +323,39 @@
       border-bottom: 1px solid #333;
       padding-bottom: 8px;
     }
+    #theme-selector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .theme-label {
+      color: #fff;
+      font-size: 0.5rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    #theme-options {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .theme-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: var(--theme-accent, #fff);
+      cursor: pointer;
+      padding: 0;
+    }
+    .theme-dot.active {
+      box-shadow: 0 0 0 2px #000, 0 0 0 4px #fff;
+    }
+    .theme-dot:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
     .status-line {
       display: flex;
       justify-content: space-between;
@@ -624,6 +657,8 @@
         <div class="wordbank-list" id="status-wordbank"></div>
       </div>
 
+      <div class="status-panel" id="theme-selector"><span class="theme-label">Accent Palette</span><div id="theme-options" role="radiogroup" aria-label="Accent palette"></div></div>
+
       <div class="screen-actions">
         <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
         <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
@@ -773,6 +808,15 @@ function resolveApiBase() {
 const API = resolveApiBase();
 const ACCOUNT_TOKEN_KEY = 'lingoAccountTokenV1';
 const WORD_BANK_LIMIT = 10;
+const ACCENT_THEME_KEY = 'lingoAccentTheme';
+const ACCENT_THEMES = [
+  { id: 'crimson', accent: '#cc0033', dark: '#7a001f' },
+  { id: 'teal', accent: '#0f8f8f', dark: '#075959' },
+  { id: 'amber', accent: '#c68400', dark: '#7b4f00' },
+  { id: 'violet', accent: '#6f3cc9', dark: '#43217d' },
+  { id: 'mint', accent: '#0f9d73', dark: '#076348' },
+];
+let activeAccentTheme = ACCENT_THEMES[0].id;
 
 // ============================================================
 //  LEVEL DATA
@@ -4804,6 +4848,21 @@ function safeStorageSet(key, value) {
   } catch (e) {}
 }
 
+function getAccentTheme(name) {
+  return ACCENT_THEMES.find(theme => theme.id === name) || ACCENT_THEMES[0];
+}
+
+function applyAccentTheme(name) {
+  const theme = getAccentTheme(name);
+  activeAccentTheme = theme.id;
+  const rootStyle = document.documentElement && document.documentElement.style;
+  if (rootStyle) {
+    rootStyle.setProperty('--accent', theme.accent);
+    rootStyle.setProperty('--accent-dark', theme.dark);
+  }
+  return theme;
+}
+
 function authHeaders() {
   return accountSession.token ? { Authorization: 'Bearer ' + accountSession.token } : {};
 }
@@ -5312,6 +5371,7 @@ const startBtn   = document.getElementById('start-btn');
 const createSaveBtn = document.getElementById('create-save-btn');
 const statusStartBtn = document.getElementById('status-start-btn');
 const statusLogoutBtn = document.getElementById('status-logout-btn');
+const themeOptions = document.getElementById('theme-options');
 const nameInput  = document.getElementById('name-input');
 const passwordInput  = document.getElementById('password-input');
 const audioGate  = document.getElementById('audio-gate');
@@ -5320,6 +5380,47 @@ const audioMuteBtn   = document.getElementById('audio-mute-btn');
 
 function getChoiceButtons() {
   return Array.from(dlgChoices.querySelectorAll('.choice-btn'));
+}
+
+function syncAccentThemeButtons() {
+  if (!themeOptions) return;
+  themeOptions.querySelectorAll('.theme-dot').forEach(btn => {
+    const isActive = btn.dataset.theme === activeAccentTheme;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+function handleAccentThemeSelect(themeId) {
+  const theme = applyAccentTheme(themeId);
+  safeStorageSet(ACCENT_THEME_KEY, theme.id);
+  syncAccentThemeButtons();
+}
+
+function renderAccentThemeSelector() {
+  if (!themeOptions) return;
+  themeOptions.textContent = '';
+  ACCENT_THEMES.forEach(theme => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'theme-dot';
+    btn.dataset.theme = theme.id;
+    btn.style.setProperty('--theme-accent', theme.accent);
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-label', theme.id);
+    btn.setAttribute('aria-checked', 'false');
+    btn.setAttribute('aria-pressed', 'false');
+    btn.addEventListener('click', () => handleAccentThemeSelect(theme.id));
+    themeOptions.appendChild(btn);
+  });
+  syncAccentThemeButtons();
+}
+
+function initAccentTheme() {
+  const storedTheme = safeStorageGet(ACCENT_THEME_KEY);
+  applyAccentTheme(storedTheme);
+  renderAccentThemeSelector();
 }
 
 function focusDialogueControl() {
@@ -6170,6 +6271,7 @@ audioMuteBtn.addEventListener('touchstart', e => {
 // ============================================================
 //  INIT
 // ============================================================
+initAccentTheme();
 loadLevel(0);
 fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
 Promise.resolve(maybeResumeStoredSession()).finally(() => {
