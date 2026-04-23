@@ -453,6 +453,9 @@
       #screen-status {
         padding-left: 14px;
         padding-right: 14px;
+        padding-bottom: calc(
+          max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px)) + var(--ios-obscured-bottom, 0px)
+        );
       }
       .ui-panel,
       .status-panel {
