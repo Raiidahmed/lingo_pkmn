@@ -301,6 +301,7 @@
       max-width: none;
       max-height: 220px;
       border: 0;
+      overflow-y: auto;
     }
     #screen-title #lb-list .lb-header {
       justify-content: center;
@@ -460,9 +461,10 @@
       #name-input {
         font-size: 0.62rem;
       }
-      /* iPhone: keep Hall of Fame bottom visible (no scrolling) */
+      /* iPhone: keep Hall of Fame bottom visible */
       #screen-title #lb-list {
         max-height: max(110px, calc(170px - var(--ios-obscured-bottom, 0px)));
+        -webkit-overflow-scrolling: touch;
       }
 
       /* iPhone: prevent status screen content from forcing viewport/page scroll */
