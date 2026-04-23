@@ -464,6 +464,8 @@
       /* iPhone: keep Hall of Fame bottom visible */
       #screen-title #lb-list {
         max-height: max(110px, calc(170px - var(--ios-obscured-bottom, 0px)));
+        overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
       }
 
