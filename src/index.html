@@ -11,6 +11,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
+    :root {
+      --accent: #e64f4f;
+      --accent-dark: #892525;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       width: 100%; height: 100%;
@@ -156,7 +160,7 @@
     .screen.active { display: flex; }
     .screen h1 {
       font-size: clamp(0.95rem, 5vw, 1.7rem);
-      color: #fff; letter-spacing: 4px;
+      color: var(--accent); letter-spacing: 4px;
       text-transform: uppercase;
       margin-bottom: 8px; line-height: 1.4;
     }
@@ -232,8 +236,60 @@
       font-size: 0.55rem;
       margin-bottom: 10px;
       letter-spacing: 2px;
-      color: #fff;
+      color: var(--accent);
       text-transform: uppercase;
+    }
+    #screen-status .status-panel {
+      border-color: var(--accent-dark);
+    }
+    #screen-status .big-btn {
+      background: var(--accent);
+      border-color: var(--accent-dark);
+      color: #fff;
+    }
+    #screen-status .big-btn:hover {
+      background: var(--accent-dark);
+      color: #fff;
+    }
+    #theme-selector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      background: #020202;
+    }
+    #theme-selector .theme-label {
+      color: #bcbcbc;
+      font-size: 0.45rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      line-height: 1.7;
+    }
+    #theme-options {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .theme-dot {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: 2px solid #3a3a3a;
+      background: var(--dot-color, #fff);
+      cursor: pointer;
+      image-rendering: pixelated;
+      box-shadow: 0 0 0 1px #000;
+    }
+    .theme-dot[aria-pressed="true"] {
+      border-color: #fff;
+      box-shadow: 0 0 0 1px #000, 0 0 0 3px var(--accent-dark);
+    }
+    .theme-dot:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 1px;
     }
     .status-line {
       display: flex;
@@ -433,6 +489,10 @@
       <div class="status-line"><span>Best floor</span><span id="status-floor">1</span></div>
       <div class="status-line"><span>Resume</span><span id="status-resume">Fresh start</span></div>
     </div>
+    <div class="status-panel" id="theme-selector">
+      <span class="theme-label">Accent Palette</span>
+      <div id="theme-options" role="radiogroup" aria-label="Accent palette"></div>
+    </div>
     <div class="status-panel">
       <h3>Start Level</h3>
       <p class="subtle-note">Pick where to begin, or continue from where you left off.</p>
@@ -600,6 +660,15 @@ function resolveApiBase() {
 const API = resolveApiBase();
 const ACCOUNT_TOKEN_KEY = 'lingoAccountTokenV1';
 const WORD_BANK_LIMIT = 10;
+const ACCENT_THEME_KEY = 'lingoAccentTheme';
+const ACCENT_THEMES = [
+  { id: 'crimson', label: 'Crimson', accent: '#e64f4f', dark: '#892525' }, // default
+  { id: 'teal', label: 'Teal', accent: '#46c9b4', dark: '#166e67' },
+  { id: 'amber', label: 'Amber', accent: '#f0be52', dark: '#9a6b10' },
+  { id: 'violet', label: 'Violet', accent: '#9d8dff', dark: '#45339f' },
+  { id: 'mint', label: 'Mint', accent: '#86e29a', dark: '#2e7d40' },
+];
+let activeAccentThemeId = ACCENT_THEMES[0].id;
 
 // ============================================================
 //  LEVEL DATA
@@ -4631,6 +4700,56 @@ function safeStorageSet(key, value) {
   } catch (e) {}
 }
 
+function getAccentTheme(themeId) {
+  const found = ACCENT_THEMES.find(theme => theme.id === themeId);
+  return found || ACCENT_THEMES[0];
+}
+
+function syncAccentThemeSelection() {
+  const buttons = document.querySelectorAll('#theme-options .theme-dot');
+  buttons.forEach(btn => {
+    const selected = btn.dataset.theme === activeAccentThemeId;
+    btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    btn.setAttribute('aria-checked', selected ? 'true' : 'false');
+  });
+}
+
+function applyAccentTheme(themeId, options = {}) {
+  const { persist = true, syncUi = true } = options;
+  const theme = getAccentTheme(themeId);
+  activeAccentThemeId = theme.id;
+  document.documentElement.style.setProperty('--accent', theme.accent);
+  document.documentElement.style.setProperty('--accent-dark', theme.dark);
+  if (persist) safeStorageSet(ACCENT_THEME_KEY, theme.id);
+  if (syncUi) syncAccentThemeSelection();
+}
+
+function renderAccentThemeSelector() {
+  const optionsEl = document.getElementById('theme-options');
+  if (!optionsEl) return;
+  optionsEl.textContent = '';
+  ACCENT_THEMES.forEach(theme => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'theme-dot';
+    btn.dataset.theme = theme.id;
+    btn.style.setProperty('--dot-color', theme.accent);
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-label', `${theme.label} accent palette`);
+    btn.title = theme.label;
+    btn.addEventListener('click', () => applyAccentTheme(theme.id));
+    optionsEl.appendChild(btn);
+  });
+  syncAccentThemeSelection();
+}
+
+function initAccentTheme() {
+  const saved = safeStorageGet(ACCENT_THEME_KEY);
+  const initial = getAccentTheme(saved).id;
+  applyAccentTheme(initial, { persist: false, syncUi: false });
+  renderAccentThemeSelector();
+}
+
 function authHeaders() {
   return accountSession.token ? { Authorization: 'Bearer ' + accountSession.token } : {};
 }
@@ -5997,6 +6116,7 @@ audioMuteBtn.addEventListener('touchstart', e => {
 // ============================================================
 //  INIT
 // ============================================================
+initAccentTheme();
 loadLevel(0);
 fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
 Promise.resolve(maybeResumeStoredSession()).finally(() => {
