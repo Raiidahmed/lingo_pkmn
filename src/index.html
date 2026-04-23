@@ -24,8 +24,8 @@
     }
 
     :root {
-      --accent: #cc0033;
-      --accent-dark: #7a001f;
+      --accent: #5b2fb0;
+      --accent-dark: #35156f;
     }
 
 
@@ -4754,14 +4754,32 @@ function drawNPC(npc) {
 
 function drawPlayer() {
   const x = player.col*TILE, y = player.row*TILE;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5b2fb0';
+  const accentDark = getComputedStyle(document.documentElement).getPropertyValue('--accent-dark').trim() || '#35156f';
+
   ctx.fillStyle='rgba(0,0,0,0.4)';
   ctx.beginPath(); ctx.ellipse(x+TILE/2, y+TILE-4, 9, 4, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle='#555'; ctx.fillRect(x+9, y+14, 14, 14);
-  ctx.fillStyle='#ccc'; ctx.fillRect(x+10, y+6, 12, 11);
-  ctx.fillStyle='#777'; ctx.fillRect(x+10, y+5, 12, 4);
-  ctx.fillStyle='#000'; ctx.fillRect(x+12, y+10, 3, 3); ctx.fillRect(x+17, y+10, 3, 3);
-  ctx.fillStyle='#aaa'; ctx.fillRect(x+23, y+10, 3, 14);
-  ctx.fillStyle='#888'; ctx.fillRect(x+21, y+14, 7, 3);
+
+  // Body/head
+  ctx.fillStyle=accentDark;
+  ctx.fillRect(x+9, y+14, 14, 14);
+  ctx.fillStyle='#ccc';
+  ctx.fillRect(x+10, y+6, 12, 11);
+
+  // Cap/shoulder
+  ctx.fillStyle=accent;
+  ctx.fillRect(x+10, y+5, 12, 4);
+
+  // Eyes
+  ctx.fillStyle='#000';
+  ctx.fillRect(x+12, y+10, 3, 3);
+  ctx.fillRect(x+17, y+10, 3, 3);
+
+  // Shadow/side accents
+  ctx.fillStyle=accentDark;
+  ctx.fillRect(x+23, y+10, 3, 14);
+  ctx.fillStyle=accent;
+  ctx.fillRect(x+21, y+14, 7, 3);
 }
 
 function render() {
