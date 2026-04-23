@@ -468,11 +468,15 @@
       /* iPhone: prevent status screen content from forcing viewport/page scroll */
       #screen-status .screen-shell {
         max-height: calc(100vh - var(--ios-obscured-bottom, 0px) - 40px);
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
       }
       #screen-status .wordbank-list {
         max-height: calc(120px - var(--ios-obscured-bottom, 0px));
         overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
       }
 
       .title-leaderboard-panel {
