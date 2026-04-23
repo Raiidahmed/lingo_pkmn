@@ -26,6 +26,8 @@
     :root {
       --accent: #5b2fb0;
       --accent-dark: #35156f;
+      /* iOS Safari: px obscured by bottom browser UI (e.g. search bar) */
+      --ios-obscured-bottom: 0px;
     }
 
 
@@ -460,7 +462,7 @@
       }
       /* iPhone: keep Hall of Fame bottom visible (no scrolling) */
       #screen-title #lb-list {
-        max-height: 170px;
+        max-height: max(110px, calc(170px - var(--ios-obscured-bottom, 0px)));
       }
       .title-leaderboard-panel {
         margin-top: 6px;
@@ -6297,6 +6299,40 @@ audioMuteBtn.addEventListener('touchstart', e => {
 // ============================================================
 //  INIT
 // ============================================================
+(function initIOSObscuredBottom() {
+  try {
+    const vv = window.visualViewport;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isIOS || !vv) return;
+
+    let pending = false;
+    const set = () => {
+      const cut = Math.max(0, window.innerHeight - vv.height);
+      // Cap to avoid extreme layout jumps.
+      const capped = Math.min(220, cut);
+      document.documentElement.style.setProperty('--ios-obscured-bottom', `${capped}px`);
+    };
+
+    const schedule = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        set();
+      });
+    };
+
+    schedule();
+    vv.addEventListener('resize', schedule);
+    window.addEventListener('orientationchange', schedule);
+    window.addEventListener('scroll', schedule, { passive: true });
+    document.addEventListener('focusin', schedule);
+    document.addEventListener('touchstart', schedule, { passive: true });
+  } catch (e) {
+    // No-op: safe fallback to default layout.
+  }
+})();
+
 initAccentTheme();
 loadLevel(0);
 fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
