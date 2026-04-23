@@ -461,12 +461,17 @@
       #name-input {
         font-size: 0.62rem;
       }
-      /* iPhone: keep Hall of Fame bottom visible */
+      /* iPhone: keep Hall of Fame bottom visible (address-bar safe) */
+      #screen-title .title-leaderboard-panel {
+        margin-bottom: var(--ios-obscured-bottom, 0px);
+      }
       #screen-title #lb-list {
         max-height: max(110px, calc(170px - var(--ios-obscured-bottom, 0px)));
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        padding-bottom: calc(10px + var(--ios-obscured-bottom, 0px));
+        box-sizing: border-box;
       }
 
       /* iPhone: prevent status screen content from forcing viewport/page scroll */
