@@ -1,0 +1,341 @@
+/* ============================================================
+   LingoDungeon Game Engine — scoped styles
+   These apply inside .ld-game-host (the native canvas container).
+   Accent vars (--accent, --accent-dark) come from the shell's :root.
+   ============================================================ */
+
+.ld-game-host {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  color: #fff;
+  touch-action: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ---- HUD ---- */
+.ld-game-host .ld-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #000;
+  border-bottom: 2px solid var(--accent);
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.ld-game-host .ld-hud .ld-title { color: var(--accent); font-weight: bold; letter-spacing: 3px; }
+.ld-game-host .ld-hud .ld-xp { color: #ddd; }
+@media (max-width: 430px) {
+  .ld-game-host .ld-hud { padding-left: 6px; padding-right: 6px; gap: 4px; }
+  .ld-game-host .ld-hud .ld-title { font-size: 0.5rem; letter-spacing: 1px; }
+}
+
+/* ---- Buttons in HUD ---- */
+.ld-game-host .ld-hud-btn {
+  background: #000;
+  border: 2px solid #fff;
+  color: #fff;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ld-game-host .ld-hud-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+}
+
+/* ---- Game wrap + canvas ---- */
+.ld-game-host .ld-game-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  padding-top: 12px;
+}
+.ld-game-host .ld-game-wrap canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* ---- Toast ---- */
+.ld-game-host .ld-toast {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--accent);
+  color: #fff;
+  font-size: 0.5rem;
+  padding: 6px 12px;
+  letter-spacing: 1px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+  max-width: 90%;
+  text-align: center;
+  z-index: 20;
+}
+
+/* ---- Dialogue ---- */
+.ld-game-host .ld-dialogue {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  background: rgba(0,0,0,0.92);
+  border-top: 2px solid var(--accent);
+  padding: 14px 16px 16px;
+  z-index: 30;
+  max-height: 60%;
+  overflow-y: auto;
+}
+.ld-game-host .ld-dialogue .ld-dlg-speaker {
+  font-size: 0.55rem;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.ld-game-host .ld-dialogue .ld-dlg-text {
+  font-size: 0.65rem;
+  line-height: 1.9;
+  color: #fff;
+  margin-bottom: 10px;
+  white-space: pre-line;
+}
+.ld-game-host .ld-dialogue .ld-dlg-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ld-game-host .ld-choice-btn {
+  background: #111;
+  border: 2px solid #444;
+  color: #fff;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  text-align: left;
+  line-height: 1.8;
+  transition: background 0.1s, border-color 0.1s;
+}
+.ld-game-host .ld-choice-btn:not(:disabled):hover,
+.ld-game-host .ld-choice-btn.selected { background: #222; border-color: var(--accent); }
+.ld-game-host .ld-choice-btn.correct { background: #002; border-color: #0f0; color: #0f0; }
+.ld-game-host .ld-choice-btn.wrong   { background: #200; border-color: #f00; color: #f00; }
+.ld-game-host .ld-choice-btn.eliminated { opacity: 0.35; cursor: not-allowed; }
+.ld-game-host .ld-continue-btn {
+  background: #000;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ld-game-host .ld-continue-btn:hover { background: var(--accent); color: #fff; }
+}
+
+/* ---- Level complete overlay ---- */
+.ld-game-host .ld-screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: #000;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 20px 16px calc(20px + var(--ios-obscured-bottom, 0px));
+  z-index: 40;
+}
+.ld-game-host .ld-screen.active { display: flex; }
+.ld-game-host .ld-screen h1 {
+  font-size: 1rem;
+  color: var(--accent);
+  margin: 20px 0 10px;
+  text-align: center;
+}
+.ld-game-host .ld-screen h2 {
+  font-size: 0.65rem;
+  color: #bbb;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.ld-game-host .ld-level-badge {
+  font-size: 0.55rem;
+  color: #bbb;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+.ld-game-host .ld-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 16px;
+  width: 100%;
+  max-width: 340px;
+}
+.ld-game-host .ld-stat-box {
+  background: #000;
+  border: 2px solid var(--accent);
+  padding: 10px;
+  text-align: center;
+}
+.ld-game-host .ld-stat-box .ld-val { font-size: 1.1rem; color: #fff; margin-bottom: 4px; }
+.ld-game-host .ld-stat-box .ld-lbl { font-size: 0.4rem; color: #999; letter-spacing: 1px; }
+
+/* ---- Buttons in screens ---- */
+.ld-game-host .ld-big-btn {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 8px;
+}
+.ld-game-host .ld-ghost-btn {
+  background: #000;
+  border: 2px solid #555;
+  color: #999;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ld-game-host .ld-big-btn:hover { background: var(--accent-dark); }
+  .ld-game-host .ld-ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
+}
+
+/* ---- Mobile d-pad ---- */
+.ld-game-host .ld-mobile-controls {
+  display: none;
+  position: absolute;
+  bottom: calc(4px + var(--ios-obscured-bottom, 0px));
+  left: 0; right: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 12px;
+  z-index: 25;
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .ld-game-host .ld-mobile-controls { display: flex; }
+}
+.ld-game-host .ld-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(3, 40px);
+  gap: 2px;
+  pointer-events: auto;
+}
+.ld-game-host .ld-dpad-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.ld-game-host .ld-dpad-btn.center { background: transparent; border: none; cursor: default; }
+.ld-game-host .ld-action-btn {
+  width: 64px;
+  height: 64px;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  pointer-events: auto;
+  border-radius: 50%;
+  margin-bottom: 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ld-game-host .ld-mobile-controls { display: none; }
+}
+
+/* ---- Audio gate + Install helper modals ---- */
+.ld-game-host .ld-modal {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.ld-game-host .ld-modal.active { display: flex; }
+.ld-game-host .ld-modal-box {
+  background: #111;
+  border: 2px solid var(--accent);
+  padding: 24px 20px;
+  max-width: 280px;
+  width: 90%;
+  text-align: center;
+}
+.ld-game-host .ld-modal-box h2 {
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.ld-game-host .ld-modal-box p {
+  color: #999;
+  font-size: 0.5rem;
+  margin-bottom: 16px;
+  line-height: 2;
+}
+.ld-game-host .ld-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ld-game-host .ld-modal-actions .ld-big-btn,
+.ld-game-host .ld-modal-actions .ld-ghost-btn {
+  width: 100%;
+  max-width: none;
+}

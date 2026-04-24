@@ -1,170 +1,135 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '../state/appStore.js';
+import { mountGameEngine } from '../engine/game-engine.js';
+import '../engine/game-engine.css';
 
-// GameCanvas embeds the legacy monolithic game (src/index.html) as an
-// iframe module. This is the "keep canvas/game loop isolated from the UI
-// shell" boundary — the shell never reaches into the game's DOM.
+// GameCanvas mounts the LingoDungeon game engine directly into a native div
+// in the React shell — no iframe, no postMessage bridge.
 //
-// Bridge contract:
-// - legacy -> shell: lingo:ready, lingo:startAck, lingo:gameOver
-// - shell -> legacy: lingo:config, lingo:start, lingo:quit
+// Engine API:
+//   const ctrl = mountGameEngine(containerEl, config)
+//   ctrl.start({ mode, levelIndex, snapshot, launchNonce })
+//   ctrl.quit()
+//   ctrl.setAccent(theme)
+//   ctrl.setSound(bool)
+//   ctrl.destroy()
+//
+// Shell → engine:  direct JS method calls
+// Engine → shell:  onReady() and onGameOver(stats, terminal) callbacks
 export default function GameCanvas() {
-  const iframeRef = useRef(null);
-  const startAckedRef = useRef(false);
-  const quitFallbackTimerRef = useRef(null);
-  const reportGameOver = useAppStore(s => s.reportGameOver);
-  const gotoStatus = useAppStore(s => s.gotoStatus);
-  const gotoTitle = useAppStore(s => s.gotoTitle);
-  const session = useAppStore(s => s.session);
-  const accent = useAppStore(s => s.accent);
-  const soundEnabled = useAppStore(s => s.soundEnabled);
-  const launchPreferences = useAppStore(s => s.launchPreferences);
-  const launchNonce = useAppStore(s => s.launchNonce);
+  const containerRef = useRef(null);
+  const engineRef    = useRef(null);
 
-  const startPayload = useMemo(() => ({
-    mode: launchPreferences.mode === 'resume' ? 'resume' : 'restart',
-    levelIndex: Math.max(0, Math.floor(Number(launchPreferences.levelIndex) || 0)),
-    launchNonce,
-  }), [launchNonce, launchPreferences.levelIndex, launchPreferences.mode]);
+  const reportGameOver       = useAppStore(s => s.reportGameOver);
+  const gotoStatus           = useAppStore(s => s.gotoStatus);
+  const gotoTitle            = useAppStore(s => s.gotoTitle);
+  const session              = useAppStore(s => s.session);
+  const accent               = useAppStore(s => s.accent);
+  const soundEnabled         = useAppStore(s => s.soundEnabled);
+  const launchPreferences    = useAppStore(s => s.launchPreferences);
+  const launchNonce          = useAppStore(s => s.launchNonce);
+  const saveSnapshot         = useAppStore(s => s.saveSnapshot);
 
-  const pushConfigToLegacy = useCallback(() => {
-    const targetWindow = iframeRef.current?.contentWindow;
-    if (!targetWindow) return;
-    targetWindow.postMessage(
-      {
-        type: 'lingo:config',
-        accentTheme: accent,
-        sound: soundEnabled ? 'on' : 'off',
-      },
-      window.location.origin,
-    );
-  }, [accent, soundEnabled]);
+  // Build stable config refs so the engine mount only fires once
+  const accentRef         = useRef(accent);
+  const soundRef          = useRef(soundEnabled);
+  const sessionRef        = useRef(session);
+  const snapshotRef       = useRef(saveSnapshot);
+  const launchPrefsRef    = useRef(launchPreferences);
+  const launchNonceRef    = useRef(launchNonce);
+  const reportGameOverRef = useRef(reportGameOver);
 
-  const pushStartToLegacy = useCallback(() => {
-    const targetWindow = iframeRef.current?.contentWindow;
-    if (!targetWindow) return;
-    targetWindow.postMessage(
-      {
-        type: 'lingo:start',
-        mode: startPayload.mode,
-        levelIndex: startPayload.levelIndex,
-        launchNonce: startPayload.launchNonce,
-      },
-      window.location.origin,
-    );
-  }, [startPayload.levelIndex, startPayload.launchNonce, startPayload.mode]);
+  useEffect(() => { accentRef.current = accent; }, [accent]);
+  useEffect(() => { soundRef.current = soundEnabled; }, [soundEnabled]);
+  useEffect(() => { sessionRef.current = session; }, [session]);
+  useEffect(() => { snapshotRef.current = saveSnapshot; }, [saveSnapshot]);
+  useEffect(() => { launchPrefsRef.current = launchPreferences; }, [launchPreferences]);
+  useEffect(() => { launchNonceRef.current = launchNonce; }, [launchNonce]);
+  useEffect(() => { reportGameOverRef.current = reportGameOver; }, [reportGameOver]);
 
-  const pushQuitToLegacy = useCallback(() => {
-    const targetWindow = iframeRef.current?.contentWindow;
-    if (!targetWindow) return;
-    targetWindow.postMessage(
-      {
-        type: 'lingo:quit',
-        reason: 'shell_toolbar',
-      },
-      window.location.origin,
-    );
-  }, []);
-
+  // ---- Mount / unmount engine ----
   useEffect(() => {
-    function onMessage(e) {
-      if (!iframeRef.current || e.source !== iframeRef.current.contentWindow) {
-        return;
-      }
-      const data = e.data;
-      if (!data || typeof data !== 'object') return;
-      if (data.type === 'lingo:gameOver') {
-        if (quitFallbackTimerRef.current !== null) {
-          window.clearTimeout(quitFallbackTimerRef.current);
-          quitFallbackTimerRef.current = null;
-        }
-        reportGameOver(data.stats || null, data.terminal || null);
-        return;
-      }
-      if (data.type === 'lingo:ready') {
-        pushConfigToLegacy();
-        pushStartToLegacy();
-        return;
-      }
-      if (data.type === 'lingo:startAck') {
-        if (
-          !Number.isFinite(Number(data.launchNonce))
-          || Number(data.launchNonce) === startPayload.launchNonce
-        ) {
-          startAckedRef.current = true;
-        }
-      }
-    }
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [pushConfigToLegacy, pushStartToLegacy, reportGameOver, startPayload.launchNonce]);
+    const el = containerRef.current;
+    if (!el) return;
 
-  useEffect(() => () => {
-    if (quitFallbackTimerRef.current !== null) {
-      window.clearTimeout(quitFallbackTimerRef.current);
-      quitFallbackTimerRef.current = null;
-    }
-  }, []);
+    const ctrl = mountGameEngine(el, {
+      accent:       accentRef.current,
+      soundEnabled: soundRef.current,
+      playerName:   sessionRef.current?.profile?.name || 'Hero',
+      token:        sessionRef.current?.token || '',
+      apiBase:      '',
+      onReady: (nonce) => {
+        // Engine is ready and the game loop has started.
+        // Could be used for analytics / timing if needed.
+        void nonce;
+      },
+      onGameOver: (stats, terminal) => {
+        reportGameOverRef.current(stats || null, terminal || null);
+      },
+    });
+    engineRef.current = ctrl;
 
+    // Start the game immediately with current launch prefs
+    const prefs    = launchPrefsRef.current;
+    const mode     = prefs?.mode === 'resume' ? 'resume' : 'restart';
+    const levelIdx = Math.max(0, Math.floor(Number(prefs?.levelIndex) || 0));
+    ctrl.start({
+      mode,
+      levelIndex: levelIdx,
+      snapshot:   snapshotRef.current || null,
+      launchNonce: launchNonceRef.current,
+    });
+
+    return () => {
+      ctrl.destroy();
+      engineRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount once per GameCanvas lifecycle
+
+  // ---- Sync accent when shell setting changes ----
   useEffect(() => {
-    pushConfigToLegacy();
-  }, [pushConfigToLegacy]);
+    engineRef.current?.setAccent(accent);
+  }, [accent]);
 
+  // ---- Sync sound when shell setting changes ----
   useEffect(() => {
-    startAckedRef.current = false;
-    pushStartToLegacy();
-    let attempts = 0;
-    const maxAttempts = 20;
-    const timer = window.setInterval(() => {
-      if (startAckedRef.current) {
-        window.clearInterval(timer);
-        return;
-      }
-      attempts += 1;
-      pushStartToLegacy();
-      if (attempts >= maxAttempts) {
-        window.clearInterval(timer);
-      }
-    }, 250);
-    return () => window.clearInterval(timer);
-  }, [pushStartToLegacy, startPayload.launchNonce]);
+    engineRef.current?.setSound(soundEnabled);
+  }, [soundEnabled]);
 
-  function handleQuitToShell() {
-    pushQuitToLegacy();
-    if (quitFallbackTimerRef.current !== null) {
-      window.clearTimeout(quitFallbackTimerRef.current);
-    }
-    quitFallbackTimerRef.current = window.setTimeout(() => {
-      quitFallbackTimerRef.current = null;
+  // ---- Sync token if session changes mid-game ----
+  useEffect(() => {
+    engineRef.current?.setToken(session?.token || '');
+    engineRef.current?.setPlayerName(session?.profile?.name || 'Hero');
+  }, [session]);
+
+  // ---- Shell-initiated quit (toolbar button) ----
+  const handleQuitToShell = useCallback(() => {
+    const ctrl = engineRef.current;
+    if (ctrl) {
+      ctrl.quit();
+    } else {
+      // Fallback: no engine, just navigate
       if (session) gotoStatus();
       else gotoTitle();
-    }, 1800);
-  }
+    }
+  }, [session, gotoStatus, gotoTitle]);
 
   return (
-    <div className="game-host">
+    <div className="game-host phase4">
+      {/* Toolbar sits above the engine container */}
       <div className="game-toolbar">
-        <span>IN DUNGEON — legacy module</span>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            type="button"
-            className="hud-btn"
-            onClick={handleQuitToShell}
-          >
-            Quit to Shell
-          </button>
-        </div>
+        <span>IN DUNGEON</span>
+        <button
+          type="button"
+          className="hud-btn"
+          onClick={handleQuitToShell}
+        >
+          Quit to Shell
+        </button>
       </div>
-      <iframe
-        ref={iframeRef}
-        src="/legacy?embedded=1"
-        title="LingoDungeon legacy game"
-        allow="autoplay"
-        onLoad={() => {
-          pushConfigToLegacy();
-          pushStartToLegacy();
-        }}
-      />
+      {/* Engine mounts its own DOM inside this div */}
+      <div ref={containerRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }} />
     </div>
   );
 }

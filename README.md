@@ -83,3 +83,6 @@ for the Phase 1 iframe bridge (game-over + settings sync), and
 start/resume launch control into the embedded legacy runtime. Phase 3 moves
 post-run transitions and save-status continuity further into the shell:
 [`docs/frontend-shell-phase3.md`](docs/frontend-shell-phase3.md).
+Phase 4 removes the iframe entirely — the game engine runs directly in the React
+shell's DOM via `src-shell/src/engine/game-engine.js` (no postMessage bridge):
+[`docs/frontend-shell-phase4.md`](docs/frontend-shell-phase4.md).
