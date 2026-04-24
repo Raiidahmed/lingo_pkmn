@@ -23,6 +23,12 @@
       touch-action: none;
     }
 
+    html.embedded-mode, body.embedded-mode {
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      touch-action: pan-y;
+    }
+
     :root {
       --accent: #5b2fb0;
       --accent-dark: #35156f;
@@ -163,6 +169,12 @@
       overflow-y: hidden;
     }
     .screen.active { display: flex; }
+
+    html.embedded-mode .screen,
+    body.embedded-mode .screen {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     .screen h1 {
       font-size: clamp(0.95rem, 5vw, 1.7rem);
       color: #fff; letter-spacing: 4px;
@@ -4922,6 +4934,11 @@ const EMBEDDED_MODE = (() => {
   if (!window.parent || window.parent === window) return false;
   return queryParamValue('embedded') === '1';
 })();
+
+if (EMBEDDED_MODE) {
+  document.documentElement.classList.add('embedded-mode');
+  if (document.body) document.body.classList.add('embedded-mode');
+}
 
 function postShellMessage(type, payload) {
   if (!EMBEDDED_MODE) return;
