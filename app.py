@@ -17,6 +17,8 @@ from backend.leaderboard_api.db import DEFAULT_DB_PATH, LeaderboardDB, Validatio
 MAX_ACCOUNT_NAME_LEN = 24
 MAX_PASSWORD_LEN = 128
 MAX_WORD_BANK_ITEMS = 60
+DEFAULT_ACCENT_THEME_ID = "crimson"
+ACCENT_THEME_IDS = ("crimson", "violet", "teal", "amber", "mint")
 
 
 def _parse_limit(raw_limit: Any, default: int = 50) -> int:
@@ -65,11 +67,25 @@ def _init_account_db(db_path: str) -> None:
                 name_norm TEXT NOT NULL UNIQUE,
                 password_salt TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                accent_theme TEXT NOT NULL DEFAULT 'crimson',
                 session_token TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
             """
+        )
+        user_cols = {str(row["name"]) for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+        if "accent_theme" not in user_cols:
+            conn.execute(
+                "ALTER TABLE users ADD COLUMN accent_theme TEXT NOT NULL DEFAULT 'crimson'"
+            )
+        placeholders = ",".join("?" for _ in ACCENT_THEME_IDS)
+        conn.execute(
+            "UPDATE users SET accent_theme = lower(trim(accent_theme)) WHERE accent_theme IS NOT NULL"
+        )
+        conn.execute(
+            f"UPDATE users SET accent_theme = ? WHERE accent_theme IS NULL OR accent_theme = '' OR accent_theme NOT IN ({placeholders})",
+            (DEFAULT_ACCENT_THEME_ID, *ACCENT_THEME_IDS),
         )
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_session_token ON users(session_token) WHERE session_token IS NOT NULL"
@@ -192,6 +208,24 @@ def _sanitize_word_bank(payload: Any) -> list[dict[str, str]]:
     return items
 
 
+def _normalize_stored_accent_theme(value: Any) -> str:
+    theme_id = str(value or "").strip().lower()
+    if theme_id in ACCENT_THEME_IDS:
+        return theme_id
+    return DEFAULT_ACCENT_THEME_ID
+
+
+def _sanitize_accent_theme(value: Any) -> str:
+    if value is None:
+        return DEFAULT_ACCENT_THEME_ID
+    if not isinstance(value, str):
+        raise ValidationError("Invalid accent theme: must be a string.")
+    theme_id = value.strip().lower()
+    if theme_id not in ACCENT_THEME_IDS:
+        raise ValidationError("Invalid accent theme.")
+    return theme_id
+
+
 def _load_account_bundle(conn: sqlite3.Connection, user_row: sqlite3.Row) -> dict[str, Any]:
     save_row = conn.execute(
         "SELECT snapshot_json, status_json, updated_at FROM user_saves WHERE user_id = ?",
@@ -222,12 +256,14 @@ def _load_account_bundle(conn: sqlite3.Connection, user_row: sqlite3.Row) -> dic
             "updated_at": str(save_row["updated_at"]),
         }
 
+    accent_theme = _normalize_stored_accent_theme(user_row["accent_theme"] if "accent_theme" in user_row.keys() else None)
     return {
         "profile": {
             "name": str(user_row["name"]),
             "created_at": str(user_row["created_at"]),
             "updated_at": str(user_row["updated_at"]),
         },
+        "accent_theme": accent_theme,
         "save": save_payload,
         "word_bank": [
             {
@@ -507,6 +543,16 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             return jsonify({"ok": False, "error": str(exc)}), 400
         status_payload = _sanitize_status_payload(payload.get("status", {}))
         word_bank = _sanitize_word_bank(payload.get("word_bank", []))
+        try:
+            accent_theme = _sanitize_accent_theme(
+                payload.get(
+                    "accent_theme",
+                    user_row["accent_theme"] if "accent_theme" in user_row.keys() else DEFAULT_ACCENT_THEME_ID,
+                )
+            )
+        except ValidationError as exc:
+            conn.close()
+            return jsonify({"ok": False, "error": str(exc)}), 400
         now = _utc_now()
 
         with conn:
@@ -539,8 +585,8 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                     ),
                 )
             conn.execute(
-                "UPDATE users SET updated_at = ? WHERE id = ?",
-                (now, int(user_row["id"])),
+                "UPDATE users SET accent_theme = ?, updated_at = ? WHERE id = ?",
+                (accent_theme, now, int(user_row["id"])),
             )
             user_row = conn.execute(
                 "SELECT * FROM users WHERE id = ?",
