@@ -56,3 +56,11 @@ Override with `LEADERBOARD_DB_PATH=/path/to/leaderboard.db`.
 
 ## Note On Planned Architecture
 The larger React + backend architecture is still planned and documented, but not implemented in this repo yet. The current shipped project is the static HTML/CSS/JS game/editor above.
+
+## Frontend Shell Spike (branch `spike/frontend-react-shell`)
+A Vite + React + Zustand shell lives in `src-spike/`. It wraps the legacy
+single-file game (unchanged) and exposes an explicit app state machine
+for title/auth/status/settings/game-over. See
+[`docs/frontend-spike.md`](docs/frontend-spike.md) for the plan, how to
+run it, and what's intentionally incomplete. If `src-spike/dist/` is not
+built, Flask falls back to serving the legacy game at `/`.

@@ -311,9 +311,42 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.config["LEADERBOARD_DB"] = leaderboard_db
 
     src_dir = Path(__file__).resolve().parent / "src"
+    spike_dist_dir = Path(__file__).resolve().parent / "src-spike" / "dist"
+    spike_enabled = spike_dist_dir.is_dir() and (spike_dist_dir / "index.html").is_file()
 
     @app.get("/")
-    def game_page():
+    def root_page():
+        # Shell spike (Vite/React/Zustand) when built; otherwise fall back
+        # to the legacy single-file game so the branch is never broken.
+        if spike_enabled:
+            return send_from_directory(spike_dist_dir, "index.html")
+        return send_from_directory(src_dir, "index.html")
+
+    @app.get("/spike")
+    @app.get("/spike/")
+    def spike_index():
+        if not spike_enabled:
+            return ("Spike shell not built. Run `npm --prefix src-spike run build`.", 503)
+        return send_from_directory(spike_dist_dir, "index.html")
+
+    @app.get("/spike/<path:filename>")
+    def spike_files(filename: str):
+        if not spike_enabled:
+            return ("Spike shell not built.", 503)
+        target = (spike_dist_dir / filename).resolve()
+        # Prevent path traversal outside the dist directory.
+        try:
+            target.relative_to(spike_dist_dir.resolve())
+        except ValueError:
+            return ("Not found", 404)
+        if target.is_file():
+            return send_from_directory(spike_dist_dir, filename)
+        # SPA fallback — unknown routes resolve to the shell entry.
+        return send_from_directory(spike_dist_dir, "index.html")
+
+    @app.get("/legacy")
+    @app.get("/legacy/")
+    def legacy_game_page():
         return send_from_directory(src_dir, "index.html")
 
     @app.get("/editor")
