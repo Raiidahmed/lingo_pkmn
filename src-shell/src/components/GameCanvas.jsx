@@ -1,22 +1,30 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppStore } from '../state/appStore.js';
 
 // GameCanvas embeds the legacy monolithic game (src/index.html) as an
 // iframe module. This is the "keep canvas/game loop isolated from the UI
-// shell" boundary — the shell never reaches into the game's DOM, it only
-// observes postMessage events (future) or lifecycle callbacks.
+// shell" boundary — the shell never reaches into the game's DOM.
 //
-// Phase 1 bridge:
-// - legacy -> shell: lingo:gameOver
-// - shell -> legacy: lingo:config (accent theme + sound preference)
+// Bridge contract:
+// - legacy -> shell: lingo:ready, lingo:startAck, lingo:gameOver
+// - shell -> legacy: lingo:config, lingo:start
 export default function GameCanvas() {
   const iframeRef = useRef(null);
+  const startAckedRef = useRef(false);
   const reportGameOver = useAppStore(s => s.reportGameOver);
   const gotoStatus = useAppStore(s => s.gotoStatus);
   const gotoTitle = useAppStore(s => s.gotoTitle);
   const session = useAppStore(s => s.session);
   const accent = useAppStore(s => s.accent);
   const soundEnabled = useAppStore(s => s.soundEnabled);
+  const launchPreferences = useAppStore(s => s.launchPreferences);
+  const launchNonce = useAppStore(s => s.launchNonce);
+
+  const startPayload = useMemo(() => ({
+    mode: launchPreferences.mode === 'resume' ? 'resume' : 'restart',
+    levelIndex: Math.max(0, Math.floor(Number(launchPreferences.levelIndex) || 0)),
+    launchNonce,
+  }), [launchNonce, launchPreferences.levelIndex, launchPreferences.mode]);
 
   const pushConfigToLegacy = useCallback(() => {
     const targetWindow = iframeRef.current?.contentWindow;
@@ -31,9 +39,22 @@ export default function GameCanvas() {
     );
   }, [accent, soundEnabled]);
 
+  const pushStartToLegacy = useCallback(() => {
+    const targetWindow = iframeRef.current?.contentWindow;
+    if (!targetWindow) return;
+    targetWindow.postMessage(
+      {
+        type: 'lingo:start',
+        mode: startPayload.mode,
+        levelIndex: startPayload.levelIndex,
+        launchNonce: startPayload.launchNonce,
+      },
+      window.location.origin,
+    );
+  }, [startPayload.levelIndex, startPayload.launchNonce, startPayload.mode]);
+
   useEffect(() => {
     function onMessage(e) {
-      // Only react to messages from our embedded iframe.
       if (!iframeRef.current || e.source !== iframeRef.current.contentWindow) {
         return;
       }
@@ -41,15 +62,48 @@ export default function GameCanvas() {
       if (!data || typeof data !== 'object') return;
       if (data.type === 'lingo:gameOver') {
         reportGameOver(data.stats || null);
+        return;
+      }
+      if (data.type === 'lingo:ready') {
+        pushConfigToLegacy();
+        pushStartToLegacy();
+        return;
+      }
+      if (data.type === 'lingo:startAck') {
+        if (
+          !Number.isFinite(Number(data.launchNonce))
+          || Number(data.launchNonce) === startPayload.launchNonce
+        ) {
+          startAckedRef.current = true;
+        }
       }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [reportGameOver]);
+  }, [pushConfigToLegacy, pushStartToLegacy, reportGameOver, startPayload.launchNonce]);
 
   useEffect(() => {
     pushConfigToLegacy();
   }, [pushConfigToLegacy]);
+
+  useEffect(() => {
+    startAckedRef.current = false;
+    pushStartToLegacy();
+    let attempts = 0;
+    const maxAttempts = 20;
+    const timer = window.setInterval(() => {
+      if (startAckedRef.current) {
+        window.clearInterval(timer);
+        return;
+      }
+      attempts += 1;
+      pushStartToLegacy();
+      if (attempts >= maxAttempts) {
+        window.clearInterval(timer);
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [pushStartToLegacy, startPayload.launchNonce]);
 
   return (
     <div className="game-host">
@@ -70,7 +124,10 @@ export default function GameCanvas() {
         src="/legacy?embedded=1"
         title="LingoDungeon legacy game"
         allow="autoplay"
-        onLoad={pushConfigToLegacy}
+        onLoad={() => {
+          pushConfigToLegacy();
+          pushStartToLegacy();
+        }}
       />
     </div>
   );

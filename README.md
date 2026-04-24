@@ -77,5 +77,7 @@ Runtime behavior:
 - `/?legacy=1` forces legacy even when the shell is enabled.
 
 See [`docs/frontend-shell-phase0.md`](docs/frontend-shell-phase0.md) for
-Phase 0 scope/routing, and [`docs/frontend-shell-phase1.md`](docs/frontend-shell-phase1.md)
-for the Phase 1 iframe bridge (game-over + settings sync) cutline.
+Phase 0 scope/routing, [`docs/frontend-shell-phase1.md`](docs/frontend-shell-phase1.md)
+for the Phase 1 iframe bridge (game-over + settings sync), and
+[`docs/frontend-shell-phase2.md`](docs/frontend-shell-phase2.md) for shell-owned
+start/resume launch control into the embedded legacy runtime.

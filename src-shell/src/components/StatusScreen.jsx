@@ -1,9 +1,13 @@
-import { useAppStore } from '../state/appStore.js';
+import { LEGACY_LEVEL_COUNT, useAppStore } from '../state/appStore.js';
 
 export default function StatusScreen() {
   const session = useAppStore(s => s.session);
   const status = useAppStore(s => s.saveStatus);
   const wordBank = useAppStore(s => s.wordBank);
+  const launchPreferences = useAppStore(s => s.launchPreferences);
+  const hasResumableSnapshot = useAppStore(s => s.hasResumableSnapshot);
+  const setLaunchMode = useAppStore(s => s.setLaunchMode);
+  const setLaunchLevelIndex = useAppStore(s => s.setLaunchLevelIndex);
   const enterDungeon = useAppStore(s => s.enterDungeon);
   const gotoSettings = useAppStore(s => s.gotoSettings);
   const logout = useAppStore(s => s.logout);
@@ -20,14 +24,23 @@ export default function StatusScreen() {
   }
 
   const s = status || {};
-  const hasActiveRun = Boolean(s.hasActiveRun);
-  const resumeDetail = hasActiveRun
-    ? `Resume run at ${s.levelLabel || 'current level'}`
+  const selectedMode = hasResumableSnapshot && launchPreferences.mode === 'resume'
+    ? 'resume'
+    : 'restart';
+  const selectedLevelIndex = Number.isFinite(Number(launchPreferences.levelIndex))
+    ? Math.max(0, Math.min(LEGACY_LEVEL_COUNT - 1, Math.floor(Number(launchPreferences.levelIndex))))
+    : 0;
+  const actionLabel = selectedMode === 'resume'
+    ? 'Resume Run ▶'
+    : `Start Level ${selectedLevelIndex + 1} ▶`;
+  const summary = hasResumableSnapshot
+    ? (selectedMode === 'resume'
+        ? 'A resumable mid-level run was found. Launching will continue exactly where you left off.'
+        : 'A resumable mid-level run was found, but restart is selected.')
+    : 'No resumable mid-level snapshot found. Launching will start the selected level fresh.';
+  const resumeDetail = hasResumableSnapshot
+    ? `Resume run at ${s.levelLabel || `Level ${selectedLevelIndex + 1}`}`
     : 'No active run saved';
-  const actionLabel = hasActiveRun ? 'Resume Run ▶' : 'Start Fresh ▶';
-  const summary = hasActiveRun
-    ? 'Your saved run is ready to continue.'
-    : 'No in-progress run found. Starting will begin a fresh run.';
 
   return (
     <div className="screen" id="screen-status">
@@ -57,6 +70,47 @@ export default function StatusScreen() {
         </div>
 
         <div className="ui-panel">
+          <h3>Start Controls</h3>
+          <p>
+            Choose where to begin. Resume continues the exact mid-level snapshot;
+            restart loads the selected level from the start.
+          </p>
+          <label className="subtle-note" htmlFor="start-level-select">
+            Start level
+          </label>
+          <select
+            id="start-level-select"
+            value={selectedLevelIndex}
+            onChange={e => setLaunchLevelIndex(Number(e.target.value))}
+            disabled={selectedMode === 'resume'}
+          >
+            {Array.from({ length: LEGACY_LEVEL_COUNT }, (_, idx) => (
+              <option key={idx} value={idx}>
+                Level {idx + 1}
+              </option>
+            ))}
+          </select>
+          {hasResumableSnapshot ? (
+            <div className="launch-mode-row" role="group" aria-label="Run mode">
+              <button
+                type="button"
+                className={`launch-mode-btn${selectedMode === 'resume' ? ' active' : ''}`}
+                onClick={() => setLaunchMode('resume')}
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                className={`launch-mode-btn${selectedMode === 'restart' ? ' active' : ''}`}
+                onClick={() => setLaunchMode('restart')}
+              >
+                Restart
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="ui-panel">
           <h3>Word Bank ({wordBank.length})</h3>
           <p>
             Words you have collected. In the full shell this is a navigable
@@ -77,7 +131,11 @@ export default function StatusScreen() {
         </div>
 
         <div className="screen-actions">
-          <button type="button" className="big-btn" onClick={enterDungeon}>
+          <button
+            type="button"
+            className="big-btn"
+            onClick={() => enterDungeon({ mode: selectedMode, levelIndex: selectedLevelIndex })}
+          >
             {actionLabel}
           </button>
           <button type="button" className="ghost-btn" onClick={gotoSettings}>

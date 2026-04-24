@@ -217,6 +217,34 @@ input:focus, select:focus { border-color: var(--accent); }
 .status-line:last-child { border-bottom: none; }
 .status-line span:first-child { color: #888; }
 
+.launch-mode-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.launch-mode-btn {
+  flex: 1;
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+  padding: 10px 8px;
+  font-family: inherit;
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.launch-mode-btn.active {
+  background: #fff;
+  color: #000;
+}
+
+.launch-mode-btn:hover {
+  border-color: var(--accent);
+}
+
 .screen-actions {
   display: flex;
   flex-direction: column;

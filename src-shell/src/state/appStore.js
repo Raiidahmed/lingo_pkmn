@@ -23,6 +23,8 @@ export const ACCENT_THEMES = [
   { id: 'mint', label: 'Mint Rune', value: '#0f9d73', dark: '#076348' },
 ];
 
+export const LEGACY_LEVEL_COUNT = 10;
+
 const TOKEN_KEY = 'lingoSpikeTokenV1';
 const ACCENT_KEY = 'lingoAccentTheme';
 const SOUND_KEY = 'lingoSound';
@@ -54,6 +56,56 @@ function applyAccentToDom(themeId) {
   return theme.id;
 }
 
+function clampLevelIndex(value) {
+  const idx = Number(value);
+  if (!Number.isFinite(idx)) return 0;
+  return Math.max(0, Math.min(LEGACY_LEVEL_COUNT - 1, Math.floor(idx)));
+}
+
+function hasResumableSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return false;
+  return Boolean(
+    Array.isArray(snapshot.mapState)
+      && snapshot.locksState
+      && typeof snapshot.locksState === 'object'
+      && snapshot.player
+      && typeof snapshot.player === 'object'
+      && Number.isInteger(snapshot.currentLevelIdx),
+  );
+}
+
+function deriveSaveState(save) {
+  const status = (save && save.status) || {};
+  const snapshot = (save && save.snapshot && typeof save.snapshot === 'object')
+    ? save.snapshot
+    : null;
+  const snapshotLevelIndex = Number.isInteger(snapshot?.currentLevelIdx)
+    ? clampLevelIndex(snapshot.currentLevelIdx)
+    : null;
+  const statusStoryProgress = Number(status.storyProgress);
+  const statusLevelIndex = Number.isFinite(statusStoryProgress)
+    ? clampLevelIndex(Math.max(0, Math.floor(statusStoryProgress) - 1))
+    : null;
+  const defaultLevelIndex = snapshotLevelIndex ?? statusLevelIndex ?? 0;
+  const resumable = hasResumableSnapshot(snapshot);
+  return {
+    saveStatus: {
+      storyLabel: status.storyLabel || 'New run',
+      totalXP: status.totalXP || 0,
+      wordCount: status.wordCount || 0,
+      hasActiveRun: Boolean(status.hasActiveRun),
+      levelLabel: status.levelLabel || 'Level 1',
+      defaultLevelIndex,
+    },
+    saveSnapshot: snapshot,
+    hasResumableSnapshot: resumable,
+    launchPreferences: {
+      mode: resumable ? 'resume' : 'restart',
+      levelIndex: defaultLevelIndex,
+    },
+  };
+}
+
 export const useAppStore = create((set, get) => ({
   // --- state machine ---
   screen: SCREENS.BOOTING,
@@ -64,6 +116,10 @@ export const useAppStore = create((set, get) => ({
 
   // --- save / status ---
   saveStatus: null, // { storyLabel, totalXP, wordCount, hasActiveRun, levelLabel }
+  saveSnapshot: null,
+  hasResumableSnapshot: false,
+  launchPreferences: { mode: 'restart', levelIndex: 0 },
+  launchNonce: 0,
   wordBank: [],
 
   // --- UI ---
@@ -89,6 +145,24 @@ export const useAppStore = create((set, get) => ({
   // ========================================================
   setScreen(screen) {
     set(s => ({ previousScreen: s.screen, screen }));
+  },
+
+  setLaunchMode(mode) {
+    set(s => ({
+      launchPreferences: {
+        ...s.launchPreferences,
+        mode: mode === 'resume' && s.hasResumableSnapshot ? 'resume' : 'restart',
+      },
+    }));
+  },
+
+  setLaunchLevelIndex(levelIndex) {
+    set(s => ({
+      launchPreferences: {
+        ...s.launchPreferences,
+        levelIndex: clampLevelIndex(levelIndex),
+      },
+    }));
   },
 
   setAccent(id) {
@@ -122,17 +196,11 @@ export const useAppStore = create((set, get) => ({
     }
     try {
       const me = await api.fetchMe(token);
-      const status = (me.save && me.save.status) || {};
+      const saveState = deriveSaveState(me.save);
       set(s => ({
         screen: SCREENS.AUTH_TITLE,
         session: { token, profile: me.profile },
-        saveStatus: {
-          storyLabel: status.storyLabel || 'New run',
-          totalXP: status.totalXP || 0,
-          wordCount: status.wordCount || 0,
-          hasActiveRun: Boolean(status.hasActiveRun),
-          levelLabel: status.levelLabel || 'Level 1',
-        },
+        ...saveState,
         wordBank: me.word_bank || [],
         pending: { ...s.pending, boot: false },
       }));
@@ -156,17 +224,11 @@ export const useAppStore = create((set, get) => ({
     try {
       const res = await api.login({ name, password, intent });
       safeSet(TOKEN_KEY, res.token);
-      const status = (res.save && res.save.status) || {};
+      const saveState = deriveSaveState(res.save);
       set(s => ({
         screen: SCREENS.STATUS,
         session: { token: res.token, profile: res.profile },
-        saveStatus: {
-          storyLabel: status.storyLabel || 'New run',
-          totalXP: status.totalXP || 0,
-          wordCount: status.wordCount || 0,
-          hasActiveRun: Boolean(status.hasActiveRun),
-          levelLabel: status.levelLabel || 'Level 1',
-        },
+        ...saveState,
         wordBank: res.word_bank || [],
         pending: { ...s.pending, auth: false },
         authMessage: res.created
@@ -193,6 +255,10 @@ export const useAppStore = create((set, get) => ({
       screen: SCREENS.ANON_TITLE,
       session: null,
       saveStatus: null,
+      saveSnapshot: null,
+      hasResumableSnapshot: false,
+      launchPreferences: { mode: 'restart', levelIndex: 0 },
+      launchNonce: 0,
       wordBank: [],
       authMessage: 'Signed out. Enter your save name to resume.',
     });
@@ -221,7 +287,25 @@ export const useAppStore = create((set, get) => ({
     const session = get().session;
     get().setScreen(session ? SCREENS.AUTH_TITLE : SCREENS.ANON_TITLE);
   },
-  enterDungeon() { get().setScreen(SCREENS.IN_GAME); },
+  enterDungeon(options = {}) {
+    const state = get();
+    const nextLevelIndex = clampLevelIndex(
+      options.levelIndex ?? state.launchPreferences.levelIndex,
+    );
+    const requestedMode = options.mode === 'resume' ? 'resume' : state.launchPreferences.mode;
+    const nextMode = requestedMode === 'resume' && state.hasResumableSnapshot
+      ? 'resume'
+      : 'restart';
+    set(s => ({
+      previousScreen: s.screen,
+      screen: SCREENS.IN_GAME,
+      launchNonce: s.launchNonce + 1,
+      launchPreferences: {
+        mode: nextMode,
+        levelIndex: nextLevelIndex,
+      },
+    }));
+  },
 
   // Called by the game canvas module (iframe postMessage or direct call)
   reportGameOver(stats) {

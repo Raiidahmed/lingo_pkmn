@@ -214,6 +214,18 @@
       margin-bottom: 0;
     }
 
+    #screen-embedded-wait .screen-shell {
+      max-width: 520px;
+    }
+    #screen-embedded-wait code {
+      color: #fff;
+      background: #111;
+      border: 1px solid #333;
+      padding: 2px 5px;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: 0.5rem;
+    }
+
     .ui-panel {
       width: 100%;
       border: 3px solid var(--accent);
@@ -711,6 +723,21 @@
       <div class="screen-actions">
         <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
         <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMBEDDED WAIT SCREEN -->
+  <div id="screen-embedded-wait" class="screen">
+    <div class="screen-shell">
+      <h1>Dungeon Ready</h1>
+      <p>
+        Embedded mode is waiting for the shell to send a launch command.
+        Choose resume or restart in the shell status screen.
+      </p>
+      <div class="ui-panel">
+        <h3>Bridge Status</h3>
+        <p class="subtle-note">Listening for <code>lingo:start</code> from parent shell…</p>
       </div>
     </div>
   </div>
@@ -4935,6 +4962,13 @@ const EMBEDDED_MODE = (() => {
   return queryParamValue('embedded') === '1';
 })();
 
+let embeddedBootstrapped = !EMBEDDED_MODE;
+let embeddedStarted = false;
+let embeddedPendingStart = null;
+let embeddedLastStartNonce = null;
+let embeddedLastAppliedStart = null;
+let pendingStartRequest = null;
+
 if (EMBEDDED_MODE) {
   document.documentElement.classList.add('embedded-mode');
   if (document.body) document.body.classList.add('embedded-mode');
@@ -4948,6 +4982,16 @@ function postShellMessage(type, payload) {
   } catch (err) {
     console.warn('postShellMessage failed:', err);
   }
+}
+
+function clampLevelIndex(value) {
+  const idx = Number(value);
+  if (!Number.isFinite(idx)) return 0;
+  return Math.max(0, Math.min(LEVELS.length - 1, Math.floor(idx)));
+}
+
+function isEmbeddedWaitingForStart() {
+  return EMBEDDED_MODE && !embeddedStarted;
 }
 
 function currentBridgeStats(result) {
@@ -5294,7 +5338,8 @@ async function submitAccountAuth(intent) {
   }
 }
 
-async function maybeResumeStoredSession() {
+async function maybeResumeStoredSession(options = {}) {
+  const { suppressUi = false } = options;
   const token = safeStorageGet(ACCOUNT_TOKEN_KEY);
   if (!token) return false;
   try {
@@ -5306,8 +5351,10 @@ async function maybeResumeStoredSession() {
     accountSession.token = token;
     updateAccountSessionFromPayload(payload);
     playerName = payload && payload.profile && payload.profile.name ? payload.profile.name : playerName;
-    renderStatusScreen();
-    showScreen('screen-status');
+    if (!suppressUi) {
+      renderStatusScreen();
+      showScreen('screen-status');
+    }
     setAuthMessage('');
     return true;
   } catch (e) {
@@ -5691,6 +5738,51 @@ function beginGameFromTitle(nameVal, options = {}) {
   }
 }
 
+function snapshotFromAccountSession() {
+  const snap = accountSession && accountSession.save && accountSession.save.snapshot;
+  return (snap && typeof snap === 'object') ? snap : null;
+}
+
+function startRunFromSave(mode = 'restart', levelIndex = 0, options = {}) {
+  const normalizedMode = mode === 'resume' ? 'resume' : 'restart';
+  const snap = snapshotFromAccountSession();
+  const resumable = hasResumableSnapshot();
+  const requestedLevel = clampLevelIndex(levelIndex);
+  const startName = (options.playerName || (accountSession.profile && accountSession.profile.name) || playerName || 'Hero')
+    .replace(/<[^>]*>/g, '')
+    .replace(/[&'"<>]/g, '')
+    .slice(0, 24) || 'Hero';
+
+  playerName = startName;
+  pendingStartName = startName;
+  scoreSubmitWarned = false;
+  sessionStartTime = Date.now();
+  totalXP = snap && Number.isFinite(Number(snap.totalXP))
+    ? Math.max(0, Math.floor(Number(snap.totalXP)))
+    : 0;
+
+  if (normalizedMode === 'resume' && resumable) {
+    restoreSavedRun();
+    return {
+      mode: 'resume',
+      levelIndex: clampLevelIndex(Number(snap && snap.currentLevelIdx)),
+    };
+  }
+
+  loadLevel(requestedLevel);
+  return {
+    mode: 'restart',
+    levelIndex: requestedLevel,
+  };
+}
+
+function consumePendingStartRequest() {
+  if (!pendingStartRequest) return null;
+  const req = pendingStartRequest;
+  pendingStartRequest = null;
+  return req;
+}
+
 async function requestStartFromTitle(mode = pendingAuthMode || 'resume') {
   pendingAuthMode = mode;
   const authenticated = await submitAccountAuth(mode);
@@ -5706,6 +5798,11 @@ function confirmAudioAndStart() {
   Sound.ready = true;
   Sound.click();
   closeAudioGate();
+  const pending = consumePendingStartRequest();
+  if (pending) {
+    startRunFromSave(pending.mode, pending.levelIndex, { playerName: pending.playerName });
+    return;
+  }
   beginGameFromTitle((pendingStartName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
     resume: Boolean(accountSession.save && accountSession.save.snapshot)
   });
@@ -5718,6 +5815,11 @@ function continueMutedStart() {
   syncSoundButton();
   try { localStorage.setItem('lingoSound', 'off'); } catch(e) {}
   closeAudioGate();
+  const pending = consumePendingStartRequest();
+  if (pending) {
+    startRunFromSave(pending.mode, pending.levelIndex, { playerName: pending.playerName });
+    return;
+  }
   const nextName = pendingStartName || playerName || nameInput.value.trim() || 'Hero';
   beginGameFromTitle((nextName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
     resume: Boolean(accountSession.save && accountSession.save.snapshot)
@@ -5884,6 +5986,7 @@ function closeDialogue() {
 //  INTERACTION
 // ============================================================
 function interact() {
+  if (isEmbeddedWaitingForStart()) return;
   if (dialogueOpen) return;
   const dirs = [[0,0],[0,-1],[0,1],[-1,0],[1,0]];
   for (const [dc,dr] of dirs) {
@@ -5944,6 +6047,7 @@ function handleStairs() {
 //  MOVEMENT
 // ============================================================
 function tryMove(dc, dr) {
+  if (isEmbeddedWaitingForStart()) return;
   if (dialogueOpen) return;
   const nc = player.col+dc, nr = player.row+dr;
   if (nc<0||nr<0||nc>=MAP_W||nr>=MAP_H) return;
@@ -5962,6 +6066,12 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       e.preventDefault();
       continueMutedStart();
+    }
+    return;
+  }
+  if (isEmbeddedWaitingForStart()) {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Enter'].includes(e.key)) {
+      e.preventDefault();
     }
     return;
   }
@@ -5997,6 +6107,7 @@ function dpadBind(id, keyName) {
   const btn = document.getElementById(id);
   const press = e => {
     e.preventDefault();
+    if (isEmbeddedWaitingForStart()) return;
     Sound.unlock();
     if (handleTouchMenuNav(keyName)) return;
     keys[keyName] = true;
@@ -6020,6 +6131,7 @@ dpadBind('btn-right', 'ArrowRight');
 const actionBtn = document.getElementById('action-btn');
 function handleActionPress(e) {
   if (e) e.preventDefault();
+  if (isEmbeddedWaitingForStart()) return;
   Sound.unlock();
   Sound.click();
   if (audioGate.classList.contains('active')) {
@@ -6059,6 +6171,7 @@ function loop(ts) {
 const quitBtn = document.getElementById('quit-btn');
 quitBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
 quitBtn.addEventListener('click', () => {
+  if (isEmbeddedWaitingForStart()) return;
   Sound.unlock();
   Sound.click();
   const elapsed = fmtTime(Date.now() - levelStartTime);
@@ -6075,6 +6188,13 @@ quitBtn.addEventListener('click', () => {
 });
 
 function resetToTitle() {
+  if (EMBEDDED_MODE) {
+    embeddedStarted = false;
+    embeddedPendingStart = null;
+    showScreen('screen-embedded-wait');
+    postShellMessage('lingo:ready', { bridge: 'phase2', reason: 'reset' });
+    return;
+  }
   totalXP = 0;
   xp = 0;
   challengesPassed = 0;
@@ -6291,12 +6411,8 @@ function applySoundPreference(enabled, options = {}) {
   Sound.click();
 }
 
-function handleEmbeddedConfigMessage(event) {
-  if (!EMBEDDED_MODE) return;
-  if (event.source !== window.parent) return;
-  if (event.origin && window.location.origin && event.origin !== window.location.origin) return;
-  const data = event.data;
-  if (!data || typeof data !== 'object' || data.type !== 'lingo:config') return;
+function applyEmbeddedConfigPayload(data) {
+  if (!data || typeof data !== 'object') return;
   if (typeof data.accentTheme === 'string') {
     handleAccentThemeSelect(data.accentTheme);
   }
@@ -6306,8 +6422,76 @@ function handleEmbeddedConfigMessage(event) {
   }
 }
 
+function parseEmbeddedStartPayload(data) {
+  if (!data || typeof data !== 'object') return null;
+  const mode = data.mode === 'resume' ? 'resume' : 'restart';
+  const levelIndex = clampLevelIndex(data.levelIndex);
+  const launchNonceRaw = Number(data.launchNonce);
+  const launchNonce = Number.isFinite(launchNonceRaw) ? launchNonceRaw : null;
+  return { mode, levelIndex, launchNonce };
+}
+
+function processEmbeddedPendingStart() {
+  if (!EMBEDDED_MODE || !embeddedBootstrapped || !embeddedPendingStart) return;
+  const cmd = embeddedPendingStart;
+  embeddedPendingStart = null;
+
+  const applied = startRunFromSave(cmd.mode, cmd.levelIndex, {
+    playerName: (accountSession.profile && accountSession.profile.name) || playerName || 'Hero',
+  });
+  embeddedStarted = true;
+  if (cmd.launchNonce !== null) embeddedLastStartNonce = cmd.launchNonce;
+  embeddedLastAppliedStart = {
+    mode: applied.mode,
+    levelIndex: applied.levelIndex,
+    launchNonce: cmd.launchNonce,
+  };
+  showScreen(null);
+  closeAudioGate();
+  postShellMessage('lingo:startAck', {
+    launchNonce: cmd.launchNonce,
+    mode: applied.mode,
+    levelIndex: applied.levelIndex,
+  });
+}
+
+function queueEmbeddedStart(data) {
+  const cmd = parseEmbeddedStartPayload(data);
+  if (!cmd) return;
+  if (
+    cmd.launchNonce !== null
+    && embeddedStarted
+    && embeddedLastStartNonce === cmd.launchNonce
+  ) {
+    const replay = embeddedLastAppliedStart || cmd;
+    postShellMessage('lingo:startAck', {
+      launchNonce: cmd.launchNonce,
+      mode: replay.mode,
+      levelIndex: replay.levelIndex,
+    });
+    return;
+  }
+  embeddedPendingStart = cmd;
+  processEmbeddedPendingStart();
+}
+
+function handleEmbeddedBridgeMessage(event) {
+  if (!EMBEDDED_MODE) return;
+  if (event.source !== window.parent) return;
+  if (event.origin && window.location.origin && event.origin !== window.location.origin) return;
+  const data = event.data;
+  if (!data || typeof data !== 'object') return;
+  if (data.type === 'lingo:config') {
+    applyEmbeddedConfigPayload(data);
+    return;
+  }
+  if (data.type === 'lingo:start') {
+    queueEmbeddedStart(data);
+  }
+}
+
 if (EMBEDDED_MODE) {
-  window.addEventListener('message', handleEmbeddedConfigMessage);
+  window.addEventListener('message', handleEmbeddedBridgeMessage);
 }
 
 syncSoundButton();
@@ -6369,32 +6553,31 @@ statusStartBtn.addEventListener('click', () => {
   Sound.unlock();
   Sound.click();
 
-  pendingStartName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
+  const profileName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
+  pendingStartName = profileName;
+  const resumable = hasResumableSnapshot();
+  const snap = snapshotFromAccountSession();
+  const sel = document.getElementById('level-selector');
+  const selectedMode = resumable && resumeMode === 'resume' ? 'resume' : 'restart';
+  const selectedLevel = selectedMode === 'resume'
+    ? clampLevelIndex(snap && snap.currentLevelIdx)
+    : clampLevelIndex(sel ? sel.value : 0);
+  const launchRequest = {
+    mode: selectedMode,
+    levelIndex: selectedLevel,
+    playerName: profileName,
+  };
 
-  if (shouldRequireAudioGate()) {
+  if (shouldRequireAudioGate() && !EMBEDDED_MODE) {
+    pendingStartRequest = launchRequest;
     openAudioGate();
     return;
   }
 
-  const resumable = hasResumableSnapshot();
-  const sel = document.getElementById('level-selector');
-  const snap = accountSession && accountSession.save && accountSession.save.snapshot && typeof accountSession.save.snapshot === 'object'
-    ? accountSession.save.snapshot
-    : null;
-
-  playerName = pendingStartName;
-  sessionStartTime = Date.now();
-
-  if (resumable && resumeMode === 'resume') {
-    totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
-    restoreSavedRun();
-    return;
-  }
-
-  // Restart / no resumable snapshot: fresh load of selected level.
-  const idx = sel ? Math.max(0, Math.min(LEVELS.length - 1, Number(sel.value))) : 0;
-  totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
-  loadLevel(idx);
+  pendingStartRequest = null;
+  startRunFromSave(launchRequest.mode, launchRequest.levelIndex, {
+    playerName: launchRequest.playerName,
+  });
 });
 statusLogoutBtn.addEventListener('click', () => {
   Sound.click();
@@ -6465,13 +6648,23 @@ audioMuteBtn.addEventListener('touchstart', e => {
 
 initAccentTheme();
 loadLevel(0);
-fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
-Promise.resolve(maybeResumeStoredSession()).finally(() => {
-  if (!document.getElementById('screen-status').classList.contains('active')) {
-    showScreen('screen-title');
-  }
-  requestAnimationFrame(loop);
-});
+if (EMBEDDED_MODE) {
+  showScreen('screen-embedded-wait');
+  Promise.resolve(maybeResumeStoredSession({ suppressUi: true })).finally(() => {
+    embeddedBootstrapped = true;
+    processEmbeddedPendingStart();
+    postShellMessage('lingo:ready', { bridge: 'phase2' });
+    requestAnimationFrame(loop);
+  });
+} else {
+  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
+  Promise.resolve(maybeResumeStoredSession()).finally(() => {
+    if (!document.getElementById('screen-status').classList.contains('active')) {
+      showScreen('screen-title');
+    }
+    requestAnimationFrame(loop);
+  });
+}
 </script>
 </body>
 </html>
