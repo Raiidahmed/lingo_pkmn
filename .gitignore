@@ -1,12 +1,7 @@
-__pycache__/
-*.py[cod]
 .venv/
-backend/leaderboard_api/*.db
-backend/leaderboard_api/*.db-shm
-backend/leaderboard_api/*.db-wal
-backend/leaderboard_api/*.db-journal
-
-# Frontend shell (Vite + React)
-src-shell/node_modules/
-src-shell/dist/
-src-shell/.vite/
+__pycache__/
+*.pyc
+backend/lingo.db
+frontend/node_modules/
+frontend/dist/
+*.env
