@@ -28,6 +28,8 @@ export const LEGACY_LEVEL_COUNT = 10;
 const TOKEN_KEY = 'lingoSpikeTokenV1';
 const ACCENT_KEY = 'lingoAccentTheme';
 const SOUND_KEY = 'lingoSound';
+const DEFAULT_REFRESH_RETRIES = 3;
+const DEFAULT_REFRESH_RETRY_DELAY_MS = 250;
 
 function safeGet(key) {
   try { return window.localStorage.getItem(key); } catch { return null; }
@@ -60,6 +62,11 @@ function clampLevelIndex(value) {
   const idx = Number(value);
   if (!Number.isFinite(idx)) return 0;
   return Math.max(0, Math.min(LEGACY_LEVEL_COUNT - 1, Math.floor(idx)));
+}
+
+function wait(ms) {
+  const clamped = Math.max(0, Math.floor(Number(ms) || 0));
+  return new Promise(resolve => window.setTimeout(resolve, clamped));
 }
 
 function hasResumableSnapshot(snapshot) {
@@ -132,6 +139,7 @@ export const useAppStore = create((set, get) => ({
     boot: false,
     auth: false,
     leaderboard: false,
+    saveRefresh: false,
   },
 
   // --- errors ---
@@ -139,6 +147,7 @@ export const useAppStore = create((set, get) => ({
 
   // --- game_over payload ---
   gameOverStats: null,
+  gameOverTerminal: null,
 
   // ========================================================
   // Actions
@@ -260,6 +269,9 @@ export const useAppStore = create((set, get) => ({
       launchPreferences: { mode: 'restart', levelIndex: 0 },
       launchNonce: 0,
       wordBank: [],
+      pending: { boot: false, auth: false, leaderboard: false, saveRefresh: false },
+      gameOverStats: null,
+      gameOverTerminal: null,
       authMessage: 'Signed out. Enter your save name to resume.',
     });
     get().loadLeaderboard();
@@ -279,6 +291,48 @@ export const useAppStore = create((set, get) => ({
         pending: { ...s.pending, leaderboard: false },
       }));
     }
+  },
+
+  async refreshSessionSave(options = {}) {
+    const token = get().session?.token;
+    if (!token) return null;
+    const retries = Math.max(
+      0,
+      Math.min(6, Math.floor(Number(options.retries ?? DEFAULT_REFRESH_RETRIES) || 0)),
+    );
+    const retryDelayMs = Math.max(
+      0,
+      Math.floor(Number(options.retryDelayMs ?? DEFAULT_REFRESH_RETRY_DELAY_MS) || 0),
+    );
+    set(s => ({ pending: { ...s.pending, saveRefresh: true } }));
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        const me = await api.fetchMe(token);
+        if (get().session?.token !== token) {
+          set(s => ({ pending: { ...s.pending, saveRefresh: false } }));
+          return null;
+        }
+        const saveState = deriveSaveState(me.save);
+        set(s => ({
+          ...saveState,
+          wordBank: me.word_bank || [],
+          session: s.session
+            ? { ...s.session, profile: me.profile || s.session.profile }
+            : s.session,
+          pending: { ...s.pending, saveRefresh: false },
+        }));
+        return me;
+      } catch (err) {
+        if (attempt < retries) {
+          // Give the backend a short window to apply final legacy save writes.
+          // This keeps shell status continuity tighter after terminal events.
+          await wait(retryDelayMs);
+          continue;
+        }
+      }
+    }
+    set(s => ({ pending: { ...s.pending, saveRefresh: false } }));
+    return null;
   },
 
   gotoStatus() { get().setScreen(SCREENS.STATUS); },
@@ -308,16 +362,30 @@ export const useAppStore = create((set, get) => ({
   },
 
   // Called by the game canvas module (iframe postMessage or direct call)
-  reportGameOver(stats) {
+  reportGameOver(stats, terminal = null) {
     set({
       screen: SCREENS.GAME_OVER,
       gameOverStats: stats || null,
+      gameOverTerminal: terminal && typeof terminal === 'object' ? terminal : null,
     });
+    get().loadLeaderboard();
+    if (get().session?.token) {
+      get().refreshSessionSave().catch(() => {});
+    }
   },
 
   resetGameOver() {
-    set({ gameOverStats: null });
+    set({ gameOverStats: null, gameOverTerminal: null });
     get().loadLeaderboard();
+  },
+
+  playAgainFromGameOver() {
+    get().resetGameOver();
+    const launchPreferences = get().launchPreferences;
+    get().enterDungeon({
+      mode: launchPreferences.mode,
+      levelIndex: launchPreferences.levelIndex,
+    });
   },
 }));
 

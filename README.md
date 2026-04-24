@@ -57,7 +57,7 @@ Override with `LEADERBOARD_DB_PATH=/path/to/leaderboard.db`.
 ## Note On Planned Architecture
 The larger React + backend architecture is still planned and documented, but not implemented in this repo yet. The current shipped project is the static HTML/CSS/JS game/editor above.
 
-## Frontend Shell (Phase 0-1)
+## Frontend Shell (Phase 0-3)
 A Vite + React + Zustand shell lives in `src-shell/`. It wraps the legacy
 single-file game (unchanged) and exposes an explicit app state machine
 for title/auth/status/settings/game-over.
@@ -80,4 +80,6 @@ See [`docs/frontend-shell-phase0.md`](docs/frontend-shell-phase0.md) for
 Phase 0 scope/routing, [`docs/frontend-shell-phase1.md`](docs/frontend-shell-phase1.md)
 for the Phase 1 iframe bridge (game-over + settings sync), and
 [`docs/frontend-shell-phase2.md`](docs/frontend-shell-phase2.md) for shell-owned
-start/resume launch control into the embedded legacy runtime.
+start/resume launch control into the embedded legacy runtime. Phase 3 moves
+post-run transitions and save-status continuity further into the shell:
+[`docs/frontend-shell-phase3.md`](docs/frontend-shell-phase3.md).

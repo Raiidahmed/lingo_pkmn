@@ -5010,8 +5010,16 @@ function currentBridgeStats(result) {
   };
 }
 
-function notifyShellGameOver(result) {
-  postShellMessage('lingo:gameOver', { stats: currentBridgeStats(result) });
+function notifyShellGameOver(result, reason = 'terminal') {
+  postShellMessage('lingo:gameOver', {
+    stats: currentBridgeStats(result),
+    terminal: {
+      result,
+      reason: reason || 'terminal',
+      bridge: 'phase3',
+      emittedAt: new Date().toISOString(),
+    },
+  });
 }
 
 function getAccentTheme(name) {
@@ -6030,7 +6038,11 @@ function handleStairs() {
     document.getElementById('lc-title').textContent = 'YOU WIN!';
     document.getElementById('nextlevel-btn').style.display = 'none';
     saveAccountProgress('game_won');
-    notifyShellGameOver('win');
+    notifyShellGameOver('win', 'game_won');
+    if (EMBEDDED_MODE) {
+      resetToTitle();
+      return;
+    }
     fetchLeaderboard().then(scores => {
       renderLeaderboard(scores, 'win-lb');
       showScreen('screen-win');
@@ -6170,21 +6182,29 @@ function loop(ts) {
 // ============================================================
 const quitBtn = document.getElementById('quit-btn');
 quitBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
-quitBtn.addEventListener('click', () => {
+function handleTerminalQuit(reason = 'quit_to_menu') {
   if (isEmbeddedWaitingForStart()) return;
-  Sound.unlock();
-  Sound.click();
   const elapsed = fmtTime(Date.now() - levelStartTime);
   document.getElementById('quit-levelname').textContent = LEVELS[currentLevelIdx].name;
   document.getElementById('quit-xp').textContent = totalXP;
   document.getElementById('quit-challenges').textContent = challengesPassed;
   document.getElementById('quit-time').textContent = elapsed;
   document.getElementById('quit-attempts').textContent = totalAttempts;
-  saveAccountProgress('quit_to_menu');
+  saveAccountProgress(reason);
   postScore(currentLevelIdx);
-  notifyShellGameOver('quit');
+  notifyShellGameOver('quit', reason);
+  if (EMBEDDED_MODE) {
+    resetToTitle();
+    return;
+  }
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'quit-lb'));
   showScreen('screen-quit');
+}
+
+quitBtn.addEventListener('click', () => {
+  Sound.unlock();
+  Sound.click();
+  handleTerminalQuit('quit_to_menu');
 });
 
 function resetToTitle() {
@@ -6192,7 +6212,7 @@ function resetToTitle() {
     embeddedStarted = false;
     embeddedPendingStart = null;
     showScreen('screen-embedded-wait');
-    postShellMessage('lingo:ready', { bridge: 'phase2', reason: 'reset' });
+    postShellMessage('lingo:ready', { bridge: 'phase3', reason: 'reset' });
     return;
   }
   totalXP = 0;
@@ -6227,7 +6247,7 @@ document.getElementById('nextlevel-btn').addEventListener('click', () => {
 
 document.getElementById('lc-quit-btn').addEventListener('click', () => {
   Sound.click();
-  notifyShellGameOver('quit');
+  notifyShellGameOver('quit', 'quit_after_level_complete');
   resetToTitle();
 });
 
@@ -6487,6 +6507,14 @@ function handleEmbeddedBridgeMessage(event) {
   }
   if (data.type === 'lingo:start') {
     queueEmbeddedStart(data);
+    return;
+  }
+  if (data.type === 'lingo:quit') {
+    handleTerminalQuit(
+      typeof data.reason === 'string' && data.reason.trim()
+        ? data.reason.trim()
+        : 'shell_quit',
+    );
   }
 }
 
@@ -6653,7 +6681,7 @@ if (EMBEDDED_MODE) {
   Promise.resolve(maybeResumeStoredSession({ suppressUi: true })).finally(() => {
     embeddedBootstrapped = true;
     processEmbeddedPendingStart();
-    postShellMessage('lingo:ready', { bridge: 'phase2' });
+    postShellMessage('lingo:ready', { bridge: 'phase3' });
     requestAnimationFrame(loop);
   });
 } else {

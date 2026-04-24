@@ -7,10 +7,11 @@ import { useAppStore } from '../state/appStore.js';
 //
 // Bridge contract:
 // - legacy -> shell: lingo:ready, lingo:startAck, lingo:gameOver
-// - shell -> legacy: lingo:config, lingo:start
+// - shell -> legacy: lingo:config, lingo:start, lingo:quit
 export default function GameCanvas() {
   const iframeRef = useRef(null);
   const startAckedRef = useRef(false);
+  const quitFallbackTimerRef = useRef(null);
   const reportGameOver = useAppStore(s => s.reportGameOver);
   const gotoStatus = useAppStore(s => s.gotoStatus);
   const gotoTitle = useAppStore(s => s.gotoTitle);
@@ -53,6 +54,18 @@ export default function GameCanvas() {
     );
   }, [startPayload.levelIndex, startPayload.launchNonce, startPayload.mode]);
 
+  const pushQuitToLegacy = useCallback(() => {
+    const targetWindow = iframeRef.current?.contentWindow;
+    if (!targetWindow) return;
+    targetWindow.postMessage(
+      {
+        type: 'lingo:quit',
+        reason: 'shell_toolbar',
+      },
+      window.location.origin,
+    );
+  }, []);
+
   useEffect(() => {
     function onMessage(e) {
       if (!iframeRef.current || e.source !== iframeRef.current.contentWindow) {
@@ -61,7 +74,11 @@ export default function GameCanvas() {
       const data = e.data;
       if (!data || typeof data !== 'object') return;
       if (data.type === 'lingo:gameOver') {
-        reportGameOver(data.stats || null);
+        if (quitFallbackTimerRef.current !== null) {
+          window.clearTimeout(quitFallbackTimerRef.current);
+          quitFallbackTimerRef.current = null;
+        }
+        reportGameOver(data.stats || null, data.terminal || null);
         return;
       }
       if (data.type === 'lingo:ready') {
@@ -81,6 +98,13 @@ export default function GameCanvas() {
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [pushConfigToLegacy, pushStartToLegacy, reportGameOver, startPayload.launchNonce]);
+
+  useEffect(() => () => {
+    if (quitFallbackTimerRef.current !== null) {
+      window.clearTimeout(quitFallbackTimerRef.current);
+      quitFallbackTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     pushConfigToLegacy();
@@ -105,6 +129,18 @@ export default function GameCanvas() {
     return () => window.clearInterval(timer);
   }, [pushStartToLegacy, startPayload.launchNonce]);
 
+  function handleQuitToShell() {
+    pushQuitToLegacy();
+    if (quitFallbackTimerRef.current !== null) {
+      window.clearTimeout(quitFallbackTimerRef.current);
+    }
+    quitFallbackTimerRef.current = window.setTimeout(() => {
+      quitFallbackTimerRef.current = null;
+      if (session) gotoStatus();
+      else gotoTitle();
+    }, 1800);
+  }
+
   return (
     <div className="game-host">
       <div className="game-toolbar">
@@ -113,7 +149,7 @@ export default function GameCanvas() {
           <button
             type="button"
             className="hud-btn"
-            onClick={() => (session ? gotoStatus() : gotoTitle())}
+            onClick={handleQuitToShell}
           >
             Quit to Shell
           </button>

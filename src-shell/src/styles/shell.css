@@ -252,6 +252,14 @@ input:focus, select:focus { border-color: var(--accent); }
   margin-top: 16px;
 }
 
+.gameover-summary h3 {
+  color: #fff;
+}
+
+.gameover-summary p {
+  margin-bottom: 8px;
+}
+
 /* ---- Theme picker ---- */
 .theme-options {
   display: flex;
