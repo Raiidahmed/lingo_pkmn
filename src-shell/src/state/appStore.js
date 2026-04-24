@@ -16,14 +16,16 @@ export const SCREENS = Object.freeze({
 });
 
 export const ACCENT_THEMES = [
-  { id: 'purple', label: 'Dungeon Purple', value: '#5b2fb0', dark: '#35156f' },
-  { id: 'emerald', label: 'Emerald Crypt', value: '#2fa86b', dark: '#155c3c' },
-  { id: 'amber', label: 'Torch Amber', value: '#d08a2c', dark: '#6f4615' },
-  { id: 'crimson', label: 'Blood Ruby', value: '#c2384d', dark: '#661c28' },
+  { id: 'violet', label: 'Dungeon Violet', value: '#5b2fb0', dark: '#35156f' },
+  { id: 'crimson', label: 'Crimson Sigil', value: '#cc0033', dark: '#7a001f' },
+  { id: 'teal', label: 'Temple Teal', value: '#0f8f8f', dark: '#075959' },
+  { id: 'amber', label: 'Torch Amber', value: '#c68400', dark: '#7b4f00' },
+  { id: 'mint', label: 'Mint Rune', value: '#0f9d73', dark: '#076348' },
 ];
 
 const TOKEN_KEY = 'lingoSpikeTokenV1';
-const ACCENT_KEY = 'lingoSpikeAccentV1';
+const ACCENT_KEY = 'lingoAccentTheme';
+const SOUND_KEY = 'lingoSound';
 
 function safeGet(key) {
   try { return window.localStorage.getItem(key); } catch { return null; }
@@ -35,11 +37,21 @@ function safeSet(key, value) {
   } catch { /* ignore */ }
 }
 
+function resolveAccent(themeId) {
+  return ACCENT_THEMES.find(t => t.id === themeId) || ACCENT_THEMES[0];
+}
+
+function readStoredSoundEnabled() {
+  const raw = safeGet(SOUND_KEY);
+  return raw !== 'off';
+}
+
 function applyAccentToDom(themeId) {
-  const theme = ACCENT_THEMES.find(t => t.id === themeId) || ACCENT_THEMES[0];
+  const theme = resolveAccent(themeId);
   const root = document.documentElement;
   root.style.setProperty('--accent', theme.value);
   root.style.setProperty('--accent-dark', theme.dark);
+  return theme.id;
 }
 
 export const useAppStore = create((set, get) => ({
@@ -55,7 +67,8 @@ export const useAppStore = create((set, get) => ({
   wordBank: [],
 
   // --- UI ---
-  accent: safeGet(ACCENT_KEY) || 'purple',
+  accent: resolveAccent(safeGet(ACCENT_KEY)).id,
+  soundEnabled: readStoredSoundEnabled(),
   leaderboard: [],
 
   // --- async/pending flags ---
@@ -79,9 +92,15 @@ export const useAppStore = create((set, get) => ({
   },
 
   setAccent(id) {
-    safeSet(ACCENT_KEY, id);
-    applyAccentToDom(id);
-    set({ accent: id });
+    const resolvedId = applyAccentToDom(id);
+    safeSet(ACCENT_KEY, resolvedId);
+    set({ accent: resolvedId });
+  },
+
+  setSoundEnabled(enabled) {
+    const next = Boolean(enabled);
+    safeSet(SOUND_KEY, next ? 'on' : 'off');
+    set({ soundEnabled: next });
   },
 
   setAuthMessage(msg) {
@@ -89,7 +108,8 @@ export const useAppStore = create((set, get) => ({
   },
 
   async boot() {
-    applyAccentToDom(get().accent);
+    const resolvedAccent = applyAccentToDom(get().accent);
+    safeSet(ACCENT_KEY, resolvedAccent);
     set(s => ({ pending: { ...s.pending, boot: true } }));
     const token = safeGet(TOKEN_KEY);
     if (!token) {

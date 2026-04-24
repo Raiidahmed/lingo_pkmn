@@ -4903,6 +4903,56 @@ function safeStorageSet(key, value) {
   } catch (e) {}
 }
 
+function queryParamValue(name) {
+  try {
+    const search = (window.location && typeof window.location.search === 'string') ? window.location.search : '';
+    const qs = search.startsWith('?') ? search.slice(1) : search;
+    for (const part of qs.split('&')) {
+      const [kRaw, vRaw = ''] = part.split('=');
+      if (!kRaw) continue;
+      const key = (() => { try { return decodeURIComponent(kRaw.replace(/\+/g, ' ')); } catch (e) { return ''; } })();
+      if (key !== name) continue;
+      return (() => { try { return decodeURIComponent(vRaw.replace(/\+/g, ' ')); } catch (e) { return ''; } })();
+    }
+  } catch (e) {}
+  return '';
+}
+
+const EMBEDDED_MODE = (() => {
+  if (!window.parent || window.parent === window) return false;
+  return queryParamValue('embedded') === '1';
+})();
+
+function postShellMessage(type, payload) {
+  if (!EMBEDDED_MODE) return;
+  try {
+    const targetOrigin = (window.location && window.location.origin) ? window.location.origin : '*';
+    window.parent.postMessage({ type, ...(payload || {}) }, targetOrigin);
+  } catch (err) {
+    console.warn('postShellMessage failed:', err);
+  }
+}
+
+function currentBridgeStats(result) {
+  const fallbackLevel = `Level ${currentLevelIdx + 1}`;
+  const levelLabel = (LEVELS[currentLevelIdx] && LEVELS[currentLevelIdx].name) || fallbackLevel;
+  const elapsedMs = result === 'win'
+    ? Math.max(0, Date.now() - (sessionStartTime || Date.now()))
+    : Math.max(0, Date.now() - (levelStartTime || Date.now()));
+  return {
+    xp: Number.isFinite(Number(totalXP)) ? Math.max(0, Math.floor(Number(totalXP))) : 0,
+    challenges: Number.isFinite(Number(challengesPassed)) ? Math.max(0, Math.floor(Number(challengesPassed))) : 0,
+    time: fmtTime(elapsedMs),
+    attempts: Number.isFinite(Number(totalAttempts)) ? Math.max(0, Math.floor(Number(totalAttempts))) : 0,
+    levelLabel,
+    result,
+  };
+}
+
+function notifyShellGameOver(result) {
+  postShellMessage('lingo:gameOver', { stats: currentBridgeStats(result) });
+}
+
 function getAccentTheme(name) {
   return ACCENT_THEMES.find(theme => theme.id === name) || ACCENT_THEMES[0];
 }
@@ -5860,6 +5910,7 @@ function handleStairs() {
     document.getElementById('lc-title').textContent = 'YOU WIN!';
     document.getElementById('nextlevel-btn').style.display = 'none';
     saveAccountProgress('game_won');
+    notifyShellGameOver('win');
     fetchLeaderboard().then(scores => {
       renderLeaderboard(scores, 'win-lb');
       showScreen('screen-win');
@@ -6001,6 +6052,7 @@ quitBtn.addEventListener('click', () => {
   document.getElementById('quit-attempts').textContent = totalAttempts;
   saveAccountProgress('quit_to_menu');
   postScore(currentLevelIdx);
+  notifyShellGameOver('quit');
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'quit-lb'));
   showScreen('screen-quit');
 });
@@ -6038,6 +6090,7 @@ document.getElementById('nextlevel-btn').addEventListener('click', () => {
 
 document.getElementById('lc-quit-btn').addEventListener('click', () => {
   Sound.click();
+  notifyShellGameOver('quit');
   resetToTitle();
 });
 
@@ -6195,22 +6248,55 @@ document.addEventListener('click', unlockAudioFromGesture);
 document.addEventListener('keydown', unlockAudioFromGesture);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
 
-syncSoundButton();
-soundBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
-soundBtn.addEventListener('click', () => {
-  Sound.unlock();
-  Sound.enabled = !Sound.enabled;
+function parseSoundPreference(raw) {
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().toLowerCase();
+    if (normalized === 'on' || normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'off' || normalized === 'false' || normalized === '0') return false;
+  }
+  return null;
+}
+
+function applySoundPreference(enabled, options = {}) {
+  const { fromBridge = false } = options;
+  Sound.enabled = enabled !== false;
   if (!Sound.enabled) {
     Sound.ready = false;
     closeAudioGate();
+  } else if (!isLikelyIOS()) {
+    Sound.ready = true;
   }
   try { localStorage.setItem('lingoSound', Sound.enabled ? 'on' : 'off'); } catch(e) {}
   syncSoundButton();
-  if (Sound.enabled) {
-    if (!isLikelyIOS()) Sound.ready = true;
-    Sound.unlock();
-    Sound.click();
+  if (fromBridge || !Sound.enabled) return;
+  Sound.unlock();
+  Sound.click();
+}
+
+function handleEmbeddedConfigMessage(event) {
+  if (!EMBEDDED_MODE) return;
+  if (event.source !== window.parent) return;
+  if (event.origin && window.location.origin && event.origin !== window.location.origin) return;
+  const data = event.data;
+  if (!data || typeof data !== 'object' || data.type !== 'lingo:config') return;
+  if (typeof data.accentTheme === 'string') {
+    handleAccentThemeSelect(data.accentTheme);
   }
+  const nextSound = parseSoundPreference(data.sound);
+  if (nextSound !== null) {
+    applySoundPreference(nextSound, { fromBridge: true });
+  }
+}
+
+if (EMBEDDED_MODE) {
+  window.addEventListener('message', handleEmbeddedConfigMessage);
+}
+
+syncSoundButton();
+soundBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
+soundBtn.addEventListener('click', () => {
+  applySoundPreference(!Sound.enabled);
 });
 
 // ============================================================

@@ -15,7 +15,7 @@ export default function GameOverScreen() {
   return (
     <div className="screen" id="screen-gameover">
       <div className="screen-shell">
-        <h1>Game Over</h1>
+        <h1>{stats?.result === 'win' ? 'Run Complete' : 'Game Over'}</h1>
         <h2>{stats?.levelLabel || 'Dungeon run ended'}</h2>
 
         <div className="stat-grid">
@@ -37,10 +37,7 @@ export default function GameOverScreen() {
           </div>
         </div>
 
-        <p>
-          Game-over events are not yet wired back from the legacy game in this
-          spike. Use the back button below to return to the shell.
-        </p>
+        <p>Stats were reported by the embedded legacy game.</p>
 
         <div className="screen-actions">
           {session ? (

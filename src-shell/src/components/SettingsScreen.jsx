@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useAppStore, ACCENT_THEMES } from '../state/appStore.js';
 
 export default function SettingsScreen() {
@@ -7,8 +6,8 @@ export default function SettingsScreen() {
   const gotoStatus = useAppStore(s => s.gotoStatus);
   const gotoTitle = useAppStore(s => s.gotoTitle);
   const session = useAppStore(s => s.session);
-
-  const [soundOn, setSoundOn] = useState(true);
+  const soundEnabled = useAppStore(s => s.soundEnabled);
+  const setSoundEnabled = useAppStore(s => s.setSoundEnabled);
 
   return (
     <div className="screen" id="screen-settings">
@@ -47,16 +46,16 @@ export default function SettingsScreen() {
         <div className="ui-panel">
           <h3>Sound</h3>
           <p>
-            In the spike, audio lives inside the legacy game iframe. This toggle
-            only records shell intent — the real SFX switch is inside the game.
+            This setting is persisted using the legacy key and synced to the
+            embedded game immediately.
           </p>
           <div className="auth-actions">
             <button
               type="button"
               className="ghost-btn"
-              onClick={() => setSoundOn(v => !v)}
+              onClick={() => setSoundEnabled(!soundEnabled)}
             >
-              Sound: {soundOn ? 'ON' : 'OFF'}
+              Sound: {soundEnabled ? 'ON' : 'OFF'}
             </button>
           </div>
         </div>

@@ -20,12 +20,21 @@ export default function StatusScreen() {
   }
 
   const s = status || {};
+  const hasActiveRun = Boolean(s.hasActiveRun);
+  const resumeDetail = hasActiveRun
+    ? `Resume run at ${s.levelLabel || 'current level'}`
+    : 'No active run saved';
+  const actionLabel = hasActiveRun ? 'Resume Run ▶' : 'Start Fresh ▶';
+  const summary = hasActiveRun
+    ? 'Your saved run is ready to continue.'
+    : 'No in-progress run found. Starting will begin a fresh run.';
 
   return (
     <div className="screen" id="screen-status">
       <div className="screen-shell">
         <h1>Status</h1>
         <h2>Welcome back, {session.profile.name}</h2>
+        <p>{summary}</p>
 
         <div className="ui-panel">
           <h3>Save Snapshot</h3>
@@ -43,7 +52,7 @@ export default function StatusScreen() {
           </div>
           <div className="status-line">
             <span>Resume</span>
-            <span>{s.hasActiveRun ? 'Mid-run saved' : 'Fresh start'}</span>
+            <span>{resumeDetail}</span>
           </div>
         </div>
 
@@ -69,7 +78,7 @@ export default function StatusScreen() {
 
         <div className="screen-actions">
           <button type="button" className="big-btn" onClick={enterDungeon}>
-            Enter Dungeon ▶
+            {actionLabel}
           </button>
           <button type="button" className="ghost-btn" onClick={gotoSettings}>
             Settings
