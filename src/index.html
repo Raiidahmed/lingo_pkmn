@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="theme-color" content="#000000"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="LingoDungeon"/>
   <title>LingoDungeon</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/src/favicon.png?v=3"/>
   <link rel="icon" type="image/svg+xml" href="/src/favicon.svg?v=3"/>
@@ -21,17 +25,13 @@
       font-family: 'Press Start 2P', 'Courier New', monospace;
       color: #fff;
       touch-action: none;
-    }
-
-    html.embedded-mode, body.embedded-mode {
-      overflow-y: auto;
-      overscroll-behavior-y: contain;
-      touch-action: pan-y;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
 
     :root {
-      --accent: #5b2fb0;
-      --accent-dark: #35156f;
+      --accent: #cc0033;
+      --accent-dark: #7a001f;
       /* iOS Safari: px obscured by bottom browser UI (e.g. search bar) */
       --ios-obscured-bottom: 0px;
     }
@@ -56,7 +56,6 @@
       font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.5rem;
       letter-spacing: 1px;
     }
-    #quit-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
     #sound-btn {
       background: #000; border: 2px solid #fff; color: #fff;
       padding: 5px 10px; cursor: pointer;
@@ -64,7 +63,10 @@
       letter-spacing: 1px;
       margin-right: 4px;
     }
-    #sound-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+    @media (hover: hover) and (pointer: fine) {
+      #quit-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+      #sound-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+    }
     @media (max-width: 430px) {
       #hud { padding-left: 6px; padding-right: 6px; gap: 4px; }
       #hud .title { font-size: 0.5rem; letter-spacing: 1px; }
@@ -76,7 +78,7 @@
       position: relative; flex: 1; width: 100%; max-width: 100%;
       display: flex; align-items: flex-start; justify-content: center;
       overflow: hidden; background: #000;
-      padding-top: 18px; /* keeps level-start toast from covering the gameplay area */
+      padding-top: 56px; /* keep gameplay below level-start toast */
     }
     canvas {
       display: block;
@@ -103,7 +105,9 @@
       cursor: pointer; text-align: left;
       transition: background 0.1s, color 0.1s;
     }
-    .choice-btn:hover:not(:disabled) { background: #fff; color: #000; }
+    @media (hover: hover) and (pointer: fine) {
+      .choice-btn:hover:not(:disabled) { background: #fff; color: #000; }
+    }
     .choice-btn.selected:not(:disabled), .choice-btn:focus-visible:not(:disabled) {
       background: #fff; color: #000; outline: 2px solid #fff; outline-offset: 2px;
     }
@@ -117,7 +121,9 @@
       font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.65rem;
       font-weight: bold; cursor: pointer; letter-spacing: 1px;
     }
-    #continue-btn:hover { background: #000; color: #fff; }
+    @media (hover: hover) and (pointer: fine) {
+      #continue-btn:hover { background: #000; color: #fff; }
+    }
 
     /* ── D-pad ── */
     #dpad {
@@ -169,11 +175,26 @@
       overflow-y: hidden;
     }
     .screen.active { display: flex; }
-
-    html.embedded-mode .screen,
-    body.embedded-mode .screen {
+    #screen-status {
+      justify-content: flex-start;
       overflow-y: auto;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #screen-title {
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #screen-title::-webkit-scrollbar { display: none; }
+    #screen-status::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
     .screen h1 {
       font-size: clamp(0.95rem, 5vw, 1.7rem);
@@ -192,12 +213,19 @@
       gap: 12px;
       align-items: center;
     }
+    #screen-title .screen-shell {
+      min-height: 100%;
+    }
 
     #screen-title,
     #screen-status {
       justify-content: flex-start;
       padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 18px));
       padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px));
+    }
+    #screen-title {
+      /* Keep the Hall of Fame clear of Safari’s bottom chrome on iOS. */
+      padding-bottom: calc(max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px)) + var(--ios-obscured-bottom, 0px) + 24px);
     }
 
     #screen-title h1,
@@ -212,18 +240,6 @@
       letter-spacing: 2px;
       color: #aaa;
       margin-bottom: 0;
-    }
-
-    #screen-embedded-wait .screen-shell {
-      max-width: 520px;
-    }
-    #screen-embedded-wait code {
-      color: #fff;
-      background: #111;
-      border: 1px solid #333;
-      padding: 2px 5px;
-      font-family: 'Press Start 2P', 'Courier New', monospace;
-      font-size: 0.5rem;
     }
 
     .ui-panel {
@@ -242,7 +258,10 @@
       text-transform: uppercase; letter-spacing: 2px;
       transition: background 0.1s, color 0.1s;
     }
-    .big-btn:hover { background: var(--accent-dark); color: #fff; }
+    @media (hover: hover) and (pointer: fine) {
+      .big-btn:hover { background: var(--accent-dark); color: #fff; }
+      .ghost-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    }
     .big-btn:active { transform: scale(0.97); }
     .ghost-btn {
       padding: 12px 24px; background: #000;
@@ -252,17 +271,23 @@
       text-transform: uppercase; letter-spacing: 1px;
       transition: border-color 0.1s, color 0.1s;
     }
-    .ghost-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .ghost-btn:active { background: #111; }
 
     /* ── Name input ── */
     #name-input, #password-input {
       background: #000; border: 3px solid var(--accent); color: #fff;
       padding: 12px;
-      font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.72rem;
+      font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 16px;
       text-align: center; width: 100%; max-width: 280px; margin: 0 auto 14px;
       outline: none; text-transform: uppercase;
     }
     #name-input:focus, #password-input:focus { background: #111; }
+    #name-input[readonly] {
+      opacity: 1;
+      cursor: default;
+      background: #111;
+      caret-color: transparent;
+    }
     #password-input {
       text-transform: none;
     }
@@ -277,30 +302,101 @@
       clip: rect(0, 0, 0, 0);
       white-space: nowrap;
     }
+    .title-account-chip {
+      display: none;
+    }
+    .title-account-chip.active {
+      display: none;
+    }
+    .title-account-chip strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 4px;
+    }
     .auth-actions {
       display: flex;
-      gap: 12px;
-      width: 100%;
-      max-width: 280px;
+      gap: var(--title-actions-gap, 10px);
+      width: var(--title-actions-width, min(100%, 280px));
+      max-width: none;
       justify-content: center;
       flex-direction: column;
-      margin: 0 auto;
+      margin: 0 auto var(--title-actions-gap, 10px);
+      min-height: 0;
     }
     .auth-actions .big-btn,
     .auth-actions .ghost-btn {
       margin-top: 0;
       width: 100%;
     }
+    .auth-actions .big-btn {
+      min-height: 56px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .title-actions-secondary {
+      display: none;
+      flex-direction: row;
+      gap: var(--title-actions-gap, 10px);
+      align-items: stretch;
+      width: var(--title-actions-width, min(100%, 280px));
+      max-width: none;
+      margin: 0 auto var(--title-actions-gap, 10px);
+      min-height: 0;
+    }
+    .title-actions-secondary .ghost-btn {
+      width: 100%;
+      margin-top: 0;
+      flex: 1;
+      min-height: 46px;
+      padding: 12px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .title-install-row {
+      display: none;
+      align-items: stretch;
+      width: var(--title-actions-width, min(100%, 280px));
+      max-width: none;
+      margin: 0 auto var(--title-actions-gap, 10px);
+      min-height: 0;
+    }
+    .title-install-row .ghost-btn {
+      width: 100%;
+      margin-top: 0;
+      min-height: 46px;
+      padding: 12px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     #auth-msg {
-      min-height: 2.4em;
+      display: none;
       max-width: 280px;
-      margin: 10px auto 0;
+      margin: 0 auto;
       color: #aaa;
       font-size: 0.52rem;
       line-height: 1.8;
     }
+    #auth-msg.has-message {
+      display: block;
+      min-height: 2.4em;
+      margin: 10px auto 0;
+    }
     .title-auth-panel {
+      --title-actions-width: min(100%, 280px);
+      --title-actions-gap: 10px;
       text-align: center;
+      min-height: 300px;
+      height: auto;
+      padding: 24px 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow: hidden;
     }
     .title-auth-panel .subtle-note {
       margin: 0 auto 12px;
@@ -308,6 +404,7 @@
     }
     .title-leaderboard-panel {
       padding: 0;
+      margin-top: 24px;
       overflow: hidden;
     }
     .title-leaderboard-panel h3 {
@@ -481,33 +578,36 @@
           max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px)) + var(--ios-obscured-bottom, 0px)
         );
       }
+      #screen-title {
+        padding-bottom: calc(
+          max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px)) + var(--ios-obscured-bottom, 0px) + 40px
+        );
+      }
+      #screen-title .screen-shell {
+        padding-bottom: 8px;
+      }
       .ui-panel,
       .status-panel {
         padding: 14px 12px;
       }
-      #name-input {
-        font-size: 0.62rem;
+      #name-input,
+      #password-input {
+        font-size: 16px;
       }
       /* iPhone: keep Hall of Fame bottom visible (address-bar safe) */
       #screen-title .title-leaderboard-panel {
         margin-bottom: var(--ios-obscured-bottom, 0px);
       }
       #screen-title #lb-list {
-        max-height: max(110px, calc(170px - var(--ios-obscured-bottom, 0px)));
+        max-height: max(110px, calc(170px - var(--ios-obscured-bottom, 0px) - 20px));
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: calc(10px + var(--ios-obscured-bottom, 0px));
+        padding-bottom: calc(14px + var(--ios-obscured-bottom, 0px));
         box-sizing: border-box;
       }
 
       /* iPhone: prevent status screen content from forcing viewport/page scroll */
-      #screen-status .screen-shell {
-        max-height: calc(100vh - var(--ios-obscured-bottom, 0px) - 40px);
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-      }
       #screen-status .wordbank-list {
         max-height: calc(120px - var(--ios-obscured-bottom, 0px));
         overflow-y: auto;
@@ -518,9 +618,60 @@
       .title-leaderboard-panel {
         margin-top: 6px;
       }
+      .title-auth-panel {
+        --title-actions-width: 100%;
+        --title-actions-gap: 10px;
+      }
       .auth-actions,
+      .title-actions-secondary,
+      .title-install-row,
       .screen-actions {
         max-width: 100%;
+      }
+      .title-actions-secondary .ghost-btn,
+      .title-install-row .ghost-btn {
+        font-size: 0.58rem;
+        letter-spacing: 0.5px;
+        padding: 10px 8px;
+        min-height: 44px;
+      }
+    }
+
+    @media (hover: none), (pointer: coarse) {
+      #quit-btn:hover,
+      #sound-btn:hover {
+        background: #000;
+        color: #fff;
+        border-color: #fff;
+      }
+      .choice-btn:hover:not(:disabled) {
+        background: #000;
+        color: #fff;
+      }
+      #continue-btn:hover {
+        background: #fff;
+        color: #000;
+      }
+      .big-btn:hover {
+        background: var(--accent);
+        color: #fff;
+      }
+      .ghost-btn:hover {
+        background: #000;
+        border-color: #aaa;
+        color: #aaa;
+      }
+      #quit-btn:active,
+      #sound-btn:active,
+      .big-btn:active {
+        background: var(--accent-dark);
+        color: #fff;
+        border-color: var(--accent-dark);
+      }
+      .ghost-btn:active {
+        background: #111;
+        border-color: #fff;
+        color: #fff;
       }
     }
 
@@ -590,30 +741,37 @@
     /* Level emphasis */
     #screen-levelcomplete #lc-title { color: var(--accent); }
     #screen-levelcomplete #lc-quit-btn { border-color: var(--accent); color: var(--accent); }
-    #screen-levelcomplete #lc-quit-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+    @media (hover: hover) and (pointer: fine) {
+      #screen-levelcomplete #lc-quit-btn:hover { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
+    }
     #screen-quit h1 { color: var(--accent); }
 
 
     /* ── Audio gate modal ── */
-    #audio-gate {
+    #audio-gate,
+    #install-helper {
       display: none; position: fixed; inset: 0;
       background: rgba(0, 0, 0, 0.92);
       align-items: center; justify-content: center;
       z-index: 200; padding: 20px;
     }
-    #audio-gate.active { display: flex; }
-    #audio-gate .ag-box {
+    #audio-gate.active,
+    #install-helper.active { display: flex; }
+    #audio-gate .ag-box,
+    #install-helper .ag-box {
       max-width: 400px;
       text-align: center;
     }
-    #audio-gate-title {
+    #audio-gate-title,
+    #install-helper-title {
       font-size: clamp(0.8rem, 4.4vw, 1.05rem);
       color: var(--accent);
       letter-spacing: 3px;
       text-transform: uppercase;
       margin-bottom: 12px;
     }
-    #audio-gate p {
+    #audio-gate p,
+    #install-helper p {
       color: #ccc;
       font-size: 0.56rem;
       line-height: 2;
@@ -628,7 +786,9 @@
       margin: 0 auto;
     }
     #audio-gate .big-btn,
-    #audio-gate .ghost-btn {
+    #audio-gate .ghost-btn,
+    #install-helper .big-btn,
+    #install-helper .ghost-btn {
       width: 100%;
       margin-top: 0;
     }
@@ -659,7 +819,7 @@
   </div>
 
   <!-- TITLE SCREEN -->
-  <div id="screen-title" class="screen active">
+  <div id="screen-title" class="screen">
     <div class="screen-shell">
       <h1>LINGO DUNGEON</h1>
       <div class="ui-panel title-auth-panel">
@@ -668,10 +828,18 @@
         <input type="text" id="name-input" maxlength="24" placeholder="SAVE NAME" autocomplete="username" spellcheck="false"/>
         <input type="password" id="password-input" class="auth-hidden" maxlength="24" placeholder="PIN" autocomplete="current-password" spellcheck="false"/>
         <div class="auth-actions">
-          <button class="big-btn" id="start-btn">Resume Save ▶</button>
+          <button class="big-btn" id="start-btn">Log In</button>
           <button class="ghost-btn" id="create-save-btn" type="button">Create Save</button>
         </div>
-        <p id="auth-msg">Enter your save name, then continue.</p>
+        <div class="title-actions-secondary">
+          <button class="ghost-btn" id="title-status-btn" type="button">Status</button>
+          <button class="ghost-btn" id="title-logout-btn" type="button">Log Out</button>
+        </div>
+        <div class="title-install-row">
+          <button class="ghost-btn" id="install-app-btn" type="button" style="display:none;">Install on iPhone</button>
+        </div>
+        <div class="title-account-chip" id="title-account-chip"></div>
+        <p id="auth-msg"></p>
       </div>
       <div class="ui-panel title-leaderboard-panel">
         <h3>Hall of Fame</h3>
@@ -722,22 +890,8 @@
 
       <div class="screen-actions">
         <button class="big-btn" id="status-start-btn">Enter Dungeon ▶</button>
+        <button class="ghost-btn" id="status-back-btn" type="button">Back to Title</button>
         <button class="ghost-btn" id="status-logout-btn" type="button">Log Out</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- EMBEDDED WAIT SCREEN -->
-  <div id="screen-embedded-wait" class="screen">
-    <div class="screen-shell">
-      <h1>Dungeon Ready</h1>
-      <p>
-        Embedded mode is waiting for the shell to send a launch command.
-        Choose resume or restart in the shell status screen.
-      </p>
-      <div class="ui-panel">
-        <h3>Bridge Status</h3>
-        <p class="subtle-note">Listening for <code>lingo:start</code> from parent shell…</p>
       </div>
     </div>
   </div>
@@ -808,6 +962,17 @@
     <div class="audio-gate-actions">
       <button class="big-btn" id="audio-enable-btn" type="button">Enable Sound ▶</button>
       <button class="ghost-btn" id="audio-mute-btn" type="button">Play Muted</button>
+    </div>
+  </div>
+</div>
+
+<!-- INSTALL HELPER MODAL -->
+<div id="install-helper" aria-hidden="true" role="dialog" aria-labelledby="install-helper-title">
+  <div class="ag-box ui-panel">
+    <h2 id="install-helper-title">Install on iPhone</h2>
+    <p>Tap Safari's Share button, then choose Add to Home Screen, then tap Add.</p>
+    <div class="audio-gate-actions">
+      <button class="big-btn" id="install-helper-close" type="button">Got It</button>
     </div>
   </div>
 </div>
@@ -886,13 +1051,14 @@ const ACCOUNT_TOKEN_KEY = 'lingoAccountTokenV1';
 const WORD_BANK_LIMIT = 10;
 const ACCENT_THEME_KEY = 'lingoAccentTheme';
 const ACCENT_THEMES = [
-  { id: 'violet', accent: '#5b2fb0', dark: '#35156f' },
   { id: 'crimson', accent: '#cc0033', dark: '#7a001f' },
+  { id: 'violet', accent: '#5b2fb0', dark: '#35156f' },
   { id: 'teal', accent: '#0f8f8f', dark: '#075959' },
   { id: 'amber', accent: '#c68400', dark: '#7b4f00' },
   { id: 'mint', accent: '#0f9d73', dark: '#076348' },
 ];
-let activeAccentTheme = ACCENT_THEMES[0].id;
+const DEFAULT_ACCENT_THEME_ID = 'crimson';
+let activeAccentTheme = DEFAULT_ACCENT_THEME_ID;
 
 // ============================================================
 //  LEVEL DATA
@@ -4685,6 +4851,7 @@ let accountSession = {
   profile: null,
   save: null,
   wordBank: [],
+  accentTheme: DEFAULT_ACCENT_THEME_ID,
   usedDefaultPin: false,
 };
 const LOCK_TARGETS_BY_LEVEL = [4, 5, 6, 7, 7, 7, 7, 7, 8, 9];
@@ -4741,10 +4908,13 @@ const wrap = document.getElementById('game-wrap');
 function resizeCanvas() {
   const viewW = MAP_W * TILE;
   const viewH = MAP_H * TILE;
-  const availW = wrap.clientWidth;
-  const availH = wrap.clientHeight;
+  const wrapStyles = getComputedStyle(wrap);
+  const padX = parseFloat(wrapStyles.paddingLeft) + parseFloat(wrapStyles.paddingRight);
+  const padY = parseFloat(wrapStyles.paddingTop) + parseFloat(wrapStyles.paddingBottom);
+  const availW = Math.max(1, wrap.clientWidth - padX);
+  const availH = Math.max(1, wrap.clientHeight - padY);
   const raw = Math.min(availW / viewW, availH / viewH);
-  const s = raw >= 1 ? Math.min(Math.floor(raw), 2) : Math.max(raw, 0.4);
+  const s = raw >= 1 ? Math.min(raw, 2) : Math.max(raw, 0.4);
   canvas.width  = viewW;
   canvas.height = viewH;
   canvas.style.width  = Math.round(viewW * s) + 'px';
@@ -4830,8 +5000,8 @@ function drawNPC(npc) {
 
 function drawPlayer() {
   const x = player.col*TILE, y = player.row*TILE;
-  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5b2fb0';
-  const accentDark = getComputedStyle(document.documentElement).getPropertyValue('--accent-dark').trim() || '#35156f';
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#cc0033';
+  const accentDark = getComputedStyle(document.documentElement).getPropertyValue('--accent-dark').trim() || '#7a001f';
 
   ctx.fillStyle='rgba(0,0,0,0.4)';
   ctx.beginPath(); ctx.ellipse(x+TILE/2, y+TILE-4, 9, 4, 0, 0, Math.PI*2); ctx.fill();
@@ -4921,8 +5091,15 @@ function addXP(amount) {
 //  SCREENS
 // ============================================================
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  if (id) document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.screen').forEach(s => {
+    s.scrollTop = 0;
+    s.classList.remove('active');
+  });
+  if (!id) return;
+  const target = document.getElementById(id);
+  if (!target) return;
+  target.classList.add('active');
+  target.scrollTop = 0;
 }
 
 function fmtTime(ms) {
@@ -4942,88 +5119,19 @@ function safeStorageSet(key, value) {
   } catch (e) {}
 }
 
-function queryParamValue(name) {
-  try {
-    const search = (window.location && typeof window.location.search === 'string') ? window.location.search : '';
-    const qs = search.startsWith('?') ? search.slice(1) : search;
-    for (const part of qs.split('&')) {
-      const [kRaw, vRaw = ''] = part.split('=');
-      if (!kRaw) continue;
-      const key = (() => { try { return decodeURIComponent(kRaw.replace(/\+/g, ' ')); } catch (e) { return ''; } })();
-      if (key !== name) continue;
-      return (() => { try { return decodeURIComponent(vRaw.replace(/\+/g, ' ')); } catch (e) { return ''; } })();
-    }
-  } catch (e) {}
-  return '';
-}
-
-const EMBEDDED_MODE = (() => {
-  if (!window.parent || window.parent === window) return false;
-  return queryParamValue('embedded') === '1';
-})();
-
-let embeddedBootstrapped = !EMBEDDED_MODE;
-let embeddedStarted = false;
-let embeddedPendingStart = null;
-let embeddedLastStartNonce = null;
-let embeddedLastAppliedStart = null;
-let pendingStartRequest = null;
-
-if (EMBEDDED_MODE) {
-  document.documentElement.classList.add('embedded-mode');
-  if (document.body) document.body.classList.add('embedded-mode');
-}
-
-function postShellMessage(type, payload) {
-  if (!EMBEDDED_MODE) return;
-  try {
-    const targetOrigin = (window.location && window.location.origin) ? window.location.origin : '*';
-    window.parent.postMessage({ type, ...(payload || {}) }, targetOrigin);
-  } catch (err) {
-    console.warn('postShellMessage failed:', err);
-  }
-}
-
-function clampLevelIndex(value) {
-  const idx = Number(value);
-  if (!Number.isFinite(idx)) return 0;
-  return Math.max(0, Math.min(LEVELS.length - 1, Math.floor(idx)));
-}
-
-function isEmbeddedWaitingForStart() {
-  return EMBEDDED_MODE && !embeddedStarted;
-}
-
-function currentBridgeStats(result) {
-  const fallbackLevel = `Level ${currentLevelIdx + 1}`;
-  const levelLabel = (LEVELS[currentLevelIdx] && LEVELS[currentLevelIdx].name) || fallbackLevel;
-  const elapsedMs = result === 'win'
-    ? Math.max(0, Date.now() - (sessionStartTime || Date.now()))
-    : Math.max(0, Date.now() - (levelStartTime || Date.now()));
-  return {
-    xp: Number.isFinite(Number(totalXP)) ? Math.max(0, Math.floor(Number(totalXP))) : 0,
-    challenges: Number.isFinite(Number(challengesPassed)) ? Math.max(0, Math.floor(Number(challengesPassed))) : 0,
-    time: fmtTime(elapsedMs),
-    attempts: Number.isFinite(Number(totalAttempts)) ? Math.max(0, Math.floor(Number(totalAttempts))) : 0,
-    levelLabel,
-    result,
-  };
-}
-
-function notifyShellGameOver(result, reason = 'terminal') {
-  postShellMessage('lingo:gameOver', {
-    stats: currentBridgeStats(result),
-    terminal: {
-      result,
-      reason: reason || 'terminal',
-      bridge: 'phase3',
-      emittedAt: new Date().toISOString(),
-    },
-  });
-}
-
 function getAccentTheme(name) {
-  return ACCENT_THEMES.find(theme => theme.id === name) || ACCENT_THEMES[0];
+  const normalized = typeof name === 'string' ? name.trim().toLowerCase() : '';
+  return ACCENT_THEMES.find(theme => theme.id === normalized)
+    || ACCENT_THEMES.find(theme => theme.id === DEFAULT_ACCENT_THEME_ID)
+    || ACCENT_THEMES[0];
+}
+
+function resolveAccountAccentTheme(payload) {
+  const payloadTheme = (payload && typeof payload.accent_theme === 'string')
+    ? payload.accent_theme
+    : '';
+  if (payloadTheme) return getAccentTheme(payloadTheme).id;
+  return getAccentTheme(accountSession.accentTheme || activeAccentTheme || safeStorageGet(ACCENT_THEME_KEY)).id;
 }
 
 function applyAccentTheme(name) {
@@ -5084,11 +5192,91 @@ function updateAccountSessionFromPayload(payload) {
   accountSession.profile = payload && payload.profile ? payload.profile : null;
   accountSession.save = payload && payload.save ? payload.save : null;
   accountSession.wordBank = Array.isArray(payload && payload.word_bank) ? payload.word_bank : [];
+  accountSession.accentTheme = resolveAccountAccentTheme(payload);
+  if (accountSession.token) {
+    applyAccentTheme(accountSession.accentTheme);
+    syncAccentThemeButtons();
+  }
 }
 
 function setAuthMessage(msg) {
   const el = document.getElementById('auth-msg');
-  if (el) el.textContent = msg;
+  if (!el) return;
+  const text = typeof msg === 'string' ? msg : '';
+  el.textContent = text;
+  el.classList.toggle('has-message', Boolean(text.trim()));
+}
+
+function refreshTitleAccountChip() {
+  const chip = document.getElementById('title-account-chip');
+  const input = document.getElementById('name-input');
+  if (!chip) return;
+  const profile = accountSession.profile || {};
+  const save = accountSession.save || {};
+  const status = save.status || {};
+  const hasSession = Boolean(accountSession.token && profile && profile.name);
+  if (!hasSession) {
+    chip.classList.remove('active');
+    chip.textContent = '';
+    if (input) {
+      input.readOnly = false;
+      input.value = '';
+      input.placeholder = 'SAVE NAME';
+    }
+    return;
+  }
+  if (input) {
+    input.value = profile.name || '';
+    input.readOnly = true;
+    input.placeholder = '';
+  }
+  const parts = [
+    `Signed in as ${profile.name || 'Hero'}`,
+    status.hasActiveRun ? 'Resume is ready.' : 'Status is available.'
+  ];
+  chip.textContent = parts.join(' ');
+  chip.classList.add('active');
+}
+
+function isFirstTimeAccountPayload(payload) {
+  const save = payload && payload.save && typeof payload.save === 'object' ? payload.save : null;
+  const status = save && save.status && typeof save.status === 'object' ? save.status : null;
+  const snapshot = save && save.snapshot && typeof save.snapshot === 'object' ? save.snapshot : null;
+  const hasWordBank = Array.isArray(payload && payload.word_bank) && payload.word_bank.length > 0;
+  return Boolean(payload && (payload.created || (!status && !snapshot && !hasWordBank)));
+}
+
+function updateTitleControls() {
+  const hasSession = Boolean(accountSession.token && accountSession.profile);
+  const isAuthPending = authFlowPending && !hasSession;
+  const start = document.getElementById('start-btn');
+  if (createSaveBtn) {
+    createSaveBtn.style.display = hasSession ? 'none' : '';
+    createSaveBtn.style.pointerEvents = (hasSession || isAuthPending) ? 'none' : 'auto';
+    createSaveBtn.disabled = hasSession || isAuthPending;
+  }
+  if (titleStatusBtn) {
+    titleStatusBtn.style.display = hasSession ? '' : 'none';
+    titleStatusBtn.style.pointerEvents = hasSession ? 'auto' : 'none';
+    titleStatusBtn.disabled = !hasSession;
+  }
+  if (titleLogoutBtn) {
+    titleLogoutBtn.style.display = hasSession ? '' : 'none';
+    titleLogoutBtn.style.pointerEvents = hasSession ? 'auto' : 'none';
+    titleLogoutBtn.disabled = !hasSession;
+  }
+  if (titleActionsSecondary) {
+    titleActionsSecondary.style.display = hasSession ? 'flex' : 'none';
+  }
+  if (start) {
+    start.textContent = hasSession
+      ? 'Resume Game'
+      : (isAuthPending ? (pendingAuthMode === 'create' ? 'Creating Save...' : 'Logging In...') : 'Log In');
+    start.disabled = isAuthPending;
+    start.style.pointerEvents = isAuthPending ? 'none' : 'auto';
+  }
+  if (hasSession) setAuthMessage('');
+  syncInstallButton();
 }
 
 function currentStoryLabel() {
@@ -5097,6 +5285,24 @@ function currentStoryLabel() {
   }
   if (LEVELS[currentLevelIdx]) return LEVELS[currentLevelIdx].name;
   return 'New run';
+}
+
+function getLoadedSnapshot() {
+  const snap = accountSession && accountSession.save && accountSession.save.snapshot;
+  return (snap && typeof snap === 'object') ? snap : null;
+}
+
+function resumeIntoGame() {
+  const snap = getLoadedSnapshot();
+  playerName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
+  sessionStartTime = Date.now();
+  totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
+  if (snap && snap.mapState && snap.locksState && snap.player) {
+    restoreSavedRun();
+  } else {
+    const idx = snap && Number.isInteger(snap.currentLevelIdx) ? snap.currentLevelIdx : currentLevelIdx || 0;
+    loadLevel(Math.max(0, Math.min(LEVELS.length - 1, idx)));
+  }
 }
 
 function currentStatusPayload(reason = 'manual') {
@@ -5156,6 +5362,7 @@ async function saveAccountProgress(reason = 'manual') {
         snapshot: currentSnapshotPayload(),
         status: currentStatusPayload(reason),
         word_bank: accountSession.wordBank,
+        accent_theme: getAccentTheme(activeAccentTheme).id,
       })
     });
     const payload = await response.json();
@@ -5164,6 +5371,35 @@ async function saveAccountProgress(reason = 'manual') {
     return payload;
   } catch (err) {
     console.warn('Save progress failed:', err);
+    return null;
+  }
+}
+
+async function persistAccentThemeForAccount(themeId) {
+  if (!accountSession.token) return null;
+  const save = (accountSession.save && typeof accountSession.save === 'object') ? accountSession.save : {};
+  const snapshot = (save.snapshot && typeof save.snapshot === 'object') ? save.snapshot : {};
+  const status = (save.status && typeof save.status === 'object') ? save.status : {};
+  try {
+    const response = await fetch(API + '/api/account/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(),
+      },
+      body: JSON.stringify({
+        snapshot,
+        status,
+        word_bank: Array.isArray(accountSession.wordBank) ? accountSession.wordBank : [],
+        accent_theme: getAccentTheme(themeId).id,
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload && payload.error ? payload.error : 'Could not save accent theme.');
+    updateAccountSessionFromPayload(payload);
+    return payload;
+  } catch (err) {
+    console.warn('Accent theme save failed:', err);
     return null;
   }
 }
@@ -5299,7 +5535,7 @@ async function submitAccountAuth(intent) {
   if (!rawName) {
     setAuthMessage('Enter a save name first.');
     nameInput.focus();
-    return false;
+    return null;
   }
   // PIN/password protection deferred; for now always authenticate using default PIN 0000.
   const effectivePassword = '0000';
@@ -5308,7 +5544,6 @@ async function submitAccountAuth(intent) {
   const loginUrl = (API || '') + '/api/account/login';
   let stage = 'request';
 
-  setAuthMessage(intent === 'create' ? 'Creating save...' : 'Loading save...');
   try {
     stage = 'fetch';
     const response = await fetch(loginUrl, {
@@ -5335,21 +5570,27 @@ async function submitAccountAuth(intent) {
     safeStorageSet(ACCOUNT_TOKEN_KEY, accountSession.token);
     updateAccountSessionFromPayload(payload);
     playerName = rawName;
-    renderStatusScreen();
-    showScreen('screen-status');
-    return true;
+    pendingStartName = rawName;
+    return {
+      ok: true,
+      firstTime: isFirstTimeAccountPayload(payload),
+      created: Boolean(payload.created),
+    };
   } catch (err) {
     const msg = (err instanceof Error ? err.message : 'Could not load that save.');
     console.warn('submitAccountAuth failed', { stage, loginUrl, msg, intent });
     setAuthMessage((stage && stage !== 'request' ? `Login failed (${stage}): ` : '') + msg);
-    return false;
+    return null;
   }
 }
 
-async function maybeResumeStoredSession(options = {}) {
-  const { suppressUi = false } = options;
+async function maybeResumeStoredSession() {
   const token = safeStorageGet(ACCOUNT_TOKEN_KEY);
-  if (!token) return false;
+  if (!token) {
+    refreshTitleAccountChip();
+    updateTitleControls();
+    return false;
+  }
   try {
     const response = await fetch(API + '/api/account/me', {
       headers: { Authorization: 'Bearer ' + token }
@@ -5359,15 +5600,24 @@ async function maybeResumeStoredSession(options = {}) {
     accountSession.token = token;
     updateAccountSessionFromPayload(payload);
     playerName = payload && payload.profile && payload.profile.name ? payload.profile.name : playerName;
-    if (!suppressUi) {
-      renderStatusScreen();
-      showScreen('screen-status');
+    if (nameInput && payload && payload.profile && payload.profile.name) {
+      nameInput.value = payload.profile.name;
+      nameInput.readOnly = true;
+      nameInput.placeholder = '';
     }
+    refreshTitleAccountChip();
+    updateTitleControls();
     setAuthMessage('');
     return true;
   } catch (e) {
     safeStorageSet(ACCOUNT_TOKEN_KEY, '');
     accountSession.token = '';
+    accountSession.profile = null;
+    accountSession.save = null;
+    accountSession.wordBank = [];
+    accountSession.accentTheme = getAccentTheme(safeStorageGet(ACCENT_THEME_KEY)).id;
+    refreshTitleAccountChip();
+    updateTitleControls();
     return false;
   }
 }
@@ -5384,11 +5634,21 @@ async function logoutAccount() {
     console.warn('Logout failed:', e);
   }
   safeStorageSet(ACCOUNT_TOKEN_KEY, '');
-  accountSession = { token: '', profile: null, save: null, wordBank: [] };
+  safeStorageSet(ACCENT_THEME_KEY, DEFAULT_ACCENT_THEME_ID);
+  applyAccentTheme(DEFAULT_ACCENT_THEME_ID);
+  syncAccentThemeButtons();
+  accountSession = { token: '', profile: null, save: null, wordBank: [], accentTheme: DEFAULT_ACCENT_THEME_ID, usedDefaultPin: false };
   pendingAuthMode = 'resume';
   const pw = document.getElementById('password-input');
   if (pw) pw.value = '';
-  setAuthMessage('Enter your save name, then continue.');
+  if (nameInput) {
+    nameInput.readOnly = false;
+    nameInput.value = '';
+    nameInput.placeholder = 'SAVE NAME';
+  }
+  setAuthMessage('');
+  updateTitleControls();
+  refreshTitleAccountChip();
   fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
   showScreen('screen-title');
 }
@@ -5547,13 +5807,23 @@ const soundBtn   = document.getElementById('sound-btn');
 const startBtn   = document.getElementById('start-btn');
 const createSaveBtn = document.getElementById('create-save-btn');
 const statusStartBtn = document.getElementById('status-start-btn');
+const statusBackBtn = document.getElementById('status-back-btn');
 const statusLogoutBtn = document.getElementById('status-logout-btn');
+const titleStatusBtn = document.getElementById('title-status-btn');
+const titleLogoutBtn = document.getElementById('title-logout-btn');
+const installAppBtn = document.getElementById('install-app-btn');
+const titleActionsSecondary = titleStatusBtn ? titleStatusBtn.parentElement : null;
+const titleInstallRow = installAppBtn ? installAppBtn.parentElement : null;
+const installHelper = document.getElementById('install-helper');
+const installHelperCloseBtn = document.getElementById('install-helper-close');
 const themeOptions = document.getElementById('theme-options');
 const nameInput  = document.getElementById('name-input');
 const passwordInput  = document.getElementById('password-input');
 const audioGate  = document.getElementById('audio-gate');
 const audioEnableBtn = document.getElementById('audio-enable-btn');
 const audioMuteBtn   = document.getElementById('audio-mute-btn');
+let deferredInstallPrompt = null;
+let authFlowPending = false;
 
 function getChoiceButtons() {
   return Array.from(dlgChoices.querySelectorAll('.choice-btn'));
@@ -5572,6 +5842,10 @@ function syncAccentThemeButtons() {
 function handleAccentThemeSelect(themeId) {
   const theme = applyAccentTheme(themeId);
   safeStorageSet(ACCENT_THEME_KEY, theme.id);
+  if (accountSession.token) {
+    accountSession.accentTheme = theme.id;
+    persistAccentThemeForAccount(theme.id);
+  }
   syncAccentThemeButtons();
 }
 
@@ -5722,6 +5996,52 @@ function syncSoundButton() {
   soundBtn.style.color = Sound.enabled ? '' : '#555';
 }
 
+function isStandaloneWebApp() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function canShowInstallButton() {
+  return !isStandaloneWebApp() && (isLikelyIOS() || !!deferredInstallPrompt);
+}
+
+function syncInstallButton() {
+  if (!installAppBtn) return;
+  const visible = canShowInstallButton();
+  installAppBtn.style.display = visible ? '' : 'none';
+  if (titleInstallRow) titleInstallRow.style.display = visible ? 'flex' : 'none';
+}
+
+function openInstallHelper() {
+  if (!installHelper) return;
+  installHelper.classList.add('active');
+  installHelper.setAttribute('aria-hidden', 'false');
+  if (installHelperCloseBtn) installHelperCloseBtn.focus({ preventScroll: true });
+}
+
+function closeInstallHelper() {
+  if (!installHelper) return;
+  installHelper.classList.remove('active');
+  installHelper.setAttribute('aria-hidden', 'true');
+}
+
+async function handleInstallApp() {
+  if (isStandaloneWebApp()) {
+    syncInstallButton();
+    return;
+  }
+  if (deferredInstallPrompt) {
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    promptEvent.prompt();
+    try { await promptEvent.userChoice; } catch (e) {}
+    syncInstallButton();
+    return;
+  }
+  if (isLikelyIOS()) {
+    openInstallHelper();
+  }
+}
+
 function openAudioGate() {
   audioGate.classList.add('active');
   audioGate.setAttribute('aria-hidden', 'false');
@@ -5742,59 +6062,35 @@ function beginGameFromTitle(nameVal, options = {}) {
     totalXP = 0;
     loadLevel(0);
   } else {
-    restoreSavedRun();
+    resumeIntoGame();
   }
-}
-
-function snapshotFromAccountSession() {
-  const snap = accountSession && accountSession.save && accountSession.save.snapshot;
-  return (snap && typeof snap === 'object') ? snap : null;
-}
-
-function startRunFromSave(mode = 'restart', levelIndex = 0, options = {}) {
-  const normalizedMode = mode === 'resume' ? 'resume' : 'restart';
-  const snap = snapshotFromAccountSession();
-  const resumable = hasResumableSnapshot();
-  const requestedLevel = clampLevelIndex(levelIndex);
-  const startName = (options.playerName || (accountSession.profile && accountSession.profile.name) || playerName || 'Hero')
-    .replace(/<[^>]*>/g, '')
-    .replace(/[&'"<>]/g, '')
-    .slice(0, 24) || 'Hero';
-
-  playerName = startName;
-  pendingStartName = startName;
-  scoreSubmitWarned = false;
-  sessionStartTime = Date.now();
-  totalXP = snap && Number.isFinite(Number(snap.totalXP))
-    ? Math.max(0, Math.floor(Number(snap.totalXP)))
-    : 0;
-
-  if (normalizedMode === 'resume' && resumable) {
-    restoreSavedRun();
-    return {
-      mode: 'resume',
-      levelIndex: clampLevelIndex(Number(snap && snap.currentLevelIdx)),
-    };
-  }
-
-  loadLevel(requestedLevel);
-  return {
-    mode: 'restart',
-    levelIndex: requestedLevel,
-  };
-}
-
-function consumePendingStartRequest() {
-  if (!pendingStartRequest) return null;
-  const req = pendingStartRequest;
-  pendingStartRequest = null;
-  return req;
 }
 
 async function requestStartFromTitle(mode = pendingAuthMode || 'resume') {
   pendingAuthMode = mode;
-  const authenticated = await submitAccountAuth(mode);
-  if (!authenticated) return;
+  authFlowPending = true;
+  setAuthMessage('');
+  updateTitleControls();
+  try {
+    const authResult = await submitAccountAuth(mode);
+    if (!authResult || !authResult.ok) {
+      return;
+    }
+    if (authResult.firstTime) {
+      authFlowPending = false;
+      refreshTitleAccountChip();
+      updateTitleControls();
+      renderStatusScreen();
+      showScreen('screen-status');
+      return;
+    }
+    setAuthMessage('');
+  } finally {
+    authFlowPending = false;
+    refreshTitleAccountChip();
+    updateTitleControls();
+  }
+  showScreen('screen-title');
 }
 
 function confirmAudioAndStart() {
@@ -5806,11 +6102,6 @@ function confirmAudioAndStart() {
   Sound.ready = true;
   Sound.click();
   closeAudioGate();
-  const pending = consumePendingStartRequest();
-  if (pending) {
-    startRunFromSave(pending.mode, pending.levelIndex, { playerName: pending.playerName });
-    return;
-  }
   beginGameFromTitle((pendingStartName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
     resume: Boolean(accountSession.save && accountSession.save.snapshot)
   });
@@ -5823,11 +6114,6 @@ function continueMutedStart() {
   syncSoundButton();
   try { localStorage.setItem('lingoSound', 'off'); } catch(e) {}
   closeAudioGate();
-  const pending = consumePendingStartRequest();
-  if (pending) {
-    startRunFromSave(pending.mode, pending.levelIndex, { playerName: pending.playerName });
-    return;
-  }
   const nextName = pendingStartName || playerName || nameInput.value.trim() || 'Hero';
   beginGameFromTitle((nextName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
     resume: Boolean(accountSession.save && accountSession.save.snapshot)
@@ -5994,7 +6280,6 @@ function closeDialogue() {
 //  INTERACTION
 // ============================================================
 function interact() {
-  if (isEmbeddedWaitingForStart()) return;
   if (dialogueOpen) return;
   const dirs = [[0,0],[0,-1],[0,1],[-1,0],[1,0]];
   for (const [dc,dr] of dirs) {
@@ -6038,11 +6323,6 @@ function handleStairs() {
     document.getElementById('lc-title').textContent = 'YOU WIN!';
     document.getElementById('nextlevel-btn').style.display = 'none';
     saveAccountProgress('game_won');
-    notifyShellGameOver('win', 'game_won');
-    if (EMBEDDED_MODE) {
-      resetToTitle();
-      return;
-    }
     fetchLeaderboard().then(scores => {
       renderLeaderboard(scores, 'win-lb');
       showScreen('screen-win');
@@ -6059,7 +6339,6 @@ function handleStairs() {
 //  MOVEMENT
 // ============================================================
 function tryMove(dc, dr) {
-  if (isEmbeddedWaitingForStart()) return;
   if (dialogueOpen) return;
   const nc = player.col+dc, nr = player.row+dr;
   if (nc<0||nr<0||nc>=MAP_W||nr>=MAP_H) return;
@@ -6078,12 +6357,6 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       e.preventDefault();
       continueMutedStart();
-    }
-    return;
-  }
-  if (isEmbeddedWaitingForStart()) {
-    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Enter'].includes(e.key)) {
-      e.preventDefault();
     }
     return;
   }
@@ -6119,7 +6392,6 @@ function dpadBind(id, keyName) {
   const btn = document.getElementById(id);
   const press = e => {
     e.preventDefault();
-    if (isEmbeddedWaitingForStart()) return;
     Sound.unlock();
     if (handleTouchMenuNav(keyName)) return;
     keys[keyName] = true;
@@ -6143,7 +6415,6 @@ dpadBind('btn-right', 'ArrowRight');
 const actionBtn = document.getElementById('action-btn');
 function handleActionPress(e) {
   if (e) e.preventDefault();
-  if (isEmbeddedWaitingForStart()) return;
   Sound.unlock();
   Sound.click();
   if (audioGate.classList.contains('active')) {
@@ -6182,52 +6453,35 @@ function loop(ts) {
 // ============================================================
 const quitBtn = document.getElementById('quit-btn');
 quitBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
-function handleTerminalQuit(reason = 'quit_to_menu') {
-  if (isEmbeddedWaitingForStart()) return;
+quitBtn.addEventListener('click', () => {
+  Sound.unlock();
+  Sound.click();
   const elapsed = fmtTime(Date.now() - levelStartTime);
   document.getElementById('quit-levelname').textContent = LEVELS[currentLevelIdx].name;
   document.getElementById('quit-xp').textContent = totalXP;
   document.getElementById('quit-challenges').textContent = challengesPassed;
   document.getElementById('quit-time').textContent = elapsed;
   document.getElementById('quit-attempts').textContent = totalAttempts;
-  saveAccountProgress(reason);
+  saveAccountProgress('quit_to_menu');
   postScore(currentLevelIdx);
-  notifyShellGameOver('quit', reason);
-  if (EMBEDDED_MODE) {
-    resetToTitle();
-    return;
-  }
-  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'quit-lb'));
-  showScreen('screen-quit');
-}
-
-quitBtn.addEventListener('click', () => {
-  Sound.unlock();
-  Sound.click();
-  handleTerminalQuit('quit_to_menu');
+  fetchLeaderboard().then(scores => {
+    renderLeaderboard(scores, 'quit-lb');
+    showScreen('screen-quit');
+  });
 });
 
 function resetToTitle() {
-  if (EMBEDDED_MODE) {
-    embeddedStarted = false;
-    embeddedPendingStart = null;
-    showScreen('screen-embedded-wait');
-    postShellMessage('lingo:ready', { bridge: 'phase3', reason: 'reset' });
-    return;
-  }
   totalXP = 0;
   xp = 0;
   challengesPassed = 0;
   totalAttempts = 0;
   playerName = (accountSession.profile && accountSession.profile.name) || 'Hero';
-  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
-  if (accountSession.token) {
-    renderStatusScreen();
-    showScreen('screen-status');
-    return;
-  }
-  showScreen('screen-title');
-  document.getElementById('name-input').value = '';
+  updateTitleControls();
+  refreshTitleAccountChip();
+  fetchLeaderboard().then(scores => {
+    renderLeaderboard(scores, 'lb-list');
+    showScreen('screen-title');
+  });
 }
 
 document.getElementById('quit-play-again').addEventListener('click', () => {
@@ -6247,7 +6501,6 @@ document.getElementById('nextlevel-btn').addEventListener('click', () => {
 
 document.getElementById('lc-quit-btn').addEventListener('click', () => {
   Sound.click();
-  notifyShellGameOver('quit', 'quit_after_level_complete');
   resetToTitle();
 });
 
@@ -6405,127 +6658,22 @@ document.addEventListener('click', unlockAudioFromGesture);
 document.addEventListener('keydown', unlockAudioFromGesture);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
 
-function parseSoundPreference(raw) {
-  if (typeof raw === 'boolean') return raw;
-  if (typeof raw === 'string') {
-    const normalized = raw.trim().toLowerCase();
-    if (normalized === 'on' || normalized === 'true' || normalized === '1') return true;
-    if (normalized === 'off' || normalized === 'false' || normalized === '0') return false;
-  }
-  return null;
-}
-
-function applySoundPreference(enabled, options = {}) {
-  const { fromBridge = false } = options;
-  Sound.enabled = enabled !== false;
-  if (!Sound.enabled) {
-    Sound.ready = false;
-    closeAudioGate();
-  } else if (!isLikelyIOS()) {
-    Sound.ready = true;
-  }
-  try { localStorage.setItem('lingoSound', Sound.enabled ? 'on' : 'off'); } catch(e) {}
-  syncSoundButton();
-  if (fromBridge || !Sound.enabled) return;
-  Sound.unlock();
-  Sound.click();
-}
-
-function applyEmbeddedConfigPayload(data) {
-  if (!data || typeof data !== 'object') return;
-  if (typeof data.accentTheme === 'string') {
-    handleAccentThemeSelect(data.accentTheme);
-  }
-  const nextSound = parseSoundPreference(data.sound);
-  if (nextSound !== null) {
-    applySoundPreference(nextSound, { fromBridge: true });
-  }
-}
-
-function parseEmbeddedStartPayload(data) {
-  if (!data || typeof data !== 'object') return null;
-  const mode = data.mode === 'resume' ? 'resume' : 'restart';
-  const levelIndex = clampLevelIndex(data.levelIndex);
-  const launchNonceRaw = Number(data.launchNonce);
-  const launchNonce = Number.isFinite(launchNonceRaw) ? launchNonceRaw : null;
-  return { mode, levelIndex, launchNonce };
-}
-
-function processEmbeddedPendingStart() {
-  if (!EMBEDDED_MODE || !embeddedBootstrapped || !embeddedPendingStart) return;
-  const cmd = embeddedPendingStart;
-  embeddedPendingStart = null;
-
-  const applied = startRunFromSave(cmd.mode, cmd.levelIndex, {
-    playerName: (accountSession.profile && accountSession.profile.name) || playerName || 'Hero',
-  });
-  embeddedStarted = true;
-  if (cmd.launchNonce !== null) embeddedLastStartNonce = cmd.launchNonce;
-  embeddedLastAppliedStart = {
-    mode: applied.mode,
-    levelIndex: applied.levelIndex,
-    launchNonce: cmd.launchNonce,
-  };
-  showScreen(null);
-  closeAudioGate();
-  postShellMessage('lingo:startAck', {
-    launchNonce: cmd.launchNonce,
-    mode: applied.mode,
-    levelIndex: applied.levelIndex,
-  });
-}
-
-function queueEmbeddedStart(data) {
-  const cmd = parseEmbeddedStartPayload(data);
-  if (!cmd) return;
-  if (
-    cmd.launchNonce !== null
-    && embeddedStarted
-    && embeddedLastStartNonce === cmd.launchNonce
-  ) {
-    const replay = embeddedLastAppliedStart || cmd;
-    postShellMessage('lingo:startAck', {
-      launchNonce: cmd.launchNonce,
-      mode: replay.mode,
-      levelIndex: replay.levelIndex,
-    });
-    return;
-  }
-  embeddedPendingStart = cmd;
-  processEmbeddedPendingStart();
-}
-
-function handleEmbeddedBridgeMessage(event) {
-  if (!EMBEDDED_MODE) return;
-  if (event.source !== window.parent) return;
-  if (event.origin && window.location.origin && event.origin !== window.location.origin) return;
-  const data = event.data;
-  if (!data || typeof data !== 'object') return;
-  if (data.type === 'lingo:config') {
-    applyEmbeddedConfigPayload(data);
-    return;
-  }
-  if (data.type === 'lingo:start') {
-    queueEmbeddedStart(data);
-    return;
-  }
-  if (data.type === 'lingo:quit') {
-    handleTerminalQuit(
-      typeof data.reason === 'string' && data.reason.trim()
-        ? data.reason.trim()
-        : 'shell_quit',
-    );
-  }
-}
-
-if (EMBEDDED_MODE) {
-  window.addEventListener('message', handleEmbeddedBridgeMessage);
-}
-
 syncSoundButton();
 soundBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: true });
 soundBtn.addEventListener('click', () => {
-  applySoundPreference(!Sound.enabled);
+  Sound.unlock();
+  Sound.enabled = !Sound.enabled;
+  if (!Sound.enabled) {
+    Sound.ready = false;
+    closeAudioGate();
+  }
+  try { localStorage.setItem('lingoSound', Sound.enabled ? 'on' : 'off'); } catch(e) {}
+  syncSoundButton();
+  if (Sound.enabled) {
+    if (!isLikelyIOS()) Sound.ready = true;
+    Sound.unlock();
+    Sound.click();
+  }
 });
 
 // ============================================================
@@ -6535,6 +6683,20 @@ startBtn.addEventListener('touchstart', () => { Sound.unlock(); }, { passive: tr
 startBtn.addEventListener('click', async () => {
   Sound.unlock();
   Sound.click();
+
+  if (accountSession.token && accountSession.profile) {
+    pendingStartName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
+    if (shouldRequireAudioGate()) {
+      openAudioGate();
+      return;
+    }
+    beginGameFromTitle((pendingStartName || 'Hero').replace(/<[^>]*>/g, '').replace(/[&'"<>]/g, '').slice(0, 24) || 'Hero', {
+      resume: Boolean(accountSession.save && accountSession.save.snapshot)
+    });
+    pendingStartName = '';
+    return;
+  }
+
   pendingAuthMode = 'resume';
   await requestStartFromTitle('resume');
 });
@@ -6577,35 +6739,51 @@ const restartBtnEl = document.getElementById('resume-mode-restart');
 if (resumeBtnEl) resumeBtnEl.addEventListener('click', () => { Sound.click(); setResumeMode('resume'); });
 if (restartBtnEl) restartBtnEl.addEventListener('click', () => { Sound.click(); setResumeMode('restart'); });
 
+if (titleStatusBtn) titleStatusBtn.addEventListener('click', () => {
+  Sound.unlock();
+  Sound.click();
+  renderStatusScreen();
+  showScreen('screen-status');
+});
+if (titleLogoutBtn) titleLogoutBtn.addEventListener('click', () => {
+  Sound.click();
+  logoutAccount();
+});
+
 statusStartBtn.addEventListener('click', () => {
   Sound.unlock();
   Sound.click();
 
-  const profileName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
-  pendingStartName = profileName;
-  const resumable = hasResumableSnapshot();
-  const snap = snapshotFromAccountSession();
-  const sel = document.getElementById('level-selector');
-  const selectedMode = resumable && resumeMode === 'resume' ? 'resume' : 'restart';
-  const selectedLevel = selectedMode === 'resume'
-    ? clampLevelIndex(snap && snap.currentLevelIdx)
-    : clampLevelIndex(sel ? sel.value : 0);
-  const launchRequest = {
-    mode: selectedMode,
-    levelIndex: selectedLevel,
-    playerName: profileName,
-  };
+  pendingStartName = (accountSession.profile && accountSession.profile.name) || playerName || 'Hero';
 
-  if (shouldRequireAudioGate() && !EMBEDDED_MODE) {
-    pendingStartRequest = launchRequest;
+  if (shouldRequireAudioGate()) {
     openAudioGate();
     return;
   }
 
-  pendingStartRequest = null;
-  startRunFromSave(launchRequest.mode, launchRequest.levelIndex, {
-    playerName: launchRequest.playerName,
-  });
+  const resumable = hasResumableSnapshot();
+  const sel = document.getElementById('level-selector');
+  const snap = getLoadedSnapshot();
+
+  playerName = pendingStartName;
+  sessionStartTime = Date.now();
+
+  if (resumable && resumeMode === 'resume') {
+    totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
+    resumeIntoGame();
+    return;
+  }
+
+  // Restart / no resumable snapshot: fresh load of selected level.
+  const idx = sel ? Math.max(0, Math.min(LEVELS.length - 1, Number(sel.value))) : 0;
+  totalXP = snap && Number.isFinite(Number(snap.totalXP)) ? Math.max(0, Math.floor(Number(snap.totalXP))) : 0;
+  loadLevel(idx);
+});
+statusBackBtn && statusBackBtn.addEventListener('click', () => {
+  Sound.click();
+  showScreen('screen-title');
+  updateTitleControls();
+  refreshTitleAccountChip();
 });
 statusLogoutBtn.addEventListener('click', () => {
   Sound.click();
@@ -6636,6 +6814,29 @@ audioMuteBtn.addEventListener('touchstart', e => {
   e.preventDefault();
   continueMutedStart();
 }, { passive: false });
+if (installAppBtn) {
+  installAppBtn.addEventListener('click', () => {
+    handleInstallApp();
+  });
+}
+if (installHelperCloseBtn) {
+  installHelperCloseBtn.addEventListener('click', () => {
+    closeInstallHelper();
+  });
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  syncInstallButton();
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  closeInstallHelper();
+  syncInstallButton();
+});
+window.matchMedia('(display-mode: standalone)').addEventListener('change', () => {
+  syncInstallButton();
+});
 
 // ============================================================
 //  INIT
@@ -6647,7 +6848,20 @@ audioMuteBtn.addEventListener('touchstart', e => {
     if (!isIOS || !vv) return;
 
     let pending = false;
+    const isKeyboardEditing = () => {
+      const el = document.activeElement;
+      if (!el || el.disabled || el.readOnly) return false;
+      const tag = el.tagName;
+      if (tag === 'TEXTAREA') return true;
+      if (tag === 'INPUT') {
+        const t = (el.type || 'text').toLowerCase();
+        return !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(t);
+      }
+      return !!el.isContentEditable;
+    };
     const set = () => {
+      // Keep title/auth layout stable while the keyboard is open for text entry.
+      if (isKeyboardEditing()) return;
       const cut = Math.max(0, window.innerHeight - vv.height);
       // Cap to avoid extreme layout jumps.
       const capped = Math.min(220, cut);
@@ -6667,32 +6881,22 @@ audioMuteBtn.addEventListener('touchstart', e => {
     vv.addEventListener('resize', schedule);
     window.addEventListener('orientationchange', schedule);
     window.addEventListener('scroll', schedule, { passive: true });
-    document.addEventListener('focusin', schedule);
-    document.addEventListener('touchstart', schedule, { passive: true });
   } catch (e) {
     // No-op: safe fallback to default layout.
   }
 })();
 
 initAccentTheme();
+syncInstallButton();
 loadLevel(0);
-if (EMBEDDED_MODE) {
-  showScreen('screen-embedded-wait');
-  Promise.resolve(maybeResumeStoredSession({ suppressUi: true })).finally(() => {
-    embeddedBootstrapped = true;
-    processEmbeddedPendingStart();
-    postShellMessage('lingo:ready', { bridge: 'phase3' });
-    requestAnimationFrame(loop);
-  });
-} else {
-  fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
-  Promise.resolve(maybeResumeStoredSession()).finally(() => {
-    if (!document.getElementById('screen-status').classList.contains('active')) {
-      showScreen('screen-title');
-    }
-    requestAnimationFrame(loop);
-  });
-}
+fetchLeaderboard().then(scores => renderLeaderboard(scores, 'lb-list'));
+Promise.resolve(maybeResumeStoredSession()).finally(() => {
+  updateTitleControls();
+  refreshTitleAccountChip();
+  syncInstallButton();
+  showScreen('screen-title');
+  requestAnimationFrame(loop);
+});
 </script>
 </body>
 </html>

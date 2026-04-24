@@ -17,6 +17,8 @@ from backend.leaderboard_api.db import DEFAULT_DB_PATH, LeaderboardDB, Validatio
 MAX_ACCOUNT_NAME_LEN = 24
 MAX_PASSWORD_LEN = 128
 MAX_WORD_BANK_ITEMS = 60
+DEFAULT_ACCENT_THEME_ID = "crimson"
+ACCENT_THEME_IDS = ("crimson", "violet", "teal", "amber", "mint")
 
 
 def _parse_limit(raw_limit: Any, default: int = 50) -> int:
@@ -26,21 +28,6 @@ def _parse_limit(raw_limit: Any, default: int = 50) -> int:
         return int(raw_limit)
     except (TypeError, ValueError):
         return default
-
-
-def _parse_bool_flag(raw_value: Any, default: bool = False) -> bool:
-    if isinstance(raw_value, bool):
-        return raw_value
-    if raw_value is None:
-        return default
-    if isinstance(raw_value, (int, float)):
-        return raw_value != 0
-    value = str(raw_value).strip().lower()
-    if value in {"1", "true", "yes", "on", "y"}:
-        return True
-    if value in {"0", "false", "no", "off", "n", ""}:
-        return False
-    return default
 
 
 def _extract_admin_token() -> str:
@@ -80,11 +67,25 @@ def _init_account_db(db_path: str) -> None:
                 name_norm TEXT NOT NULL UNIQUE,
                 password_salt TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                accent_theme TEXT NOT NULL DEFAULT 'crimson',
                 session_token TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
             """
+        )
+        user_cols = {str(row["name"]) for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+        if "accent_theme" not in user_cols:
+            conn.execute(
+                "ALTER TABLE users ADD COLUMN accent_theme TEXT NOT NULL DEFAULT 'crimson'"
+            )
+        placeholders = ",".join("?" for _ in ACCENT_THEME_IDS)
+        conn.execute(
+            "UPDATE users SET accent_theme = lower(trim(accent_theme)) WHERE accent_theme IS NOT NULL"
+        )
+        conn.execute(
+            f"UPDATE users SET accent_theme = ? WHERE accent_theme IS NULL OR accent_theme = '' OR accent_theme NOT IN ({placeholders})",
+            (DEFAULT_ACCENT_THEME_ID, *ACCENT_THEME_IDS),
         )
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_session_token ON users(session_token) WHERE session_token IS NOT NULL"
@@ -207,6 +208,24 @@ def _sanitize_word_bank(payload: Any) -> list[dict[str, str]]:
     return items
 
 
+def _normalize_stored_accent_theme(value: Any) -> str:
+    theme_id = str(value or "").strip().lower()
+    if theme_id in ACCENT_THEME_IDS:
+        return theme_id
+    return DEFAULT_ACCENT_THEME_ID
+
+
+def _sanitize_accent_theme(value: Any) -> str:
+    if value is None:
+        return DEFAULT_ACCENT_THEME_ID
+    if not isinstance(value, str):
+        raise ValidationError("Invalid accent theme: must be a string.")
+    theme_id = value.strip().lower()
+    if theme_id not in ACCENT_THEME_IDS:
+        raise ValidationError("Invalid accent theme.")
+    return theme_id
+
+
 def _load_account_bundle(conn: sqlite3.Connection, user_row: sqlite3.Row) -> dict[str, Any]:
     save_row = conn.execute(
         "SELECT snapshot_json, status_json, updated_at FROM user_saves WHERE user_id = ?",
@@ -237,12 +256,14 @@ def _load_account_bundle(conn: sqlite3.Connection, user_row: sqlite3.Row) -> dic
             "updated_at": str(save_row["updated_at"]),
         }
 
+    accent_theme = _normalize_stored_accent_theme(user_row["accent_theme"] if "accent_theme" in user_row.keys() else None)
     return {
         "profile": {
             "name": str(user_row["name"]),
             "created_at": str(user_row["created_at"]),
             "updated_at": str(user_row["updated_at"]),
         },
+        "accent_theme": accent_theme,
         "save": save_payload,
         "word_bank": [
             {
@@ -307,13 +328,10 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     db_path = os.getenv("LEADERBOARD_DB_PATH", DEFAULT_DB_PATH)
     admin_token = os.getenv("LEADERBOARD_ADMIN_TOKEN", "")
-    shell_enabled = _parse_bool_flag(os.getenv("SHELL_ENABLED", "0"), default=False)
 
     if test_config:
         db_path = test_config.get("LEADERBOARD_DB_PATH", db_path)
         admin_token = test_config.get("LEADERBOARD_ADMIN_TOKEN", admin_token)
-        if "SHELL_ENABLED" in test_config:
-            shell_enabled = _parse_bool_flag(test_config.get("SHELL_ENABLED"), default=shell_enabled)
 
     db_path = str(Path(db_path))
     db_parent = Path(db_path).parent
@@ -327,56 +345,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.config["LEADERBOARD_DB_PATH"] = db_path
     app.config["LEADERBOARD_ADMIN_TOKEN"] = admin_token
     app.config["LEADERBOARD_DB"] = leaderboard_db
-    app.config["SHELL_ENABLED"] = shell_enabled
 
     src_dir = Path(__file__).resolve().parent / "src"
-    shell_dist_dir = Path(__file__).resolve().parent / "src-shell" / "dist"
-    shell_built = shell_dist_dir.is_dir() and (shell_dist_dir / "index.html").is_file()
-    app.config["SHELL_BUILT"] = shell_built
-
-    def _should_force_legacy() -> bool:
-        return _parse_bool_flag(request.args.get("legacy"), default=False)
 
     @app.get("/")
-    def root_page():
-        # Explicit ?legacy=1 always forces the stable legacy entrypoint.
-        if _should_force_legacy():
-            return send_from_directory(src_dir, "index.html")
-
-        # Shell is opt-in and only served when build artifacts exist.
-        if app.config["SHELL_ENABLED"] and shell_built:
-            return send_from_directory(shell_dist_dir, "index.html")
-        return send_from_directory(src_dir, "index.html")
-
-    @app.get("/shell")
-    @app.get("/shell/")
-    def shell_index():
-        if not app.config["SHELL_ENABLED"]:
-            return ("Frontend shell is disabled. Set SHELL_ENABLED=1 to enable.", 503)
-        if not shell_built:
-            return ("Frontend shell is not built. Run `npm --prefix src-shell run build`.", 503)
-        return send_from_directory(shell_dist_dir, "index.html")
-
-    @app.get("/shell/<path:filename>")
-    def shell_files(filename: str):
-        if not app.config["SHELL_ENABLED"]:
-            return ("Frontend shell is disabled. Set SHELL_ENABLED=1 to enable.", 503)
-        if not shell_built:
-            return ("Frontend shell is not built.", 503)
-        target = (shell_dist_dir / filename).resolve()
-        # Prevent path traversal outside the dist directory.
-        try:
-            target.relative_to(shell_dist_dir.resolve())
-        except ValueError:
-            return ("Not found", 404)
-        if target.is_file():
-            return send_from_directory(shell_dist_dir, filename)
-        # SPA fallback — unknown routes resolve to the shell entry.
-        return send_from_directory(shell_dist_dir, "index.html")
-
-    @app.get("/legacy")
-    @app.get("/legacy/")
-    def legacy_game_page():
+    def game_page():
         return send_from_directory(src_dir, "index.html")
 
     @app.get("/editor")
@@ -570,6 +543,16 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             return jsonify({"ok": False, "error": str(exc)}), 400
         status_payload = _sanitize_status_payload(payload.get("status", {}))
         word_bank = _sanitize_word_bank(payload.get("word_bank", []))
+        try:
+            accent_theme = _sanitize_accent_theme(
+                payload.get(
+                    "accent_theme",
+                    user_row["accent_theme"] if "accent_theme" in user_row.keys() else DEFAULT_ACCENT_THEME_ID,
+                )
+            )
+        except ValidationError as exc:
+            conn.close()
+            return jsonify({"ok": False, "error": str(exc)}), 400
         now = _utc_now()
 
         with conn:
@@ -602,8 +585,8 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                     ),
                 )
             conn.execute(
-                "UPDATE users SET updated_at = ? WHERE id = ?",
-                (now, int(user_row["id"])),
+                "UPDATE users SET accent_theme = ?, updated_at = ? WHERE id = ?",
+                (accent_theme, now, int(user_row["id"])),
             )
             user_row = conn.execute(
                 "SELECT * FROM users WHERE id = ?",
