@@ -347,9 +347,21 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.config["LEADERBOARD_DB"] = leaderboard_db
 
     src_dir = Path(__file__).resolve().parent / "src"
+    shell_dist = Path(__file__).resolve().parent / "src-shell" / "dist"
+    shell_enabled = os.environ.get("SHELL_ENABLED", "0").strip() not in ("0", "false", "no", "")
 
     @app.get("/")
     def game_page():
+        if shell_enabled and (shell_dist / "index.html").exists():
+            return send_from_directory(shell_dist, "index.html")
+        return send_from_directory(src_dir, "index.html")
+
+    @app.get("/assets/<path:filename>")
+    def shell_assets(filename: str):
+        return send_from_directory(shell_dist / "assets", filename)
+
+    @app.get("/legacy")
+    def legacy_page():
         return send_from_directory(src_dir, "index.html")
 
     @app.get("/editor")
