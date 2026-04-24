@@ -56,3 +56,33 @@ Override with `LEADERBOARD_DB_PATH=/path/to/leaderboard.db`.
 
 ## Note On Planned Architecture
 The larger React + backend architecture is still planned and documented, but not implemented in this repo yet. The current shipped project is the static HTML/CSS/JS game/editor above.
+
+## Frontend Shell (Phase 0-3)
+A Vite + React + Zustand shell lives in `src-shell/`. It wraps the legacy
+single-file game (unchanged) and exposes an explicit app state machine
+for title/auth/status/settings/game-over.
+
+Build + enable it:
+
+```bash
+npm --prefix src-shell install
+npm --prefix src-shell run build
+SHELL_ENABLED=1 flask --app app:create_app run --debug
+```
+
+Runtime behavior:
+- `/` serves the shell only when `SHELL_ENABLED=1` and `src-shell/dist/index.html` exists.
+- `/` falls back to legacy automatically when disabled or not built.
+- `/legacy` always serves the untouched legacy game.
+- `/?legacy=1` forces legacy even when the shell is enabled.
+
+See [`docs/frontend-shell-phase0.md`](docs/frontend-shell-phase0.md) for
+Phase 0 scope/routing, [`docs/frontend-shell-phase1.md`](docs/frontend-shell-phase1.md)
+for the Phase 1 iframe bridge (game-over + settings sync), and
+[`docs/frontend-shell-phase2.md`](docs/frontend-shell-phase2.md) for shell-owned
+start/resume launch control into the embedded legacy runtime. Phase 3 moves
+post-run transitions and save-status continuity further into the shell:
+[`docs/frontend-shell-phase3.md`](docs/frontend-shell-phase3.md).
+Phase 4 removes the iframe entirely — the game engine runs directly in the React
+shell's DOM via `src-shell/src/engine/game-engine.js` (no postMessage bridge):
+[`docs/frontend-shell-phase4.md`](docs/frontend-shell-phase4.md).
