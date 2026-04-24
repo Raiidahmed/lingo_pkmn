@@ -1,13 +1,13 @@
-# Frontend Shell Spike (`src-spike/`)
+# Frontend Shell Phase 0 (`src-shell/`)
 
-Isolated on the `spike/frontend-react-shell` branch. The `main` branch is
+Ported from the `spike/frontend-react-shell` branch. The `main` branch is
 unchanged by this work beyond `app.py` serving routes — the legacy game
 in `src/index.html` is **not modified**, so you can A/B the two shells on
 the same Flask server.
 
-## What this spike demonstrates
+## What this Phase 0 shell demonstrates
 
-- Vite + React + Zustand SPA shell (`src-spike/`).
+- Vite + React + Zustand SPA shell (`src-shell/`).
 - Explicit app state machine covering every screen from the proposal:
   `booting → anonymous_title → authenticating → authenticated_title`
   `→ status → settings → in_game → game_over`.
@@ -25,14 +25,18 @@ the same Flask server.
 
 | Route | Served by Flask | What it is |
 |-------|-----------------|------------|
-| `/` | `src-spike/dist/index.html` when built, else `src/index.html` | Shell (or legacy fallback) |
-| `/spike`, `/spike/<asset>` | `src-spike/dist/` | Shell bundle + assets |
+| `/` | `src-shell/dist/index.html` only when `SHELL_ENABLED=1` and built, else `src/index.html` | Shell (or legacy fallback) |
+| `/shell`, `/shell/<asset>` | `src-shell/dist/` | Shell bundle + assets |
 | `/legacy` | `src/index.html` | Untouched legacy game (also used by the iframe) |
 | `/editor` | `src/editor.html` | Untouched level editor |
 | `/scores`, `/api/account/*` | Flask APIs | Unchanged |
 
-If `src-spike/dist/` has no build output, Flask silently falls back to
-serving the legacy game at `/`, so the branch is never broken.
+`/` always supports `?legacy=1` to force the legacy page even when the
+shell is enabled and built.
+
+If `src-shell/dist/` has no build output, or `SHELL_ENABLED` is not
+truthy, Flask serves the legacy game at `/`, so the branch is never
+broken.
 
 ## How to run locally
 
@@ -48,19 +52,20 @@ Build the shell and start Flask:
 
 ```bash
 # build the React shell
-cd src-spike
+cd src-shell
 npm install
 npm run build
 cd ..
 
-# run Flask — serves the shell at / and the legacy game at /legacy
-flask --app app:create_app run --debug
+# run Flask — serves the shell at / when enabled
+SHELL_ENABLED=1 flask --app app:create_app run --debug
 ```
 
 Open:
 
 - Shell: http://127.0.0.1:5000/
 - Legacy game (for comparison): http://127.0.0.1:5000/legacy
+- Forced legacy override: http://127.0.0.1:5000/?legacy=1
 - Editor: http://127.0.0.1:5000/editor
 
 ### Dev workflow with hot reload
@@ -68,7 +73,7 @@ Open:
 Run Flask on 5000 as above, then in another terminal:
 
 ```bash
-cd src-spike
+cd src-shell
 npm run dev  # serves on :5173 with proxy to Flask for /scores, /api, /legacy
 ```
 
@@ -78,7 +83,7 @@ requests to the Flask backend so the shell works end-to-end.
 ## Directory layout
 
 ```
-src-spike/
+src-shell/
 ├── index.html                    Vite entry
 ├── package.json
 ├── vite.config.js
@@ -129,9 +134,9 @@ scores/logout) are inside the store actions so components stay pure.
   proposal guidance.
 - Easy to iterate — once the shell is proven, we can replace the iframe
   with a React-mounted game module by extracting the legacy JS into
-  ES modules. That refactor is explicitly out of scope for this spike.
+  ES modules. That refactor is explicitly out of scope for Phase 0.
 
-## Known limitations of the spike
+## Known Phase 0 limitations
 
 - Game-over events are not posted from the legacy game yet. The shell
   is ready to receive them (`window.postMessage({ type: 'lingo:gameOver',
@@ -145,13 +150,13 @@ scores/logout) are inside the store actions so components stay pure.
   specific level; launching jumps straight into the legacy game at
   whatever level it was on.
 
-These are deliberate cutlines to keep the spike small and reversible.
+These are deliberate cutlines to keep Phase 0 small and reversible.
 
 ## Reverting
 
-Nothing about the spike is load-bearing for existing users. Options:
+Nothing about the shell is load-bearing for existing users. Options:
 
-1. Keep both (current behaviour): shell at `/`, legacy at `/legacy`.
-2. Revert `app.py` routing changes to send `/` back to the legacy game.
-3. Delete `src-spike/` entirely — Flask falls back to legacy automatically
+1. Keep both (current behaviour): shell at `/` behind `SHELL_ENABLED=1`, legacy at `/legacy`.
+2. Set `SHELL_ENABLED=0` (or unset) to send `/` to the legacy game.
+3. Delete `src-shell/` entirely — Flask falls back to legacy automatically
    when no `dist/` exists.

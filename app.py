@@ -28,6 +28,21 @@ def _parse_limit(raw_limit: Any, default: int = 50) -> int:
         return default
 
 
+def _parse_bool_flag(raw_value: Any, default: bool = False) -> bool:
+    if isinstance(raw_value, bool):
+        return raw_value
+    if raw_value is None:
+        return default
+    if isinstance(raw_value, (int, float)):
+        return raw_value != 0
+    value = str(raw_value).strip().lower()
+    if value in {"1", "true", "yes", "on", "y"}:
+        return True
+    if value in {"0", "false", "no", "off", "n", ""}:
+        return False
+    return default
+
+
 def _extract_admin_token() -> str:
     provided = request.headers.get("X-Admin-Token", "")
     auth = request.headers.get("Authorization", "")
@@ -292,10 +307,13 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     db_path = os.getenv("LEADERBOARD_DB_PATH", DEFAULT_DB_PATH)
     admin_token = os.getenv("LEADERBOARD_ADMIN_TOKEN", "")
+    shell_enabled = _parse_bool_flag(os.getenv("SHELL_ENABLED", "0"), default=False)
 
     if test_config:
         db_path = test_config.get("LEADERBOARD_DB_PATH", db_path)
         admin_token = test_config.get("LEADERBOARD_ADMIN_TOKEN", admin_token)
+        if "SHELL_ENABLED" in test_config:
+            shell_enabled = _parse_bool_flag(test_config.get("SHELL_ENABLED"), default=shell_enabled)
 
     db_path = str(Path(db_path))
     db_parent = Path(db_path).parent
@@ -309,40 +327,52 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.config["LEADERBOARD_DB_PATH"] = db_path
     app.config["LEADERBOARD_ADMIN_TOKEN"] = admin_token
     app.config["LEADERBOARD_DB"] = leaderboard_db
+    app.config["SHELL_ENABLED"] = shell_enabled
 
     src_dir = Path(__file__).resolve().parent / "src"
-    spike_dist_dir = Path(__file__).resolve().parent / "src-spike" / "dist"
-    spike_enabled = spike_dist_dir.is_dir() and (spike_dist_dir / "index.html").is_file()
+    shell_dist_dir = Path(__file__).resolve().parent / "src-shell" / "dist"
+    shell_built = shell_dist_dir.is_dir() and (shell_dist_dir / "index.html").is_file()
+    app.config["SHELL_BUILT"] = shell_built
+
+    def _should_force_legacy() -> bool:
+        return _parse_bool_flag(request.args.get("legacy"), default=False)
 
     @app.get("/")
     def root_page():
-        # Shell spike (Vite/React/Zustand) when built; otherwise fall back
-        # to the legacy single-file game so the branch is never broken.
-        if spike_enabled:
-            return send_from_directory(spike_dist_dir, "index.html")
+        # Explicit ?legacy=1 always forces the stable legacy entrypoint.
+        if _should_force_legacy():
+            return send_from_directory(src_dir, "index.html")
+
+        # Shell is opt-in and only served when build artifacts exist.
+        if app.config["SHELL_ENABLED"] and shell_built:
+            return send_from_directory(shell_dist_dir, "index.html")
         return send_from_directory(src_dir, "index.html")
 
-    @app.get("/spike")
-    @app.get("/spike/")
-    def spike_index():
-        if not spike_enabled:
-            return ("Spike shell not built. Run `npm --prefix src-spike run build`.", 503)
-        return send_from_directory(spike_dist_dir, "index.html")
+    @app.get("/shell")
+    @app.get("/shell/")
+    def shell_index():
+        if not app.config["SHELL_ENABLED"]:
+            return ("Frontend shell is disabled. Set SHELL_ENABLED=1 to enable.", 503)
+        if not shell_built:
+            return ("Frontend shell is not built. Run `npm --prefix src-shell run build`.", 503)
+        return send_from_directory(shell_dist_dir, "index.html")
 
-    @app.get("/spike/<path:filename>")
-    def spike_files(filename: str):
-        if not spike_enabled:
-            return ("Spike shell not built.", 503)
-        target = (spike_dist_dir / filename).resolve()
+    @app.get("/shell/<path:filename>")
+    def shell_files(filename: str):
+        if not app.config["SHELL_ENABLED"]:
+            return ("Frontend shell is disabled. Set SHELL_ENABLED=1 to enable.", 503)
+        if not shell_built:
+            return ("Frontend shell is not built.", 503)
+        target = (shell_dist_dir / filename).resolve()
         # Prevent path traversal outside the dist directory.
         try:
-            target.relative_to(spike_dist_dir.resolve())
+            target.relative_to(shell_dist_dir.resolve())
         except ValueError:
             return ("Not found", 404)
         if target.is_file():
-            return send_from_directory(spike_dist_dir, filename)
+            return send_from_directory(shell_dist_dir, filename)
         # SPA fallback — unknown routes resolve to the shell entry.
-        return send_from_directory(spike_dist_dir, "index.html")
+        return send_from_directory(shell_dist_dir, "index.html")
 
     @app.get("/legacy")
     @app.get("/legacy/")

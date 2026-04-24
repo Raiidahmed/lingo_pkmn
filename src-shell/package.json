@@ -1,9 +1,9 @@
 {
-  "name": "lingo-dungeon-spike",
+  "name": "lingo-dungeon-shell",
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "Vite + React + Zustand shell spike for lingo_pkmn. Embeds the legacy canvas game as an iframe module.",
+  "description": "Vite + React + Zustand shell for lingo_pkmn. Embeds the legacy canvas game as an iframe module.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

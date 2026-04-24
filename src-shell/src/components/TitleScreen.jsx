@@ -14,7 +14,7 @@ export default function TitleScreen() {
     <div className="screen" id="screen-title">
       <div className="screen-shell">
         <h1>LINGO DUNGEON</h1>
-        <h2>Shell Spike — React + Zustand</h2>
+        <h2>Frontend Shell — React + Zustand</h2>
 
         {isAuthenticated ? (
           <div className="ui-panel">

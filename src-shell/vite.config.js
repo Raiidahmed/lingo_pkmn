@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Shell is served by Flask at /spike/. Keep asset paths relative so the
+// Shell is served by Flask at /shell/. Keep asset paths relative so the
 // built bundle works under that subpath without extra config.
 export default defineConfig({
   plugins: [react()],
-  base: '/spike/',
+  base: '/shell/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,

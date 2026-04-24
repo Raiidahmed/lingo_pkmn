@@ -6,7 +6,7 @@ backend/leaderboard_api/*.db-shm
 backend/leaderboard_api/*.db-wal
 backend/leaderboard_api/*.db-journal
 
-# Frontend spike (Vite + React)
-src-spike/node_modules/
-src-spike/dist/
-src-spike/.vite/
+# Frontend shell (Vite + React)
+src-shell/node_modules/
+src-shell/dist/
+src-shell/.vite/
