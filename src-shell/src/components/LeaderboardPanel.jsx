@@ -1,12 +1,12 @@
 import { useAppStore } from '../state/appStore.js';
 
-export default function LeaderboardPanel() {
+export default function LeaderboardPanel({ className = '' }) {
   const scores = useAppStore(s => s.leaderboard);
   const pending = useAppStore(s => s.pending.leaderboard);
   const refresh = useAppStore(s => s.loadLeaderboard);
 
   return (
-    <div className="ui-panel">
+    <div className={`ui-panel ${className}`.trim()}>
       <h3>Hall of Fame</h3>
       <div className="leaderboard">
         {pending && scores.length === 0 ? (

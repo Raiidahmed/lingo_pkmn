@@ -41,7 +41,7 @@ export default function TitleScreen() {
           <AuthPanel />
         )}
 
-        <LeaderboardPanel />
+        <LeaderboardPanel className="title-leaderboard-panel" />
       </div>
     </div>
   );

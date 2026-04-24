@@ -18,6 +18,38 @@ body {
   overflow-x: hidden;
 }
 
+#screen-title {
+  overflow: hidden;
+  overscroll-behavior-y: none;
+}
+
+#screen-title .screen-shell {
+  max-height: calc(100dvh - 120px - var(--ios-obscured-bottom));
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+#screen-title .title-leaderboard-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+#screen-title .title-leaderboard-panel h3 {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: 0;
+}
+
+#screen-title .title-leaderboard-panel .leaderboard {
+  max-height: min(220px, 32dvh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
 .app-shell {
   min-height: 100dvh;
   display: flex;
@@ -353,4 +385,23 @@ input:focus, select:focus { border-color: var(--accent); }
   color: #888;
   font-size: 0.65rem;
   letter-spacing: 2px;
+}
+
+@media (max-width: 430px) {
+  #screen-title {
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: calc(
+      max(20px, calc(env(safe-area-inset-bottom, 0px) + 18px)) + var(--ios-obscured-bottom)
+    );
+  }
+
+  #screen-title .screen-shell {
+    max-height: calc(100dvh - 96px - var(--ios-obscured-bottom));
+  }
+
+  #screen-title .title-leaderboard-panel .leaderboard {
+    max-height: max(120px, calc(190px - var(--ios-obscured-bottom)));
+    padding-bottom: calc(10px + var(--ios-obscured-bottom));
+  }
 }
