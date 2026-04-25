@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useStore } from '../store.js';
 
 const LEVEL_NAMES = [
@@ -17,7 +16,7 @@ const LANGUAGES = [
 ];
 
 export default function StatusPage() {
-  const { user, save, setScreen, startGame } = useStore();
+  const { user, save, setScreen, startGame, language, setLanguage } = useStore();
   const status = save?.status ?? {};
   const snapshot = save?.snapshot ?? null;
   const wordBank = user?.word_bank ?? [];
@@ -25,8 +24,6 @@ export default function StatusPage() {
 
   const currentLevel = status.levelIndex ?? 1;
   const hasResume = !!snapshot;
-
-  const [selectedLang, setSelectedLang] = useState('es');
 
   return (
     <div className="page">
@@ -62,7 +59,7 @@ export default function StatusPage() {
         <div className="card-title">STUDY LANGUAGE</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {LANGUAGES.map(lang => {
-            const active = selectedLang === lang.id;
+            const active = language === lang.id;
             return (
               <button
                 key={lang.id}
@@ -76,7 +73,7 @@ export default function StatusPage() {
                   borderColor: active ? 'var(--accent)' : undefined,
                   background: active ? 'rgba(var(--accent-rgb,204,34,68),0.08)' : undefined,
                 }}
-                onClick={() => setSelectedLang(lang.id)}
+                onClick={() => setLanguage(lang.id)}
               >
                 <span style={{ fontSize: 22, lineHeight: 1 }}>{lang.flag}</span>
                 <span style={{ fontSize: 6, color: active ? 'var(--accent)' : 'var(--text)' }}>
@@ -93,7 +90,7 @@ export default function StatusPage() {
 
       {/* Level selector with completion status */}
       <div className="card">
-        {selectedLang === 'es' ? (
+        {language === 'es' ? (
           <>
             <div className="card-title">LEVELS — {completed.length}/10 COMPLETED</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -121,6 +118,28 @@ export default function StatusPage() {
               })}
             </div>
           </>
+        ) : language === 'ja' ? (
+          <>
+            <div className="card-title">LEVELS — JAPANESE</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button
+                className="btn"
+                style={{
+                  padding: '10px 12px',
+                  fontSize: 8,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+                onClick={() => startGame(1, false)}
+              >
+                <span>1.&nbsp;
+                  <span style={{ fontFamily: 'var(--font-ja)', fontSize: 13 }}>あいうえお</span>
+                  &nbsp;— The Five Vowels
+                </span>
+              </button>
+            </div>
+          </>
         ) : (
           <>
             <div className="card-title">LEVELS</div>
@@ -128,7 +147,7 @@ export default function StatusPage() {
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>🔒</div>
               <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>COMING SOON</div>
               <div style={{ fontSize: 7, color: 'var(--text-dim)', marginTop: 8, lineHeight: 2 }}>
-                {LANGUAGES.find(l => l.id === selectedLang)?.name} levels are in development.
+                {LANGUAGES.find(l => l.id === language)?.name} levels are in development.
               </div>
             </div>
           </>

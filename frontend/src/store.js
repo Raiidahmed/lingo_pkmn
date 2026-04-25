@@ -10,8 +10,10 @@ export const useStore = create((set, get) => ({
   startLevel: 1,
   resumeMode: false,
   save: null,   // { snapshot, status } from API
+  language: 'es',
 
   setScreen: (screen) => set({ screen }),
+  setLanguage: (language) => set({ language }),
 
   login: (user, token, saveData = null) => {
     localStorage.setItem('lingo_token', token);

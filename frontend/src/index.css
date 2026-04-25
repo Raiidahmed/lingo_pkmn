@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@400;700&display=swap');
 
 :root {
   --bg: #0a0a0f;
@@ -12,6 +12,7 @@
   --accent-glow: rgba(204,34,68,0.3);
   --radius: 8px;
   --font: 'Press Start 2P', monospace;
+  --font-ja: 'Noto Sans JP', sans-serif;
   --green: #22cc66;
   --red-flash: #ff3355;
 }

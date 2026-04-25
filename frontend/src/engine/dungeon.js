@@ -1,4 +1,5 @@
-import { getLevel } from './levels.js';
+import { getLevel as getLevelES } from './levels.js';
+import { getLevel as getLevelJA } from './levels_ja.js';
 
 export const TILE = {
   FLOOR:   0,
@@ -13,8 +14,11 @@ export const TILE = {
 export const MAP_W = 15;
 export const MAP_H = 13;
 
-export function loadLevel(levelN) {
-  const data = getLevel(levelN);
+const LEVEL_GETTERS = { es: getLevelES, ja: getLevelJA };
+
+export function loadLevel(levelN, lang = 'es') {
+  const getter = LEVEL_GETTERS[lang] ?? getLevelES;
+  const data = getter(levelN);
   // Deep copy map so we can mutate door states
   const grid = data.map.map(row => [...row]);
   return {

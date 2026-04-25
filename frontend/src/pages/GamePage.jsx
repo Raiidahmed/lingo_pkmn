@@ -8,7 +8,7 @@ const MAX_HEARTS = 3;
 const MOVE_COOLDOWN = 120;
 
 export default function GamePage() {
-  const { startLevel, resumeMode, save, endGame, user, theme, updateWordBank, setScreen } = useStore();
+  const { startLevel, resumeMode, save, endGame, user, theme, language, updateWordBank, setScreen } = useStore();
 
   // --- Mutable game state (refs, no re-render) ---
   const levelRef        = useRef(startLevel);
@@ -51,7 +51,7 @@ export default function GamePage() {
 
   // --- Level loading ---
   function initLevel(n, snapshot = null) {
-    const data = loadLevel(n);
+    const data = loadLevel(n, language);
     levelDataRef.current = data;
     // Deep copy grid so mutations don't affect the source
     gridRef.current = data.grid.map(row => [...row]);
@@ -454,6 +454,18 @@ export default function GamePage() {
         <div className="challenge-overlay">
           <div className="challenge-box">
             <div className="challenge-label">⚡ CHALLENGE ⚡</div>
+            {challenge.display && (
+              <div style={{
+                fontSize: 56,
+                textAlign: 'center',
+                fontFamily: 'var(--font-ja)',
+                color: 'var(--accent)',
+                textShadow: '0 0 16px var(--accent-glow)',
+                lineHeight: 1.1,
+              }}>
+                {challenge.display}
+              </div>
+            )}
             <div style={{ fontSize: 9, color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
               {challenge.prompt}
             </div>
@@ -470,6 +482,9 @@ export default function GamePage() {
                     choiceResult && i === challenge.answer ? ' correct' :
                     choiceResult === 'wrong' && i !== challenge.answer ? ' wrong' : ''
                   }`}
+                  style={challenge.choiceStyle === 'hiragana'
+                    ? { fontSize: 22, fontFamily: 'var(--font-ja)', padding: '10px 4px' }
+                    : undefined}
                   onClick={() => handleChoice(c, i)}
                   disabled={!!choiceResult}
                 >
