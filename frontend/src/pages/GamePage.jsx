@@ -27,6 +27,8 @@ export default function GamePage() {
   const challengeActiveRef = useRef(false);
   const dialogueActiveRef  = useRef(false);
   const gameOverRef        = useRef(false);
+  const choiceTimerRef     = useRef(null);  // cleared on unmount to prevent state updates after teardown
+  const ctxRef             = useRef(null);  // canvas context cached once at mount
 
   // --- React state (triggers re-render) ---
   const [hearts,       setHearts]       = useState(MAX_HEARTS);
@@ -146,17 +148,11 @@ export default function GamePage() {
     return true;
   }
 
-  // --- Input processing ---
-  function processInput(now) {
+  // --- Shared move execution (keyboard and D-pad both route here) ---
+  function applyMove(dx, dy) {
+    const now = performance.now();
     if (now - lastMoveRef.current < MOVE_COOLDOWN) return;
     if (challengeActiveRef.current || dialogueActiveRef.current) return;
-
-    let dx = 0, dy = 0;
-    if (keysRef.current.has('ArrowLeft')  || keysRef.current.has('a')) dx = -1;
-    if (keysRef.current.has('ArrowRight') || keysRef.current.has('d')) dx =  1;
-    if (keysRef.current.has('ArrowUp')    || keysRef.current.has('w')) dy = -1;
-    if (keysRef.current.has('ArrowDown')  || keysRef.current.has('s')) dy =  1;
-    if (!dx && !dy) return;
 
     const target = {
       col: playerRef.current.col + dx,
@@ -165,7 +161,6 @@ export default function GamePage() {
     if (target.row < 0 || target.row >= MAP_H || target.col < 0 || target.col >= MAP_W) return;
     const targetTile = gridRef.current[target.row][target.col];
 
-    // Moving into a challenge tile → trigger challenge
     if (targetTile === TILE.DOOR_C || targetTile === TILE.CHEST_C) {
       tryOpenChallenge(target.col, target.row);
       lastMoveRef.current = now;
@@ -177,23 +172,33 @@ export default function GamePage() {
     playerRef.current = newPos;
     lastMoveRef.current = now;
 
-    // Stepped on stairs → next level
     if (gridRef.current[newPos.row][newPos.col] === TILE.STAIRS && isExitOpen()) {
       const completedLevel = levelRef.current;
       const nextN = completedLevel + 1;
-      // Mark level complete + submit running score
-      api.markLevelComplete(completedLevel).catch(() => {});
+      api.markLevelComplete(completedLevel).catch(e => console.warn('markLevelComplete', e));
       scoreRef.current += 200;
       setScore(scoreRef.current);
-      api.submitScore(completedLevel, scoreRef.current, Date.now() - startTimeRef.current).catch(() => {});
+      api.submitScore(completedLevel, scoreRef.current, Date.now() - startTimeRef.current)
+        .catch(e => console.warn('submitScore', e));
       if (nextN > 10) {
         finishGame(true);
       } else {
         learnedWordsRef.current = [];
-        api.saveGame(null, {}).catch(() => {});
+        api.saveGame(null, {}).catch(e => console.warn('saveGame', e));
         initLevel(nextN);
       }
     }
+  }
+
+  // --- Input processing (keyboard polling, runs every RAF tick) ---
+  function processInput() {
+    let dx = 0, dy = 0;
+    if (keysRef.current.has('ArrowLeft')  || keysRef.current.has('a')) dx = -1;
+    if (keysRef.current.has('ArrowRight') || keysRef.current.has('d')) dx =  1;
+    if (keysRef.current.has('ArrowUp')    || keysRef.current.has('w')) dy = -1;
+    if (keysRef.current.has('ArrowDown')  || keysRef.current.has('s')) dy =  1;
+    if (!dx && !dy) return;
+    applyMove(dx, dy);
   }
 
   // --- Challenge answer ---
@@ -202,7 +207,7 @@ export default function GamePage() {
     const correct = choiceIdx === challenge.answer;
     setChoiceResult(correct ? 'correct' : 'wrong');
 
-    setTimeout(() => {
+    choiceTimerRef.current = setTimeout(() => {
       if (correct) {
         // Open the tile
         const [c, r] = challenge.lockKey.split(',').map(Number);
@@ -218,10 +223,11 @@ export default function GamePage() {
         // Only store if they differ (skip reverse-translation challenges where answer is the Spanish word)
         if (word_es && word_en && word_es.toLowerCase() !== word_en.toLowerCase() && word_es.length <= 32) {
           learnedWordsRef.current.push({ word_es, word_en });
-          api.addWords([{ es: word_es, en: word_en }], `Level ${levelRef.current}`).catch(() => {});
+          api.addWords([{ es: word_es, en: word_en }], `Level ${levelRef.current}`)
+            .catch(e => console.warn('addWords', e));
         }
         // Auto-save after correct answer
-        api.saveGame(buildSnapshot(), buildStatus()).catch(() => {});
+        api.saveGame(buildSnapshot(), buildStatus()).catch(e => console.warn('saveGame', e));
       } else {
         const newCount = attemptCount + 1;
         setAttemptCount(newCount);
@@ -272,59 +278,22 @@ export default function GamePage() {
     const time_ms = Date.now() - startTimeRef.current;
     const level   = levelRef.current;
     const finalScore = scoreRef.current;
-    api.submitScore(level, finalScore, time_ms).catch(() => {});
-    api.saveGame(null, {}).catch(() => {});
+    api.submitScore(level, finalScore, time_ms).catch(e => console.warn('submitScore', e));
+    api.saveGame(null, {}).catch(e => console.warn('saveGame', e));
     // Refresh user data (word bank already submitted per-answer, just sync store)
     api.me().then(d => updateWordBank(d.user?.word_bank ?? [])).catch(() => {});
     endGame({ level, score: finalScore, time_ms, wordsPassed: learnedWordsRef.current.length });
   }
 
-  // --- D-pad: move exactly once per tap, bypass key-polling ---
+  // --- D-pad: move exactly once per tap, delegates to shared applyMove ---
   function moveDir(dx, dy) {
-    if (challengeActiveRef.current || dialogueActiveRef.current) return;
-    const now = performance.now();
-    if (now - lastMoveRef.current < MOVE_COOLDOWN) return;
-
-    const target = {
-      col: playerRef.current.col + dx,
-      row: playerRef.current.row + dy,
-    };
-    if (target.row < 0 || target.row >= MAP_H || target.col < 0 || target.col >= MAP_W) return;
-    const targetTile = gridRef.current[target.row][target.col];
-
-    if (targetTile === TILE.DOOR_C || targetTile === TILE.CHEST_C) {
-      tryOpenChallenge(target.col, target.row);
-      lastMoveRef.current = now;
-      return;
-    }
-
-    const newPos = tryMove(gridRef.current, playerRef.current, dx, dy, isExitOpen());
-    if (newPos.col === playerRef.current.col && newPos.row === playerRef.current.row) return;
-    playerRef.current = newPos;
-    lastMoveRef.current = now;
-
-    if (gridRef.current[newPos.row][newPos.col] === TILE.STAIRS && isExitOpen()) {
-      const completedLevel = levelRef.current;
-      const nextN = completedLevel + 1;
-      api.markLevelComplete(completedLevel).catch(() => {});
-      scoreRef.current += 200;
-      setScore(scoreRef.current);
-      api.submitScore(completedLevel, scoreRef.current, Date.now() - startTimeRef.current).catch(() => {});
-      if (nextN > 10) {
-        finishGame(true);
-      } else {
-        learnedWordsRef.current = [];
-        api.saveGame(null, {}).catch(() => {});
-        initLevel(nextN);
-      }
-    }
+    applyMove(dx, dy);
   }
 
   // --- Render loop ---
   function renderFrame() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = ctxRef.current;
+    if (!ctx) return;
     particlesRef.current = particlesRef.current
       .map(p => ({ ...p, y: p.y + p.vy, alpha: p.alpha - 0.016, life: p.life - 1 }))
       .filter(p => p.life > 0);
@@ -344,6 +313,9 @@ export default function GamePage() {
     initLevel(resumeMode && snapshot ? snapshot.levelIndex : startLevel, snapshot);
     learnedWordsRef.current = [];
     gameOverRef.current = false;
+
+    // Cache canvas context — valid for the lifetime of this canvas element
+    ctxRef.current = canvasRef.current.getContext('2d');
 
     function scaleCanvas() {
       const canvas = canvasRef.current;
@@ -379,8 +351,8 @@ export default function GamePage() {
 
     const timer = setInterval(() => setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000)), 1000);
 
-    function loop(ts) {
-      processInput(ts);
+    function loop() {
+      processInput();
       renderFrame();
       rafRef.current = requestAnimationFrame(loop);
     }
@@ -388,6 +360,7 @@ export default function GamePage() {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
+      clearTimeout(choiceTimerRef.current);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('resize', scaleCanvas);
@@ -417,8 +390,8 @@ export default function GamePage() {
           <button
             style={{ fontSize: 6, color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}
             onClick={() => {
-              api.saveGame(buildSnapshot(), buildStatus()).catch(() => {});
-              api.submitScore(levelRef.current, scoreRef.current, Date.now() - startTimeRef.current).catch(() => {});
+              api.saveGame(buildSnapshot(), buildStatus()).catch(e => console.warn('saveGame', e));
+              api.submitScore(levelRef.current, scoreRef.current, Date.now() - startTimeRef.current).catch(e => console.warn('submitScore', e));
               api.me().then(d => updateWordBank(d.user?.word_bank ?? [])).catch(() => {});
               cancelAnimationFrame(rafRef.current);
               setScreen('menu');

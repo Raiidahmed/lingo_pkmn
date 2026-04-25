@@ -10,7 +10,7 @@ export default function GameOverPage() {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  const isWin = level > 10;
+  const isWin = level >= 10;
 
   return (
     <div className="page" style={{ justifyContent: 'center', minHeight: '100dvh' }}>

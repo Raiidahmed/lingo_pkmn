@@ -1,9 +1,19 @@
+import { useState } from 'react';
 import { useStore } from '../store.js';
 
 const LEVEL_NAMES = [
   'The Entrance Hall', "The Scholar's Maze", "The Conjurer's Keep",
   'The Market', 'The Clocktower', 'The Kitchen Catacombs',
   'The Night School', 'The Trainyard', 'The Office', 'The Palace',
+];
+
+const LANGUAGES = [
+  { id: 'es', flag: '🇪🇸', name: 'SPANISH',    native: 'Español'   },
+  { id: 'fr', flag: '🇫🇷', name: 'FRENCH',     native: 'Français'  },
+  { id: 'de', flag: '🇩🇪', name: 'GERMAN',     native: 'Deutsch'   },
+  { id: 'it', flag: '🇮🇹', name: 'ITALIAN',    native: 'Italiano'  },
+  { id: 'pt', flag: '🇵🇹', name: 'PORTUGUESE', native: 'Português' },
+  { id: 'ja', flag: '🇯🇵', name: 'JAPANESE',   native: '日本語'    },
 ];
 
 export default function StatusPage() {
@@ -15,6 +25,8 @@ export default function StatusPage() {
 
   const currentLevel = status.levelIndex ?? 1;
   const hasResume = !!snapshot;
+
+  const [selectedLang, setSelectedLang] = useState('es');
 
   return (
     <div className="page">
@@ -43,6 +55,40 @@ export default function StatusPage() {
         ) : (
           <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>No active run. Start below.</div>
         )}
+      </div>
+
+      {/* Language selector */}
+      <div className="card">
+        <div className="card-title">STUDY LANGUAGE</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          {LANGUAGES.map(lang => {
+            const active = selectedLang === lang.id;
+            return (
+              <button
+                key={lang.id}
+                className="btn"
+                style={{
+                  padding: '12px 6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  borderColor: active ? 'var(--accent)' : undefined,
+                  background: active ? 'rgba(var(--accent-rgb,204,34,68),0.08)' : undefined,
+                }}
+                onClick={() => setSelectedLang(lang.id)}
+              >
+                <span style={{ fontSize: 22, lineHeight: 1 }}>{lang.flag}</span>
+                <span style={{ fontSize: 6, color: active ? 'var(--accent)' : 'var(--text)' }}>
+                  {lang.name}
+                </span>
+                <span style={{ fontSize: 11, fontFamily: 'sans-serif', color: active ? 'var(--accent)' : 'var(--text-dim)' }}>
+                  {lang.native}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Level selector with completion status */}

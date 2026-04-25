@@ -91,7 +91,6 @@ def create_app():
 
     @app.get("/api/me")
     def me():
-        import json
         user = require_auth()
         if not user:
             return jsonify({"error": "Unauthorized"}), 401
@@ -118,7 +117,6 @@ def create_app():
 
     @app.post("/api/save")
     def save():
-        import json
         user = require_auth()
         if not user:
             return jsonify({"error": "Unauthorized"}), 401

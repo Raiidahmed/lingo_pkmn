@@ -44,6 +44,10 @@ def init_db(db_path):
             updated_at    TEXT NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE INDEX IF NOT EXISTS idx_users_token    ON users(session_token);
+        CREATE INDEX IF NOT EXISTS idx_scores_user    ON scores(user_id);
+        CREATE INDEX IF NOT EXISTS idx_word_bank_user ON word_bank(user_id);
     """)
     conn.commit()
     conn.close()
