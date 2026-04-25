@@ -93,31 +93,46 @@ export default function StatusPage() {
 
       {/* Level selector with completion status */}
       <div className="card">
-        <div className="card-title">LEVELS — {completed.length}/10 COMPLETED</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {Array.from({ length: 10 }, (_, i) => i + 1).map(n => {
-            const done = completed.includes(n);
-            return (
-              <button
-                key={n}
-                className="btn"
-                style={{
-                  padding: '10px 12px',
-                  fontSize: 8,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderColor: done ? 'var(--accent)' : undefined,
-                  color: done ? 'var(--accent)' : undefined,
-                }}
-                onClick={() => startGame(n, false)}
-              >
-                <span>{n}. {LEVEL_NAMES[n - 1]}</span>
-                <span style={{ fontSize: 10 }}>{done ? '✓' : ''}</span>
-              </button>
-            );
-          })}
-        </div>
+        {selectedLang === 'es' ? (
+          <>
+            <div className="card-title">LEVELS — {completed.length}/10 COMPLETED</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => {
+                const done = completed.includes(n);
+                return (
+                  <button
+                    key={n}
+                    className="btn"
+                    style={{
+                      padding: '10px 12px',
+                      fontSize: 8,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderColor: done ? 'var(--accent)' : undefined,
+                      color: done ? 'var(--accent)' : undefined,
+                    }}
+                    onClick={() => startGame(n, false)}
+                  >
+                    <span>{n}. {LEVEL_NAMES[n - 1]}</span>
+                    <span style={{ fontSize: 10 }}>{done ? '✓' : ''}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="card-title">LEVELS</div>
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>🔒</div>
+              <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>COMING SOON</div>
+              <div style={{ fontSize: 7, color: 'var(--text-dim)', marginTop: 8, lineHeight: 2 }}>
+                {LANGUAGES.find(l => l.id === selectedLang)?.name} levels are in development.
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Word bank preview */}
