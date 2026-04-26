@@ -25,6 +25,7 @@ export default function App() {
         ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
         : 'var(--border)'
     );
+    el.style.setProperty('--shimmer-str', ui.shimmer / 100);
     const root = document.getElementById('root');
     if (root) root.style.zoom = ui.fontSize ?? 1;
   }, []);
@@ -43,15 +44,6 @@ export default function App() {
 
   return (
     <>
-      {/* Gradient overlay — sits behind content via mix-blend-mode:screen */}
-      {ui.gradient > 0 && (
-        <div aria-hidden="true" style={{
-          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1,
-          background: 'radial-gradient(ellipse 120% 50% at 50% 0%, var(--accent), transparent)',
-          opacity: ui.gradient / 200,
-          mixBlendMode: lightMode ? 'multiply' : 'screen',
-        }} />
-      )}
       {screen === 'login'       && <LoginPage />}
       {screen === 'menu'        && <MenuPage />}
       {screen === 'leaderboard' && <LeaderboardPage />}

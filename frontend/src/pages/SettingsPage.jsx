@@ -95,8 +95,8 @@ export default function SettingsPage() {
         <SliderRow label="GLOW SIZE" value={ui.glowSize} min={0} max={64} unit="px"
           onChange={v => setUI('glowSize', v)} />
 
-        <SliderRow label="GRADIENT" value={ui.gradient} min={0} max={100} unit="%"
-          onChange={v => setUI('gradient', v)} />
+        <SliderRow label="BORDER SHIMMER" value={ui.shimmer} min={0} max={100} unit="%"
+          onChange={v => setUI('shimmer', v)} />
 
         {lightMode && (
           <>
@@ -112,7 +112,7 @@ export default function SettingsPage() {
           onClick={() => {
             [
               ['borderWidth', 1], ['radius', 8], ['glowSize', 16],
-              ['canvasTint', 0.58], ['borderTint', 0], ['gradient', 0], ['fontSize', 1.0],
+              ['canvasTint', 0.58], ['borderTint', 0], ['shimmer', 0], ['fontSize', 1.0],
             ].forEach(([k, v]) => setUI(k, v));
           }}>
           RESET DEFAULTS

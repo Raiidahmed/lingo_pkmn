@@ -18,6 +18,46 @@
   --border-w: 1px;
   --border-col: var(--border);
   --glow-size: 16px;
+  --shimmer-str: 0;
+}
+
+/* ── Border shimmer (Apple Intelligence style) ──────────────────────────── */
+@property --shimmer-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes shimmer-spin {
+  to { --shimmer-angle: 360deg; }
+}
+
+.card {
+  position: relative;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius) + 1px);
+  border: 2px solid transparent;
+  background:
+    conic-gradient(
+      from var(--shimmer-angle),
+      transparent    0deg,
+      #1a6fff       40deg,
+      #60b8ff       72deg,
+      #ffffff       90deg,
+      #60b8ff      108deg,
+      #1a6fff      140deg,
+      transparent  180deg,
+      transparent  360deg
+    ) border-box,
+    transparent padding-box;
+  opacity: var(--shimmer-str);
+  pointer-events: none;
+  animation: shimmer-spin 2.5s linear infinite;
 }
 
 /* ── Playground slider ──────────────────────────────────────────────────── */
