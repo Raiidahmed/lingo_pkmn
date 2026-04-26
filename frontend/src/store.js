@@ -11,7 +11,8 @@ function applyUI(ui) {
       ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
       : 'var(--border)'
   );
-  el.style.setProperty('--shimmer-str', ui.shimmer / 100);
+  el.style.setProperty('--shimmer-str',   ui.shimmer / 100);
+  el.style.setProperty('--shimmer-speed', `${ui.shimmerSpeed}s`);
   const root = document.getElementById('root');
   if (root) root.style.zoom = ui.fontSize ?? 1;
 }
@@ -33,7 +34,8 @@ export const useStore = create((set, get) => ({
     glowSize:    16,   // px, 0–48
     canvasTint:  0.58, // 0–1, light mode overlay strength
     borderTint:  0,    // 0–100, blend border toward accent color
-    shimmer:     0,    // 0–100, animated gradient shimmer on card borders
+    shimmer:      0,   // 0–100, animated gradient shimmer on card borders
+    shimmerSpeed: 4,   // 1–12s, rotation period (higher = slower)
     fontSize:    1.0,  // 0.75–1.5, page zoom scale
   },
 

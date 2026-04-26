@@ -25,7 +25,8 @@ export default function App() {
         ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
         : 'var(--border)'
     );
-    el.style.setProperty('--shimmer-str', ui.shimmer / 100);
+    el.style.setProperty('--shimmer-str',   ui.shimmer / 100);
+    el.style.setProperty('--shimmer-speed', `${ui.shimmerSpeed}s`);
     const root = document.getElementById('root');
     if (root) root.style.zoom = ui.fontSize ?? 1;
   }, []);

@@ -28,6 +28,10 @@
   inherits: false;
 }
 
+:root {
+  --shimmer-speed: 4s;
+}
+
 @keyframes shimmer-spin {
   to { --shimmer-angle: 360deg; }
 }
@@ -36,32 +40,41 @@
   position: relative;
 }
 
+/*
+  Sits OUTSIDE the card by --border-w so the shimmer ring lands exactly
+  on top of the existing solid border, replacing it visually when opacity > 0.
+  Mask XOR punches out the interior so the gradient is only visible
+  in the border-width ring — no bleed into the card content.
+*/
 .card::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  padding: calc(var(--border-w) + 1px);
+  inset: calc(-1 * var(--border-w));
+  border-radius: calc(var(--radius) + var(--border-w));
+  padding: var(--border-w);
   background: conic-gradient(
     from var(--shimmer-angle),
-    transparent    0deg,
-    #1a6fff       40deg,
-    #60b8ff       72deg,
-    #ffffff       90deg,
-    #60b8ff      108deg,
-    #1a6fff      140deg,
-    transparent  180deg,
-    transparent  360deg
+    transparent       0deg,
+    #001a66          25deg,
+    #0052cc          50deg,
+    #0099ff          70deg,
+    #66ccff          82deg,
+    #ffffff           90deg,
+    #66ccff          98deg,
+    #0099ff          110deg,
+    #0052cc          130deg,
+    #001a66          155deg,
+    transparent      180deg,
+    transparent      360deg
   );
-  /* mask punches out the interior, leaving only the padding ring visible */
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  opacity: var(--shimmer-str);
+  opacity: var(--shimmer-str, 0);
   pointer-events: none;
-  animation: shimmer-spin 2.5s linear infinite;
+  animation: shimmer-spin var(--shimmer-speed) linear infinite;
 }
 
 /* ── Playground slider ──────────────────────────────────────────────────── */
