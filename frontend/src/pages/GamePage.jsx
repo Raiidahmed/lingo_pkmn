@@ -304,7 +304,7 @@ export default function GamePage() {
       exitOpen: isExitOpen(),
       particles: particlesRef.current,
       npcs: levelDataRef.current?.npcs ?? [],
-    }, theme.accent, lightMode ? (ui?.canvasTint ?? 0.58) : 0);
+    }, theme.accent, (() => { const s = useStore.getState(); return s.lightMode ? (s.ui?.canvasTint ?? 0.58) : 0; })());
   }
 
   // --- Mount ---

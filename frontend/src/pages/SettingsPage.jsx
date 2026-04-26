@@ -4,16 +4,15 @@ import { api } from '../api.js';
 
 function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }) {
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: 18 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
         <span style={{ fontSize: 7, color: 'var(--text-dim)' }}>{label}</span>
-        <span style={{ fontSize: 8, color: 'var(--accent)', minWidth: 36, textAlign: 'right' }}>
+        <span style={{ fontSize: 9, color: 'var(--accent)', minWidth: 40, textAlign: 'right' }}>
           {value}{unit}
         </span>
       </div>
       <input
-        type="range"
-        className="ui-slider"
+        type="range" className="ui-slider"
         min={min} max={max} step={step}
         value={value}
         onChange={e => onChange(Number(e.target.value))}
@@ -21,28 +20,6 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
         <span style={{ fontSize: 6, color: 'var(--text-dim)' }}>{min}{unit}</span>
         <span style={{ fontSize: 6, color: 'var(--text-dim)' }}>{max}{unit}</span>
-      </div>
-    </div>
-  );
-}
-
-function ModeToggle({ label, options, activeId, onSelect }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 7, color: 'var(--text-dim)', marginBottom: 8 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {options.map(opt => (
-          <button
-            key={opt.id}
-            className="btn"
-            style={{ flex: 1, padding: '10px 8px', fontSize: 7,
-              borderColor: activeId === opt.id ? 'var(--accent)' : undefined,
-              color: activeId === opt.id ? 'var(--accent)' : undefined }}
-            onClick={() => onSelect(opt.id)}
-          >
-            {opt.label}
-          </button>
-        ))}
       </div>
     </div>
   );
@@ -56,7 +33,7 @@ export default function SettingsPage() {
     api.setTheme(themeId).catch(() => {});
   }
 
-  const divider = <div style={{ borderTop: 'var(--border-w) solid var(--border)', margin: '16px 0' }} />;
+  const div = <div style={{ borderTop: 'var(--border-w) solid var(--border-col)', margin: '18px 0 14px' }} />;
 
   return (
     <div className="page">
@@ -76,37 +53,67 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {divider}
-        <ModeToggle
-          label="BACKGROUND"
-          options={[{ id: 'dark', label: 'DARK' }, { id: 'light', label: 'LIGHT' }]}
-          activeId={lightMode ? 'light' : 'dark'}
-          onSelect={id => { if ((id === 'light') !== lightMode) toggleLightMode(); }}
-        />
+        {div}
+
+        <div style={{ fontSize: 7, color: 'var(--text-dim)', marginBottom: 8 }}>BACKGROUND</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+          {[{ id: 'dark', label: 'DARK' }, { id: 'light', label: 'LIGHT' }].map(opt => {
+            const active = opt.id === 'light' ? lightMode : !lightMode;
+            return (
+              <button key={opt.id} className="btn" style={{ flex: 1, padding: '10px 8px', fontSize: 7,
+                borderColor: active ? 'var(--accent)' : undefined, color: active ? 'var(--accent)' : undefined }}
+                onClick={() => { if (active) return; toggleLightMode(); }}>
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── UI Playground ── */}
       <div className="card">
         <div className="card-title">UI PLAYGROUND</div>
 
+        <SliderRow label="FONT SIZE" value={Math.round(ui.fontSize * 100)} min={75} max={150} unit="%"
+          onChange={v => setUI('fontSize', v / 100)} />
+
+        {div}
+
         <SliderRow label="BORDER WIDTH" value={ui.borderWidth} min={0} max={8} unit="px"
           onChange={v => setUI('borderWidth', v)} />
+
+        <SliderRow label="BORDER ACCENT" value={ui.borderTint} min={0} max={100} unit="%"
+          onChange={v => setUI('borderTint', v)} />
+
+        {div}
 
         <SliderRow label="CORNER RADIUS" value={ui.radius} min={0} max={24} unit="px"
           onChange={v => setUI('radius', v)} />
 
-        <SliderRow label="GLOW SIZE" value={ui.glowSize} min={0} max={48} unit="px"
+        {div}
+
+        <SliderRow label="GLOW SIZE" value={ui.glowSize} min={0} max={64} unit="px"
           onChange={v => setUI('glowSize', v)} />
 
+        <SliderRow label="GRADIENT" value={ui.gradient} min={0} max={100} unit="%"
+          onChange={v => setUI('gradient', v)} />
+
         {lightMode && (
-          <SliderRow label="CANVAS TINT" value={Math.round(ui.canvasTint * 100)} min={0} max={100} unit="%"
-            onChange={v => setUI('canvasTint', v / 100)} />
+          <>
+            {div}
+            <SliderRow label="CANVAS TINT" value={Math.round(ui.canvasTint * 100)} min={0} max={100} unit="%"
+              onChange={v => setUI('canvasTint', v / 100)} />
+          </>
         )}
 
-        <button className="btn btn-ghost" style={{ fontSize: 7, marginTop: 4 }}
+        {div}
+
+        <button className="btn btn-ghost" style={{ fontSize: 7 }}
           onClick={() => {
-            const defaults = { borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0.58 };
-            Object.entries(defaults).forEach(([k, v]) => setUI(k, v));
+            [
+              ['borderWidth', 1], ['radius', 8], ['glowSize', 16],
+              ['canvasTint', 0.58], ['borderTint', 0], ['gradient', 0], ['fontSize', 1.0],
+            ].forEach(([k, v]) => setUI(k, v));
           }}>
           RESET DEFAULTS
         </button>

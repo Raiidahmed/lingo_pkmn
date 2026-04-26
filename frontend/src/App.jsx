@@ -15,10 +15,18 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('light-mode', lightMode);
+    // applyUI is imported via store — call it directly from the module
     const el = document.documentElement;
-    el.style.setProperty('--border-w', `${ui.borderWidth}px`);
-    el.style.setProperty('--radius',   `${ui.radius}px`);
-    el.style.setProperty('--glow-size',`${ui.glowSize}px`);
+    el.style.setProperty('--border-w',  `${ui.borderWidth}px`);
+    el.style.setProperty('--radius',    `${ui.radius}px`);
+    el.style.setProperty('--glow-size', `${ui.glowSize}px`);
+    el.style.setProperty('--border-col',
+      ui.borderTint > 0
+        ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
+        : 'var(--border)'
+    );
+    const root = document.getElementById('root');
+    if (root) root.style.zoom = ui.fontSize ?? 1;
   }, []);
 
   useEffect(() => {
@@ -35,6 +43,15 @@ export default function App() {
 
   return (
     <>
+      {/* Gradient overlay — sits behind content via mix-blend-mode:screen */}
+      {ui.gradient > 0 && (
+        <div aria-hidden="true" style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1,
+          background: 'radial-gradient(ellipse 120% 50% at 50% 0%, var(--accent), transparent)',
+          opacity: ui.gradient / 200,
+          mixBlendMode: lightMode ? 'multiply' : 'screen',
+        }} />
+      )}
       {screen === 'login'       && <LoginPage />}
       {screen === 'menu'        && <MenuPage />}
       {screen === 'leaderboard' && <LeaderboardPage />}

@@ -9,52 +9,99 @@ function tvar(col, row) {
 
 // ─── Tile drawers ─────────────────────────────────────────────────────────────
 
-function drawFloor(ctx, x, y, col, row) {
-  const alt = (col + row) % 2 === 0;
-  ctx.fillStyle = alt ? '#18182e' : '#141428';
-  ctx.fillRect(x, y, T, T);
-
-  // Stone seams
-  ctx.fillStyle = '#0e0e1e';
-  ctx.fillRect(x, y + T / 2, T, 1);
-  const off = (row % 2 === 0) ? 0 : T / 2;
-  ctx.fillRect(x + off, y, 1, T / 2);
-  ctx.fillRect(x + (off + T / 2) % T, y + T / 2, 1, T / 2);
-
-  // Occasional crack
-  const r = tvar(col, row);
-  if (r > 0.78) {
-    ctx.strokeStyle = '#202038';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    const cx = x + 6 + r * 14;
-    ctx.moveTo(cx, y + 8); ctx.lineTo(cx - 3, y + 16); ctx.lineTo(cx + 2, y + 22);
-    ctx.stroke();
+function drawFloor(ctx, x, y, col, row, light = false) {
+  if (light) {
+    const alt = (col + row) % 2 === 0;
+    ctx.fillStyle = alt ? '#bdd6ea' : '#b2ccdf';
+    ctx.fillRect(x, y, T, T);
+    // Grid seams — visible stone tile edges
+    ctx.fillStyle = '#94b4cc';
+    ctx.fillRect(x, y, T, 1);
+    ctx.fillRect(x, y, 1, T);
+    // Interior tile detail
+    const r = tvar(col, row);
+    if (r > 0.82) {
+      // Small inset square — carved stone
+      ctx.fillStyle = '#a8c4db';
+      ctx.fillRect(x + 6, y + 6, T - 12, T - 12);
+      ctx.fillStyle = '#94b4cc';
+      ctx.fillRect(x + 6, y + 6, T - 12, 1);
+      ctx.fillRect(x + 6, y + 6, 1, T - 12);
+    } else if (r > 0.6) {
+      // Center dot ornament
+      ctx.fillStyle = '#94b4cc';
+      ctx.fillRect(x + T/2 - 1, y + T/2 - 1, 3, 3);
+    } else if (r > 0.4) {
+      // Diagonal crack
+      ctx.strokeStyle = '#a0bdd0';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      const cx = x + 7 + r * 12;
+      ctx.moveTo(cx, y + 8); ctx.lineTo(cx + 4, y + 18); ctx.lineTo(cx + 2, y + 26);
+      ctx.stroke();
+    }
+  } else {
+    const alt = (col + row) % 2 === 0;
+    ctx.fillStyle = alt ? '#18182e' : '#141428';
+    ctx.fillRect(x, y, T, T);
+    // Stone seams
+    ctx.fillStyle = '#0e0e1e';
+    ctx.fillRect(x, y + T / 2, T, 1);
+    const off = (row % 2 === 0) ? 0 : T / 2;
+    ctx.fillRect(x + off, y, 1, T / 2);
+    ctx.fillRect(x + (off + T / 2) % T, y + T / 2, 1, T / 2);
+    // Occasional crack
+    const r = tvar(col, row);
+    if (r > 0.78) {
+      ctx.strokeStyle = '#202038';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      const cx = x + 6 + r * 14;
+      ctx.moveTo(cx, y + 8); ctx.lineTo(cx - 3, y + 16); ctx.lineTo(cx + 2, y + 22);
+      ctx.stroke();
+    }
   }
 }
 
-function drawWall(ctx, x, y, col, row) {
-  ctx.fillStyle = '#08080e';
-  ctx.fillRect(x, y, T, T);
-
-  const stag = (col % 2 === 0) ? 0 : T / 4;
-  ctx.fillStyle = '#0e0e1c';
-  ctx.fillRect(x + 1, y + 1, T - 2, T / 2 - 1);
-  ctx.fillRect(x + 1, y + T / 2, T - 2, T / 2 - 1);
-
-  // Mortar
-  ctx.fillStyle = '#050510';
-  ctx.fillRect(x, y + T / 2 - 1, T, 2);
-  ctx.fillRect(x + stag, y, 1, T / 2 - 1);
-  ctx.fillRect(x + (stag + T / 2) % T, y + T / 2, 1, T / 2 - 1);
-
-  // 3D bevel
-  ctx.fillStyle = '#16162a';
-  ctx.fillRect(x, y, T, 1);
-  ctx.fillRect(x, y, 1, T);
-  ctx.fillStyle = '#020206';
-  ctx.fillRect(x, y + T - 1, T, 1);
-  ctx.fillRect(x + T - 1, y, 1, T);
+function drawWall(ctx, x, y, col, row, light = false) {
+  if (light) {
+    ctx.fillStyle = '#6888a0';
+    ctx.fillRect(x, y, T, T);
+    const stag = (col % 2 === 0) ? 0 : T / 4;
+    // Brick faces
+    ctx.fillStyle = '#7898b2';
+    ctx.fillRect(x + 1, y + 1, T - 2, T / 2 - 2);
+    ctx.fillRect(x + 1, y + T / 2 + 1, T - 2, T / 2 - 2);
+    // Mortar lines
+    ctx.fillStyle = '#547090';
+    ctx.fillRect(x, y + T / 2 - 1, T, 2);
+    ctx.fillRect(x + stag, y, 1, T / 2 - 1);
+    ctx.fillRect(x + (stag + T / 2) % T, y + T / 2, 1, T / 2 - 1);
+    // Sunlight bevel (top-left bright, bottom-right shadow)
+    ctx.fillStyle = '#90b0c8';
+    ctx.fillRect(x, y, T, 1);
+    ctx.fillRect(x, y, 1, T);
+    ctx.fillStyle = '#507090';
+    ctx.fillRect(x, y + T - 1, T, 1);
+    ctx.fillRect(x + T - 1, y, 1, T);
+  } else {
+    ctx.fillStyle = '#08080e';
+    ctx.fillRect(x, y, T, T);
+    const stag = (col % 2 === 0) ? 0 : T / 4;
+    ctx.fillStyle = '#0e0e1c';
+    ctx.fillRect(x + 1, y + 1, T - 2, T / 2 - 1);
+    ctx.fillRect(x + 1, y + T / 2, T - 2, T / 2 - 1);
+    ctx.fillStyle = '#050510';
+    ctx.fillRect(x, y + T / 2 - 1, T, 2);
+    ctx.fillRect(x + stag, y, 1, T / 2 - 1);
+    ctx.fillRect(x + (stag + T / 2) % T, y + T / 2, 1, T / 2 - 1);
+    ctx.fillStyle = '#16162a';
+    ctx.fillRect(x, y, T, 1);
+    ctx.fillRect(x, y, 1, T);
+    ctx.fillStyle = '#020206';
+    ctx.fillRect(x, y + T - 1, T, 1);
+    ctx.fillRect(x + T - 1, y, 1, T);
+  }
 }
 
 function drawDoorClosed(ctx, x, y, accent) {
@@ -442,6 +489,7 @@ function drawPlayer(ctx, x, y, accent) {
 
 export function render(ctx, state, accentColor, canvasTint = 0) {
   const { grid, player, exitOpen, particles, npcs } = state;
+  const light = canvasTint > 0;
 
   ctx.clearRect(0, 0, MAP_W * T, MAP_H * T);
 
@@ -450,8 +498,8 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
       const t = grid[r][c];
       const x = c * T, y = r * T;
       switch (t) {
-        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r); break;
-        case TILE.WALL:    drawWall(ctx, x, y, c, r); break;
+        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, light); break;
+        case TILE.WALL:    drawWall(ctx, x, y, c, r, light); break;
         case TILE.DOOR_C:  drawDoorClosed(ctx, x, y, accentColor); break;
         case TILE.DOOR_O:  drawDoorOpen(ctx, x, y); break;
         case TILE.CHEST_C: drawChestClosed(ctx, x, y, accentColor); break;
@@ -469,9 +517,9 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
 
   if (player) drawPlayer(ctx, player.col * T, player.row * T, accentColor);
 
-  // Light mode canvas tint — washes dark tile art toward the light palette
+  // Light mode: subtle unifying tint over already-light tiles
   if (canvasTint > 0) {
-    ctx.globalAlpha = canvasTint;
+    ctx.globalAlpha = canvasTint * 0.25;
     ctx.fillStyle = '#c8dcee';
     ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
     ctx.globalAlpha = 1;

@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import { THEMES, DEFAULT_THEME, applyTheme } from './themes.js';
 
+function applyUI(ui) {
+  const el = document.documentElement;
+  el.style.setProperty('--border-w',   `${ui.borderWidth}px`);
+  el.style.setProperty('--radius',     `${ui.radius}px`);
+  el.style.setProperty('--glow-size',  `${ui.glowSize}px`);
+  el.style.setProperty('--border-col',
+    ui.borderTint > 0
+      ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
+      : 'var(--border)'
+  );
+  const root = document.getElementById('root');
+  if (root) root.style.zoom = ui.fontSize ?? 1;
+}
+
 export const useStore = create((set, get) => ({
   screen: 'login',
   user: null,
@@ -13,10 +27,13 @@ export const useStore = create((set, get) => ({
   language: 'es',
   lightMode: localStorage.getItem('lingo_light_mode') === '1',
   ui: JSON.parse(localStorage.getItem('lingo_ui') || 'null') || {
-    borderWidth: 1,   // px, 0–8
-    radius:      8,   // px, 0–24
-    glowSize:    16,  // px, 0–48
+    borderWidth: 1,    // px, 0–8
+    radius:      8,    // px, 0–24
+    glowSize:    16,   // px, 0–48
     canvasTint:  0.58, // 0–1, light mode overlay strength
+    borderTint:  0,    // 0–100, blend border toward accent color
+    gradient:    0,    // 0–100, radial accent gradient behind UI
+    fontSize:    1.0,  // 0.75–1.5, page zoom scale
   },
 
   setScreen: (screen) => set({ screen }),
@@ -32,10 +49,7 @@ export const useStore = create((set, get) => ({
   setUI: (key, value) => set(s => {
     const next = { ...s.ui, [key]: value };
     localStorage.setItem('lingo_ui', JSON.stringify(next));
-    const el = document.documentElement;
-    el.style.setProperty('--border-w', `${next.borderWidth}px`);
-    el.style.setProperty('--radius',   `${next.radius}px`);
-    el.style.setProperty('--glow-size',`${next.glowSize}px`);
+    applyUI(next);
     return { ui: next };
   }),
 
