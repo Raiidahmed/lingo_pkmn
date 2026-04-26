@@ -1,0 +1,23 @@
+name: Deploy to staging
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            set -e
+            cd /home/claude-agent/lingo_pkmn_staging
+            git pull origin staging
+            cd frontend && npm install --prefer-offline && npm run build
+            cd ..
+            sudo systemctl restart lingo-dungeon-staging
