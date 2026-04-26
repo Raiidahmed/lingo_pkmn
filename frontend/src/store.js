@@ -12,21 +12,31 @@ export const useStore = create((set, get) => ({
   save: null,   // { snapshot, status } from API
   language: 'es',
   lightMode: localStorage.getItem('lingo_light_mode') === '1',
-  thickBorder: localStorage.getItem('lingo_thick_border') === '1',
+  ui: JSON.parse(localStorage.getItem('lingo_ui') || 'null') || {
+    borderWidth: 1,   // px, 0–8
+    radius:      8,   // px, 0–24
+    glowSize:    16,  // px, 0–48
+    canvasTint:  0.58, // 0–1, light mode overlay strength
+  },
 
   setScreen: (screen) => set({ screen }),
   setLanguage: (language) => set({ language }),
+
   toggleLightMode: () => set(s => {
     const next = !s.lightMode;
     localStorage.setItem('lingo_light_mode', next ? '1' : '0');
     document.documentElement.classList.toggle('light-mode', next);
     return { lightMode: next };
   }),
-  toggleThickBorder: () => set(s => {
-    const next = !s.thickBorder;
-    localStorage.setItem('lingo_thick_border', next ? '1' : '0');
-    document.documentElement.classList.toggle('thick-border', next);
-    return { thickBorder: next };
+
+  setUI: (key, value) => set(s => {
+    const next = { ...s.ui, [key]: value };
+    localStorage.setItem('lingo_ui', JSON.stringify(next));
+    const el = document.documentElement;
+    el.style.setProperty('--border-w', `${next.borderWidth}px`);
+    el.style.setProperty('--radius',   `${next.radius}px`);
+    el.style.setProperty('--glow-size',`${next.glowSize}px`);
+    return { ui: next };
   }),
 
   login: (user, token, saveData = null) => {

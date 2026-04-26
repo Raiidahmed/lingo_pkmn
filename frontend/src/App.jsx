@@ -11,12 +11,15 @@ import GameOverPage from './pages/GameOverPage.jsx';
 import StatusPage from './pages/StatusPage.jsx';
 
 export default function App() {
-  const { screen, login, setScreen, lightMode, thickBorder } = useStore();
+  const { screen, login, setScreen, lightMode, ui } = useStore();
 
   useEffect(() => {
     document.documentElement.classList.toggle('light-mode', lightMode);
-    document.documentElement.classList.toggle('thick-border', thickBorder);
-  }, [lightMode, thickBorder]);
+    const el = document.documentElement;
+    el.style.setProperty('--border-w', `${ui.borderWidth}px`);
+    el.style.setProperty('--radius',   `${ui.radius}px`);
+    el.style.setProperty('--glow-size',`${ui.glowSize}px`);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('lingo_token');

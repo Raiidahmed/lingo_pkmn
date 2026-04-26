@@ -16,9 +16,37 @@
   --green: #22cc66;
   --red-flash: #ff3355;
   --border-w: 1px;
+  --glow-size: 16px;
 }
 
-.thick-border { --border-w: 2px; }
+/* ── Playground slider ──────────────────────────────────────────────────── */
+input[type="range"].ui-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"].ui-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+input[type="range"].ui-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 2px;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
 
 /* Light mode — overrides all surface/text vars; accent stays user-chosen */
 .light-mode {
@@ -59,7 +87,7 @@ html, body, #root {
 .page-title {
   font-size: 20px;
   color: var(--accent);
-  text-shadow: 0 0 16px var(--accent-glow);
+  text-shadow: 0 0 var(--glow-size) var(--accent-glow);
   text-align: center;
   letter-spacing: 2px;
 }
@@ -307,7 +335,7 @@ canvas#dungeon {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 0 32px var(--accent-glow);
+  box-shadow: 0 0 calc(var(--glow-size) * 2) var(--accent-glow);
 }
 
 .challenge-label {
@@ -321,7 +349,7 @@ canvas#dungeon {
   font-size: 22px;
   color: var(--accent);
   text-align: center;
-  text-shadow: 0 0 12px var(--accent-glow);
+  text-shadow: 0 0 var(--glow-size) var(--accent-glow);
 }
 
 .challenge-prompt {
