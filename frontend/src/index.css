@@ -19,12 +19,12 @@
 
 /* Light mode — overrides all surface/text vars; accent stays user-chosen */
 .light-mode {
-  --bg: #f0f4ff;
-  --surface: #ffffff;
-  --surface2: #e4ecfa;
-  --border: #b8cce8;
-  --text: #1a2340;
-  --text-dim: #5a6e96;
+  --bg: #d8e8f5;
+  --surface: #e8f1fa;
+  --surface2: #d0e2f0;
+  --border: #9ebcd8;
+  --text: #1a2a40;
+  --text-dim: #4a6880;
   --green: #1a9e4a;
   --red-flash: #cc1133;
 }
