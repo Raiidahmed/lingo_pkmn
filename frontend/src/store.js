@@ -12,6 +12,7 @@ export const useStore = create((set, get) => ({
   save: null,   // { snapshot, status } from API
   language: 'es',
   lightMode: localStorage.getItem('lingo_light_mode') === '1',
+  thickBorder: localStorage.getItem('lingo_thick_border') === '1',
 
   setScreen: (screen) => set({ screen }),
   setLanguage: (language) => set({ language }),
@@ -20,6 +21,12 @@ export const useStore = create((set, get) => ({
     localStorage.setItem('lingo_light_mode', next ? '1' : '0');
     document.documentElement.classList.toggle('light-mode', next);
     return { lightMode: next };
+  }),
+  toggleThickBorder: () => set(s => {
+    const next = !s.thickBorder;
+    localStorage.setItem('lingo_thick_border', next ? '1' : '0');
+    document.documentElement.classList.toggle('thick-border', next);
+    return { thickBorder: next };
   }),
 
   login: (user, token, saveData = null) => {

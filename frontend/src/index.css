@@ -15,18 +15,22 @@
   --font-ja: 'Noto Sans JP', sans-serif;
   --green: #22cc66;
   --red-flash: #ff3355;
+  --border-w: 1px;
 }
+
+.thick-border { --border-w: 2px; }
 
 /* Light mode — overrides all surface/text vars; accent stays user-chosen */
 .light-mode {
-  --bg: #d8e8f5;
-  --surface: #e8f1fa;
-  --surface2: #d0e2f0;
-  --border: #9ebcd8;
+  --bg: #c8dced;
+  --surface: #d8eaf8;
+  --surface2: #bdd4e8;
+  --border: #8aaecc;
   --text: #1a2a40;
-  --text-dim: #4a6880;
+  --text-dim: #3d5a78;
   --green: #1a9e4a;
   --red-flash: #cc1133;
+  --canvas-light: 1;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,7 +72,7 @@ html, body, #root {
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: var(--border-w) solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
   width: 100%;
@@ -87,7 +91,7 @@ html, body, #root {
   width: 100%;
   padding: 14px 16px;
   background: var(--surface2);
-  border: 1px solid var(--border);
+  border: var(--border-w) solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
   font-family: var(--font);
@@ -119,7 +123,7 @@ input.text-input {
   width: 100%;
   padding: 14px 12px;
   background: var(--surface2);
-  border: 2px solid var(--border);
+  border: calc(var(--border-w) + 1px) solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
   font-family: var(--font);
@@ -210,7 +214,7 @@ canvas#dungeon {
   align-items: center;
   justify-content: center;
   background: var(--surface2);
-  border: 1.5px solid var(--border);
+  border: calc(var(--border-w) + 0.5px) solid var(--border);
   border-radius: 12px;
   color: var(--text);
   font-size: 22px;
@@ -235,7 +239,7 @@ canvas#dungeon {
   top: 61px; left: 61px;
   width: 56px; height: 56px;
   background: var(--bg);
-  border: 1.5px solid var(--border);
+  border: calc(var(--border-w) + 0.5px) solid var(--border);
   border-radius: 12px;
   pointer-events: none;
 }
@@ -246,7 +250,7 @@ canvas#dungeon {
   height: 96px;
   border-radius: 12px;
   background: var(--surface2);
-  border: 1.5px solid var(--border);
+  border: calc(var(--border-w) + 0.5px) solid var(--border);
   color: var(--text);
   display: flex;
   align-items: center;
@@ -295,7 +299,7 @@ canvas#dungeon {
 
 .challenge-box {
   background: var(--surface);
-  border: 2px solid var(--accent);
+  border: calc(var(--border-w) + 1px) solid var(--accent);
   border-radius: var(--radius);
   padding: 24px;
   width: 100%;
@@ -335,7 +339,7 @@ canvas#dungeon {
 .choice-btn {
   padding: 12px 8px;
   background: var(--surface2);
-  border: 1px solid var(--border);
+  border: var(--border-w) solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
   font-family: var(--font);

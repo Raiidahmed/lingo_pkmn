@@ -440,7 +440,7 @@ function drawPlayer(ctx, x, y, accent) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function render(ctx, state, accentColor) {
+export function render(ctx, state, accentColor, lightMode = false) {
   const { grid, player, exitOpen, particles, npcs } = state;
 
   ctx.clearRect(0, 0, MAP_W * T, MAP_H * T);
@@ -468,6 +468,14 @@ export function render(ctx, state, accentColor) {
   }
 
   if (player) drawPlayer(ctx, player.col * T, player.row * T, accentColor);
+
+  // Light mode: wash the dark tile art with a semi-transparent light blue tint
+  if (lightMode) {
+    ctx.globalAlpha = 0.58;
+    ctx.fillStyle = '#c8dcee';
+    ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
+    ctx.globalAlpha = 1;
+  }
 
   if (particles) {
     for (const p of particles) {
