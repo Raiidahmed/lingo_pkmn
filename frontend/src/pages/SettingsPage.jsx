@@ -98,10 +98,12 @@ export default function SettingsPage() {
         <SliderRow label="BORDER SHIMMER" value={ui.shimmer} min={0} max={100} unit="%"
           onChange={v => setUI('shimmer', v)} />
 
-        {ui.shimmer > 0 && (
-          <SliderRow label="SHIMMER SPEED" value={ui.shimmerSpeed} min={1} max={12} unit="s"
+        {ui.shimmer > 0 && (<>
+          <SliderRow label="SHIMMER SPEED" value={ui.shimmerSpeed} min={0.5} max={8} step={0.5} unit="s"
             onChange={v => setUI('shimmerSpeed', v)} />
-        )}
+          <SliderRow label="SHIMMER PULSES" value={ui.shimmerPulses} min={1} max={4} unit=""
+            onChange={v => setUI('shimmerPulses', v)} />
+        </>)}
 
         {lightMode && (
           <>
@@ -117,7 +119,7 @@ export default function SettingsPage() {
           onClick={() => {
             [
               ['borderWidth', 1], ['radius', 8], ['glowSize', 16],
-              ['canvasTint', 0.58], ['borderTint', 0], ['shimmer', 0], ['shimmerSpeed', 4], ['fontSize', 1.0],
+              ['canvasTint', 0.58], ['borderTint', 0], ['shimmer', 0], ['shimmerSpeed', 2], ['shimmerPulses', 1], ['fontSize', 1.0],
             ].forEach(([k, v]) => setUI(k, v));
           }}>
           RESET DEFAULTS

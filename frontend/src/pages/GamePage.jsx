@@ -416,7 +416,7 @@ export default function GamePage() {
         </div>
         <button
           className="action-btn"
-          style={{ marginRight: '36px' }}
+          style={{ marginRight: '8px' }}
           onPointerDown={() => {
             if (!challengeActiveRef.current && !dialogueActiveRef.current)
               tryTalkNPC(playerRef.current);

@@ -29,7 +29,8 @@
 }
 
 :root {
-  --shimmer-speed: 4s;
+  --shimmer-speed: 2s;
+  --shimmer-gradient: none;
 }
 
 @keyframes shimmer-spin {
@@ -41,32 +42,19 @@
 }
 
 /*
-  Sits OUTSIDE the card by --border-w so the shimmer ring lands exactly
-  on top of the existing solid border, replacing it visually when opacity > 0.
-  Mask XOR punches out the interior so the gradient is only visible
-  in the border-width ring — no bleed into the card content.
+  inset: 0  →  ::after sits exactly over the card's border-box
+  padding: --border-w  →  mask ring = exactly one border-width thick
+  border-radius: --radius  →  outer ring edge matches card corners perfectly
+  Gradient is generated in JS (applyUI) so it can use var(--accent) + color-mix
+  for accent-aware pulses that update automatically on theme change.
 */
 .card::after {
   content: '';
   position: absolute;
-  inset: calc(-1 * var(--border-w));
-  border-radius: calc(var(--radius) + var(--border-w));
+  inset: 0;
+  border-radius: var(--radius);
   padding: var(--border-w);
-  background: conic-gradient(
-    from var(--shimmer-angle),
-    transparent       0deg,
-    #001a66          25deg,
-    #0052cc          50deg,
-    #0099ff          70deg,
-    #66ccff          82deg,
-    #ffffff           90deg,
-    #66ccff          98deg,
-    #0099ff          110deg,
-    #0052cc          130deg,
-    #001a66          155deg,
-    transparent      180deg,
-    transparent      360deg
-  );
+  background: var(--shimmer-gradient);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
