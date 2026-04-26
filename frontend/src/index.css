@@ -39,22 +39,26 @@
 .card::after {
   content: '';
   position: absolute;
-  inset: -1px;
-  border-radius: calc(var(--radius) + 1px);
-  border: 2px solid transparent;
-  background:
-    conic-gradient(
-      from var(--shimmer-angle),
-      transparent    0deg,
-      #1a6fff       40deg,
-      #60b8ff       72deg,
-      #ffffff       90deg,
-      #60b8ff      108deg,
-      #1a6fff      140deg,
-      transparent  180deg,
-      transparent  360deg
-    ) border-box,
-    transparent padding-box;
+  inset: 0;
+  border-radius: var(--radius);
+  padding: calc(var(--border-w) + 1px);
+  background: conic-gradient(
+    from var(--shimmer-angle),
+    transparent    0deg,
+    #1a6fff       40deg,
+    #60b8ff       72deg,
+    #ffffff       90deg,
+    #60b8ff      108deg,
+    #1a6fff      140deg,
+    transparent  180deg,
+    transparent  360deg
+  );
+  /* mask punches out the interior, leaving only the padding ring visible */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   opacity: var(--shimmer-str);
   pointer-events: none;
   animation: shimmer-spin 2.5s linear infinite;
