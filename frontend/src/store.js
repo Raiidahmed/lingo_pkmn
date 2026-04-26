@@ -11,9 +11,16 @@ export const useStore = create((set, get) => ({
   resumeMode: false,
   save: null,   // { snapshot, status } from API
   language: 'es',
+  lightMode: localStorage.getItem('lingo_light_mode') === '1',
 
   setScreen: (screen) => set({ screen }),
   setLanguage: (language) => set({ language }),
+  toggleLightMode: () => set(s => {
+    const next = !s.lightMode;
+    localStorage.setItem('lingo_light_mode', next ? '1' : '0');
+    document.documentElement.classList.toggle('light-mode', next);
+    return { lightMode: next };
+  }),
 
   login: (user, token, saveData = null) => {
     localStorage.setItem('lingo_token', token);

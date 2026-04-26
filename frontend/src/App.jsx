@@ -11,7 +11,11 @@ import GameOverPage from './pages/GameOverPage.jsx';
 import StatusPage from './pages/StatusPage.jsx';
 
 export default function App() {
-  const { screen, login, setScreen } = useStore();
+  const { screen, login, setScreen, lightMode } = useStore();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('light-mode', lightMode);
+  }, [lightMode]);
 
   useEffect(() => {
     const token = localStorage.getItem('lingo_token');

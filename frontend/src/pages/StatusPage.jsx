@@ -122,22 +122,22 @@ export default function StatusPage() {
           <>
             <div className="card-title">LEVELS — JAPANESE</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <button
-                className="btn"
-                style={{
-                  padding: '10px 12px',
-                  fontSize: 8,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-                onClick={() => startGame(1, false)}
-              >
-                <span>1.&nbsp;
-                  <span style={{ fontFamily: 'var(--font-ja)', fontSize: 13 }}>あいうえお</span>
-                  &nbsp;— The Five Vowels
-                </span>
-              </button>
+              {[
+                { n: 1, ja: 'あいうえお', en: 'The Five Vowels' },
+                { n: 2, ja: '曜日',       en: 'Days of the Week' },
+                { n: 3, ja: '数字',       en: 'Numbers' },
+                { n: 4, ja: '動物',       en: 'Animals' },
+                { n: 5, ja: '天気',       en: 'Weather' },
+              ].map(({ n, ja, en }) => (
+                <button
+                  key={n}
+                  className="btn"
+                  style={{ padding: '10px 12px', fontSize: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  onClick={() => startGame(n, false)}
+                >
+                  <span>{n}.&nbsp;<span style={{ fontFamily: 'var(--font-ja)', fontSize: 13 }}>{ja}</span>&nbsp;— {en}</span>
+                </button>
+              ))}
             </div>
           </>
         ) : (

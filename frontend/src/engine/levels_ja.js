@@ -1,15 +1,12 @@
 // Japanese levels — TILE: FLOOR=0, WALL=1, DOOR_C=2, DOOR_O=3, CHEST_C=4, CHEST_O=5, STAIRS=6, RUG=7
 
 const LEVELS_JA = [
+
+  // ─── Level 1: あいうえお ───────────────────────────────────────────────────────
   {
     id: 1,
     name: 'あいうえお',
     playerStart: { col: 7, row: 10 },
-
-    // 15 × 13 grid
-    // Row 3 is a wall barrier with 5 challenge doors (cols 2,5,8,11,13)
-    // Upper zone (rows 1-2) holds the stairs; reached only through solved doors
-    // Lower zone (rows 4-11) has 3 chests and the player start
     map: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
@@ -25,7 +22,6 @@ const LEVELS_JA = [
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ],
-
     locks: {
       '2,3':  { type: 'door',  challengeId: 0 },
       '5,3':  { type: 'door',  challengeId: 1 },
@@ -36,95 +32,197 @@ const LEVELS_JA = [
       '12,7': { type: 'chest', challengeId: 6 },
       '5,9':  { type: 'chest', challengeId: 7 },
     },
-
-    // display: large character shown above the prompt (rendered in Noto Sans JP)
-    // choiceStyle: 'hiragana' → choices rendered larger in Noto Sans JP
     challenges: [
-      {
-        display: 'あ',
-        prompt: 'What sound does this hiragana make?',
-        choices: ['a', 'i', 'u', 'e'],
-        answer: 0,
-        hint: 'The very first vowel in Japanese.',
-        reward: "'あ' is the sound 'a'",
-      },
-      {
-        display: 'い',
-        prompt: 'What sound does this hiragana make?',
-        choices: ['e', 'i', 'u', 'o'],
-        answer: 1,
-        hint: 'Think of the English word "eat".',
-        reward: "'い' is the sound 'i'",
-      },
-      {
-        display: 'う',
-        prompt: 'What sound does this hiragana make?',
-        choices: ['a', 'o', 'u', 'e'],
-        answer: 2,
-        hint: 'Like "oo" in moon.',
-        reward: "'う' is the sound 'u'",
-      },
-      {
-        display: 'え',
-        prompt: 'What sound does this hiragana make?',
-        choices: ['a', 'e', 'i', 'u'],
-        answer: 1,
-        hint: 'Like the "e" in egg.',
-        reward: "'え' is the sound 'e'",
-      },
-      {
-        display: 'お',
-        prompt: 'What sound does this hiragana make?',
-        choices: ['a', 'i', 'o', 'u'],
-        answer: 2,
-        hint: 'Like "oh!" in English.',
-        reward: "'お' is the sound 'o'",
-      },
-      {
-        prompt: "Which hiragana makes the sound 'a'?",
-        choices: ['い', 'う', 'あ', 'え'],
-        answer: 2,
-        choiceStyle: 'hiragana',
-        hint: 'It was behind the first door.',
-        reward: "'あ' is the sound 'a'",
-      },
-      {
-        prompt: "Which hiragana makes the sound 'i'?",
-        choices: ['う', 'い', 'お', 'あ'],
-        answer: 1,
-        choiceStyle: 'hiragana',
-        hint: 'The second vowel — like "eat".',
-        reward: "'い' is the sound 'i'",
-      },
-      {
-        prompt: "Which hiragana makes the sound 'e'?",
-        choices: ['お', 'う', 'あ', 'え'],
-        answer: 3,
-        choiceStyle: 'hiragana',
-        hint: 'The fourth vowel — like "egg".',
-        reward: "'え' is the sound 'e'",
-      },
+      { display: 'あ', prompt: 'What sound does this hiragana make?', choices: ['a','i','u','e'], answer: 0, hint: 'The very first vowel in Japanese.', reward: "'あ' is the sound 'a'" },
+      { display: 'い', prompt: 'What sound does this hiragana make?', choices: ['e','i','u','o'], answer: 1, hint: 'Think of the English word "eat".', reward: "'い' is the sound 'i'" },
+      { display: 'う', prompt: 'What sound does this hiragana make?', choices: ['a','o','u','e'], answer: 2, hint: 'Like "oo" in moon.', reward: "'う' is the sound 'u'" },
+      { display: 'え', prompt: 'What sound does this hiragana make?', choices: ['a','e','i','u'], answer: 1, hint: 'Like the "e" in egg.', reward: "'え' is the sound 'e'" },
+      { display: 'お', prompt: 'What sound does this hiragana make?', choices: ['a','i','o','u'], answer: 2, hint: 'Like "oh!" in English.', reward: "'お' is the sound 'o'" },
+      { prompt: "Which hiragana makes the sound 'a'?", choices: ['い','う','あ','え'], answer: 2, choiceStyle: 'hiragana', hint: 'It was behind the first door.', reward: "'あ' is the sound 'a'" },
+      { prompt: "Which hiragana makes the sound 'i'?", choices: ['う','い','お','あ'], answer: 1, choiceStyle: 'hiragana', hint: 'The second vowel — like "eat".', reward: "'い' is the sound 'i'" },
+      { prompt: "Which hiragana makes the sound 'e'?", choices: ['お','う','あ','え'], answer: 3, choiceStyle: 'hiragana', hint: 'The fourth vowel — like "egg".', reward: "'え' is the sound 'e'" },
     ],
-
     npcs: [
-      {
-        col: 12,
-        row: 10,
-        name: 'SENSEI',
-        label: 'S',
-        color: '#e8306a',
-        dialogue: [
-          'Welcome, student.',
-          'This is the Hall of Vowels.',
-          'Five doors. Five sounds.',
-          'あ い う え お.',
-          'Each hiragana is one syllable.',
-          'The chests test if you can write them.',
-          'Master all eight. The path opens.',
-        ],
-      },
+      { col: 12, row: 10, name: 'SENSEI', label: 'S', color: '#e8306a', dialogue: ['Welcome, student.', 'This is the Hall of Vowels.', 'Five doors. Five sounds.', 'あ い う え お.', 'Each hiragana is one syllable.', 'The chests test if you can write them.', 'Master all eight. The path opens.'] },
     ],
   },
+
+  // ─── Level 2: Days of the Week ────────────────────────────────────────────────
+  {
+    id: 2,
+    name: '曜日 — Days of the Week',
+    playerStart: { col: 7, row: 10 },
+    map: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,2,1,2,1,2,1,2,1,2,1,2,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,2,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    locks: {
+      '2,3':  { type: 'door', challengeId: 0 },
+      '4,3':  { type: 'door', challengeId: 1 },
+      '6,3':  { type: 'door', challengeId: 2 },
+      '8,3':  { type: 'door', challengeId: 3 },
+      '10,3': { type: 'door', challengeId: 4 },
+      '12,3': { type: 'door', challengeId: 5 },
+      '7,7':  { type: 'door', challengeId: 6 },
+    },
+    challenges: [
+      { display: '月', prompt: 'Which day of the week is this kanji?', choices: ['Monday','Tuesday','Wednesday','Friday'], answer: 0, hint: '月 means "moon" — Monday is moon-day.', reward: "'月' is Monday (月曜日)" },
+      { display: '火', prompt: 'Which day of the week is this kanji?', choices: ['Monday','Tuesday','Thursday','Saturday'], answer: 1, hint: '火 means "fire".', reward: "'火' is Tuesday (火曜日)" },
+      { display: '水', prompt: 'Which day of the week is this kanji?', choices: ['Tuesday','Wednesday','Thursday','Sunday'], answer: 1, hint: '水 means "water".', reward: "'水' is Wednesday (水曜日)" },
+      { display: '木', prompt: 'Which day of the week is this kanji?', choices: ['Monday','Wednesday','Thursday','Friday'], answer: 2, hint: '木 means "tree" or "wood".', reward: "'木' is Thursday (木曜日)" },
+      { display: '金', prompt: 'Which day of the week is this kanji?', choices: ['Friday','Saturday','Sunday','Monday'], answer: 0, hint: '金 means "gold".', reward: "'金' is Friday (金曜日)" },
+      { display: '土', prompt: 'Which day of the week is this kanji?', choices: ['Thursday','Friday','Saturday','Sunday'], answer: 2, hint: '土 means "earth" or "soil".', reward: "'土' is Saturday (土曜日)" },
+      { display: '日', prompt: 'Which day of the week is this kanji?', choices: ['Friday','Saturday','Sunday','Monday'], answer: 2, hint: '日 means "sun" or "day".', reward: "'日' is Sunday (日曜日)" },
+    ],
+    npcs: [
+      { col: 12, row: 9, name: 'CALENDAR SAGE', label: 'S', color: '#6a9ae8', dialogue: ['Each day has a kanji.', '月火水木金土日.', 'Moon, Fire, Water, Wood, Gold, Earth, Sun.', 'Seven symbols. Seven days.', 'Learn them and time will speak to you.'] },
+    ],
+  },
+
+  // ─── Level 3: Numbers 1–10 ────────────────────────────────────────────────────
+  {
+    id: 3,
+    name: '数字 — Numbers',
+    playerStart: { col: 7, row: 10 },
+    map: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,2,1,1,2,1,1,2,1,1,2,1,2,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,4,0,0,0,0,0,0,0,0,0,4,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,4,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    locks: {
+      '2,3':  { type: 'door',  challengeId: 0 },
+      '5,3':  { type: 'door',  challengeId: 1 },
+      '8,3':  { type: 'door',  challengeId: 2 },
+      '11,3': { type: 'door',  challengeId: 3 },
+      '13,3': { type: 'door',  challengeId: 4 },
+      '2,7':  { type: 'chest', challengeId: 5 },
+      '12,7': { type: 'chest', challengeId: 6 },
+      '5,9':  { type: 'chest', challengeId: 7 },
+    },
+    challenges: [
+      { prompt: 'What is 1 in Japanese?', choices: ['いち','に','さん','よん'], answer: 0, choiceStyle: 'hiragana', hint: 'Sounds like "each".', reward: "'いち' is 1" },
+      { prompt: 'What is 3 in Japanese?', choices: ['に','さん','よん','ご'], answer: 1, choiceStyle: 'hiragana', hint: 'Sounds like "sun".', reward: "'さん' is 3" },
+      { prompt: 'What is 5 in Japanese?', choices: ['ご','ろく','なな','はち'], answer: 0, choiceStyle: 'hiragana', hint: 'Short, like "go!".', reward: "'ご' is 5" },
+      { prompt: 'What is 7 in Japanese?', choices: ['ろく','なな','はち','きゅう'], answer: 1, choiceStyle: 'hiragana', hint: 'Like the name "Nana".', reward: "'なな' is 7" },
+      { prompt: 'What is 10 in Japanese?', choices: ['きゅう','じゅう','いち','に'], answer: 1, choiceStyle: 'hiragana', hint: 'Like "juice" without the e.', reward: "'じゅう' is 10" },
+      { display: 'に', prompt: 'What number is this?', choices: ['1','2','3','4'], answer: 1, hint: 'The second step.', reward: "'に' is 2" },
+      { display: 'よん', prompt: 'What number is this?', choices: ['3','4','5','6'], answer: 1, hint: 'Four seasons in a year.', reward: "'よん' is 4" },
+      { display: 'はち', prompt: 'What number is this?', choices: ['6','7','8','9'], answer: 2, hint: 'An octopus has this many arms.', reward: "'はち' is 8" },
+    ],
+    npcs: [
+      { col: 12, row: 9, name: 'NUMBERS MASTER', label: 'S', color: '#e8c030', dialogue: ['いち に さん し ご...', '...ろく なな はち きゅう じゅう.', 'One to ten. The foundation of counting.', 'Master these and you can count anything.'] },
+    ],
+  },
+
+  // ─── Level 4: Animals ─────────────────────────────────────────────────────────
+  {
+    id: 4,
+    name: '動物 — Animals',
+    playerStart: { col: 7, row: 10 },
+    map: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,2,0,0,2,0,6,0,2,0,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,4,0,0,0,0,0,0,0,0,0,4,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,4,0,0,0,0,4,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    locks: {
+      '2,3':  { type: 'door',  challengeId: 0 },
+      '5,3':  { type: 'door',  challengeId: 1 },
+      '9,3':  { type: 'door',  challengeId: 2 },
+      '12,3': { type: 'door',  challengeId: 3 },
+      '2,7':  { type: 'chest', challengeId: 4 },
+      '12,7': { type: 'chest', challengeId: 5 },
+      '4,9':  { type: 'chest', challengeId: 6 },
+      '9,9':  { type: 'chest', challengeId: 7 },
+    },
+    challenges: [
+      { display: 'いぬ', prompt: 'What does this word mean?', choices: ['cat','dog','fish','bird'], answer: 1, hint: "Man's best friend.", reward: "'いぬ' means dog" },
+      { display: 'ねこ', prompt: 'What does this word mean?', choices: ['rabbit','horse','cat','mouse'], answer: 2, hint: 'It purrs.', reward: "'ねこ' means cat" },
+      { display: 'さかな', prompt: 'What does this word mean?', choices: ['fish','bird','frog','bear'], answer: 0, hint: 'Lives in water.', reward: "'さかな' means fish" },
+      { display: 'とり', prompt: 'What does this word mean?', choices: ['dog','bird','horse','pig'], answer: 1, hint: 'It has wings and feathers.', reward: "'とり' means bird" },
+      { prompt: "Which word means 'rabbit'?", choices: ['うさぎ','かえる','ぞう','ねずみ'], answer: 0, choiceStyle: 'hiragana', hint: 'Long ears, hops around.', reward: "'うさぎ' means rabbit" },
+      { prompt: "Which word means 'frog'?", choices: ['うさぎ','かえる','うし','ぶた'], answer: 1, choiceStyle: 'hiragana', hint: 'Green, lives near ponds.', reward: "'かえる' means frog" },
+      { prompt: "Which word means 'elephant'?", choices: ['さる','ぞう','うま','ねこ'], answer: 1, choiceStyle: 'hiragana', hint: 'Largest land animal.', reward: "'ぞう' means elephant" },
+      { prompt: "Which word means 'horse'?", choices: ['うし','ぶた','うま','さる'], answer: 2, choiceStyle: 'hiragana', hint: 'Gallops and neighs.', reward: "'うま' means horse" },
+    ],
+    npcs: [
+      { col: 12, row: 10, name: 'ANIMAL KEEPER', label: 'S', color: '#30c870', dialogue: ['The animal kingdom speaks Japanese too.', 'いぬ、ねこ、さかな、とり...', 'Every creature has a name.', 'Learn them and the wild will greet you.'] },
+    ],
+  },
+
+  // ─── Level 5: Weather ─────────────────────────────────────────────────────────
+  {
+    id: 5,
+    name: '天気 — Weather',
+    playerStart: { col: 7, row: 10 },
+    map: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,2,0,0,2,0,0,0,2,0,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,4,0,0,0,0,4,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,4,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    locks: {
+      '2,4':  { type: 'door',  challengeId: 0 },
+      '5,4':  { type: 'door',  challengeId: 1 },
+      '9,4':  { type: 'door',  challengeId: 2 },
+      '12,4': { type: 'door',  challengeId: 3 },
+      '4,7':  { type: 'chest', challengeId: 4 },
+      '9,7':  { type: 'chest', challengeId: 5 },
+      '6,9':  { type: 'chest', challengeId: 6 },
+    },
+    challenges: [
+      { display: 'はれ', prompt: 'What does this weather word mean?', choices: ['rainy','cloudy','sunny','snowy'], answer: 2, hint: 'A perfect day outside.', reward: "'はれ' means sunny / clear" },
+      { display: 'くもり', prompt: 'What does this weather word mean?', choices: ['sunny','cloudy','windy','stormy'], answer: 1, hint: 'Grey skies, no rain yet.', reward: "'くもり' means cloudy" },
+      { display: 'あめ', prompt: 'What does this weather word mean?', choices: ['snow','wind','rain','fog'], answer: 2, hint: 'Bring an umbrella.', reward: "'あめ' means rain" },
+      { display: 'ゆき', prompt: 'What does this weather word mean?', choices: ['rain','hail','sleet','snow'], answer: 3, hint: 'White and cold, falls in winter.', reward: "'ゆき' means snow" },
+      { prompt: "Which word means 'hot'?", choices: ['さむい','あつい','かぜ','くもり'], answer: 1, choiceStyle: 'hiragana', hint: 'Like summer heat.', reward: "'あつい' means hot" },
+      { prompt: "Which word means 'cold'?", choices: ['あつい','はれ','さむい','あめ'], answer: 2, choiceStyle: 'hiragana', hint: 'Bundle up!', reward: "'さむい' means cold" },
+      { prompt: "Which word means 'wind'?", choices: ['ゆき','かぜ','あめ','はれ'], answer: 1, choiceStyle: 'hiragana', hint: 'It rustles the leaves.', reward: "'かぜ' means wind" },
+    ],
+    npcs: [
+      { col: 12, row: 10, name: 'WEATHER WATCHER', label: 'S', color: '#30b8e8', dialogue: ['Look to the sky, student.', 'はれ、くもり、あめ、ゆき...', 'Sunny, cloudy, rain, snow.', 'Weather shapes every day in Japan.', 'Learn to read the sky in Japanese.'] },
+    ],
+  },
+
 ];
 
 export function getLevel(n) {

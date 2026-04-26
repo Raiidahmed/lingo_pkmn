@@ -3,7 +3,7 @@ import { THEMES } from '../themes.js';
 import { api } from '../api.js';
 
 export default function SettingsPage() {
-  const { setScreen, theme, setTheme, user } = useStore();
+  const { setScreen, theme, setTheme, user, lightMode, toggleLightMode } = useStore();
 
   function handleTheme(themeId) {
     setTheme(themeId);
@@ -33,6 +33,31 @@ export default function SettingsPage() {
               <span className="swatch-label">{t.label.toUpperCase()}</span>
             </div>
           ))}
+        </div>
+
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <div className="card-title" style={{ marginBottom: 12 }}>BACKGROUND</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[{ id: 'dark', label: 'DARK' }, { id: 'light', label: 'LIGHT' }].map(opt => {
+              const active = opt.id === 'light' ? lightMode : !lightMode;
+              return (
+                <button
+                  key={opt.id}
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    padding: '10px 8px',
+                    fontSize: 7,
+                    borderColor: active ? 'var(--accent)' : undefined,
+                    color: active ? 'var(--accent)' : undefined,
+                  }}
+                  onClick={() => { if (active) return; toggleLightMode(); }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
