@@ -11,8 +11,12 @@ export const DEFAULT_THEME = THEMES[0];
 
 export function applyTheme(themeId) {
   const t = THEMES.find(t => t.id === themeId) || THEMES[0];
+  return applyRawTheme(t);
+}
+
+export function applyRawTheme(t) {
   const root = document.documentElement;
-  root.style.setProperty('--accent', t.accent);
+  root.style.setProperty('--accent',      t.accent);
   root.style.setProperty('--accent-dark', t.accentDark);
   root.style.setProperty('--accent-glow', t.glow);
   return t;

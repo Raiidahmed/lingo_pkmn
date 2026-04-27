@@ -25,7 +25,7 @@
 @property --shimmer-angle {
   syntax: '<angle>';
   initial-value: 0deg;
-  inherits: false;
+  inherits: true;
 }
 
 :root {
@@ -34,6 +34,11 @@
 
 @keyframes shimmer-spin {
   to { --shimmer-angle: 360deg; }
+}
+
+/* Animate on :root so all cards share one timeline — keeps them in sync */
+:root {
+  animation: shimmer-spin var(--shimmer-speed) linear infinite;
 }
 
 .card {
@@ -64,7 +69,6 @@
   mask-composite: exclude;
   opacity: var(--shimmer-str, 0);
   pointer-events: none;
-  animation: shimmer-spin var(--shimmer-speed) linear infinite;
 }
 
 /* ── Playground slider ──────────────────────────────────────────────────── */

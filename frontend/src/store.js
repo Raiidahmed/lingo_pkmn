@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { THEMES, DEFAULT_THEME, applyTheme } from './themes.js';
+import { THEMES, DEFAULT_THEME, applyTheme, applyRawTheme } from './themes.js';
 
 function buildShimmerGradient(pulses) {
   const step = 360 / pulses;
@@ -72,6 +72,7 @@ export const useStore = create((set, get) => ({
     shimmer:       0,  // 0–100, animated gradient shimmer on card borders
     shimmerSpeed:  2,  // 0.5–8s, rotation period
     shimmerPulses: 1,  // 1–4, number of bright sweeps per rotation
+    customColors:  JSON.parse(localStorage.getItem('lingo_custom_colors') || '[]'),
     fontSize:    1.0,  // 0.75–1.5, page zoom scale
   },
 
@@ -102,6 +103,23 @@ export const useStore = create((set, get) => ({
     localStorage.removeItem('lingo_token');
     set({ user: null, sessionToken: null, screen: 'login', gameResult: null, save: null });
   },
+
+  setCustomTheme: (themeObj) => {
+    const t = applyRawTheme(themeObj);
+    set(s => ({ theme: t }));
+  },
+
+  addCustomColor: (colorObj) => set(s => {
+    const colors = [...(s.ui.customColors || []), colorObj];
+    localStorage.setItem('lingo_custom_colors', JSON.stringify(colors));
+    return { ui: { ...s.ui, customColors: colors } };
+  }),
+
+  removeCustomColor: (idx) => set(s => {
+    const colors = (s.ui.customColors || []).filter((_, i) => i !== idx);
+    localStorage.setItem('lingo_custom_colors', JSON.stringify(colors));
+    return { ui: { ...s.ui, customColors: colors } };
+  }),
 
   setTheme: (themeId) => {
     const theme = applyTheme(themeId);

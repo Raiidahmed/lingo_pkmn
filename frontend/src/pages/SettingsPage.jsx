@@ -1,6 +1,7 @@
 import { useStore } from '../store.js';
 import { THEMES } from '../themes.js';
 import { api } from '../api.js';
+import ColorWheel from '../components/ColorWheel.jsx';
 
 function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }) {
   return (
@@ -26,7 +27,7 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }) {
 }
 
 export default function SettingsPage() {
-  const { setScreen, theme, setTheme, user, lightMode, toggleLightMode, ui, setUI } = useStore();
+  const { setScreen, theme, setTheme, setCustomTheme, addCustomColor, removeCustomColor, user, lightMode, toggleLightMode, ui, setUI } = useStore();
 
   function handleTheme(themeId) {
     setTheme(themeId);
@@ -51,6 +52,20 @@ export default function SettingsPage() {
               <span className="swatch-label">{t.label.toUpperCase()}</span>
             </div>
           ))}
+          {(ui.customColors || []).map((t, i) => (
+            <div key={t.id} className="theme-swatch" style={{ position: 'relative' }}>
+              <div
+                className={`swatch-circle${theme.id === t.id ? ' active' : ''}`}
+                style={{ background: t.accent }}
+                onClick={() => setCustomTheme(t)}
+              />
+              <button
+                onClick={() => removeCustomColor(i)}
+                style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: 'var(--surface2)', border: '1px solid var(--border-col)', color: 'var(--text-dim)', fontSize: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1, fontFamily: 'monospace' }}
+              >×</button>
+              <span className="swatch-label" style={{ fontSize: 5 }}>{t.label.slice(0, 6)}</span>
+            </div>
+          ))}
         </div>
 
         {div}
@@ -68,6 +83,12 @@ export default function SettingsPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* ── Color mixer ── */}
+      <div className="card">
+        <div className="card-title">COLOR MIXER</div>
+        <ColorWheel onAdd={(t) => { addCustomColor(t); setCustomTheme(t); }} />
       </div>
 
       {/* ── UI Playground ── */}
