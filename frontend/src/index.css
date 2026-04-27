@@ -94,7 +94,7 @@
   background: var(--accent);
   border: 2px solid #fff;
   cursor: pointer;
-  box-shadow: 0 0 0 1px var(--border-col), 0 0 12px var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--border-col);
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 .ui-slider-thumb:hover {
@@ -102,7 +102,7 @@
 }
 .ui-slider-thumb:active {
   transform: scale(1.25);
-  box-shadow: 0 0 0 1px var(--border-col), 0 0 18px var(--accent);
+  box-shadow: 0 0 0 1px var(--border-col);
 }
 
 .ui-slider-thumb:focus-visible {
@@ -138,7 +138,6 @@
 .seg-btn.active {
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 /* ── Settings sub-section heading ───────────────────────────────────────── */
@@ -157,7 +156,6 @@
   width: 8px;
   height: 8px;
   background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
 }
 .subsection-title::after {
   content: '';
@@ -182,7 +180,6 @@
   font-variant-numeric: tabular-nums;
   min-width: 48px;
   text-align: right;
-  text-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* Light mode — overrides all surface/text vars; accent stays user-chosen */
@@ -254,7 +251,6 @@ body {
   margin: 0 10px 3px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .subtitle {
@@ -501,7 +497,7 @@ canvas#dungeon {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 0 calc(var(--glow-size) * 2) var(--accent-glow);
+  box-shadow: none;
 }
 
 .challenge-label {
@@ -675,7 +671,6 @@ canvas#dungeon {
 .color-preview-code {
   font-size: 9px;
   letter-spacing: 3px;
-  text-shadow: 0 0 10px currentColor;
   font-family: monospace;
   text-align: center;
 }
@@ -750,7 +745,7 @@ canvas#dungeon {
 
 .theme-swatch.active .swatch-circle {
   border-color: var(--text);
-  box-shadow: 0 0 18px var(--accent-glow), inset 0 -8px 0 rgba(0,0,0,0.18);
+  box-shadow: inset 0 -8px 0 rgba(0,0,0,0.18);
 }
 
 .theme-swatch.active .swatch-circle::after {

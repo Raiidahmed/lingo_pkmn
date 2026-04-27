@@ -187,12 +187,11 @@ export default function SettingsPage() {
                   width: 44, height: 44, borderRadius: '50%',
                   background: t.accent,
                   border: theme.id === t.id ? '3px solid var(--text)' : '2px solid var(--border-col)',
-                  boxShadow: theme.id === t.id ? `0 0 16px ${t.accent}` : 'none',
                   cursor: 'pointer',
                   padding: 0,
                   margin: '0 auto',
                   display: 'block',
-                  transition: 'transform 120ms ease, box-shadow 120ms ease',
+                  transition: 'transform 120ms ease',
                 }}
               />
             ))}
@@ -206,7 +205,6 @@ export default function SettingsPage() {
                     width: 44, height: 44, borderRadius: '50%',
                     background: t.accent,
                     border: theme.id === t.id ? '3px solid var(--text)' : '2px solid var(--border-col)',
-                    boxShadow: theme.id === t.id ? `0 0 16px ${t.accent}` : 'none',
                     cursor: 'pointer',
                     padding: 0,
                     transition: 'transform 120ms ease',
@@ -322,7 +320,7 @@ export default function SettingsPage() {
         <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>
           Logged in as
         </div>
-        <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6, textShadow: '0 0 8px var(--accent-glow)' }}>
+        <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6 }}>
           {user?.username ?? '?'}
         </div>
       </div>
