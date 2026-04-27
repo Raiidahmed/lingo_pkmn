@@ -8,8 +8,8 @@ import ColorWheel from '../components/ColorWheel.jsx';
 import GameBoardPreview from '../components/GameBoardPreview.jsx';
 
 const UI_DEFAULTS = {
-  borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0,
-  borderTint: 0, fontSize: 1.0,
+  borderWidth: 1.47, radius: 4.17, glowSize: 14.81, canvasTint: 0.57,
+  borderTint: 25.1, fontSize: 1.03,
 };
 
 const PRESET_THEME_IDS = new Set(THEMES.map(t => t.id));

@@ -7,7 +7,15 @@ export const THEMES = [
   { id: 'sky',     label: 'Sky',     accent: '#0090c4', accentDark: '#005a8a', accentRgb: '0,144,196', glow: 'rgba(0,144,196,0.3)' },
 ];
 
-export const DEFAULT_THEME = THEMES[0];
+export const DEFAULT_THEME = {
+  id: 'custom_#0072ff',
+  label: '0072FF',
+  accent: '#0072ff',
+  accentDark: '#004aa6',
+  accentRgb: '0,114,255',
+  glow: 'rgba(0,114,255,0.35)',
+  custom: true,
+};
 
 function hexToRgbString(hex) {
   const clean = hex?.replace('#', '');
@@ -17,7 +25,7 @@ function hexToRgbString(hex) {
 }
 
 export function applyTheme(themeId) {
-  const t = THEMES.find(t => t.id === themeId) || THEMES[0];
+  const t = THEMES.find(t => t.id === themeId) || DEFAULT_THEME;
   return applyRawTheme(t);
 }
 

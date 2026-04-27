@@ -190,7 +190,7 @@ def create_app():
         if not user:
             return jsonify({"error": "Unauthorized"}), 401
         data = request.get_json(silent=True) or {}
-        theme = str(data.get("theme", "crimson"))
+        theme = str(data.get("theme", "sky"))
         valid = {"crimson", "violet", "teal", "amber", "mint", "sky"}
         if theme not in valid:
             return jsonify({"error": "Invalid theme"}), 400

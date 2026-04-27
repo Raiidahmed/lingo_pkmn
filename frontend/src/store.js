@@ -3,15 +3,22 @@ import { api } from './api.js';
 import { THEMES, DEFAULT_THEME, applyTheme, applyRawTheme } from './themes.js';
 
 const PRESET_THEME_BY_ID = new Map(THEMES.map((theme) => [theme.id, theme]));
+const DEFAULT_LIGHT_MODE = true;
 
 const DEFAULT_UI_STATE = {
-  borderWidth: 1,   // px, 0-8
-  radius: 8,        // px, 0-24
-  glowSize: 16,     // px, 0-48
-  canvasTint: 0,    // 0-1, board blend: dark (0) -> light (1)
-  borderTint: 0,    // 0-100, blend border toward accent color
-  customColors: [],
-  fontSize: 1.0,    // 0.75-1.5, page zoom scale
+  borderWidth: 1.47, // px, 0-8
+  radius: 4.17,      // px, 0-24
+  glowSize: 14.81,   // px, 0-64
+  canvasTint: 0.57,  // 0-1, board blend: dark (0) -> light (1)
+  borderTint: 25.1,  // 0-100, blend border toward accent color
+  customColors: [
+    { id: 'custom_#000000', label: '000000', accent: '#000000', accentDark: '#000000', accentRgb: '0,0,0', glow: 'rgba(0,0,0,0.35)', custom: true },
+    { id: 'custom_#ffffff', label: 'FFFFFF', accent: '#ffffff', accentDark: '#a6a6a6', accentRgb: '255,255,255', glow: 'rgba(255,255,255,0.35)', custom: true },
+    { id: 'custom_#4322ff', label: '4322FF', accent: '#4322ff', accentDark: '#2c16a6', accentRgb: '67,34,255', glow: 'rgba(67,34,255,0.35)', custom: true },
+    { id: 'custom_#003dff', label: '003DFF', accent: '#003dff', accentDark: '#0028a6', accentRgb: '0,61,255', glow: 'rgba(0,61,255,0.35)', custom: true },
+    { id: 'custom_#0072ff', label: '0072FF', accent: '#0072ff', accentDark: '#004aa6', accentRgb: '0,114,255', glow: 'rgba(0,114,255,0.35)', custom: true },
+  ],
+  fontSize: 1.03,    // 0.75-1.5, page zoom scale
 };
 
 let preferenceSyncTimer = null;
@@ -156,7 +163,7 @@ export const useStore = create((set, get) => ({
   resumeMode: false,
   save: null,   // { snapshot, status } from API
   language: 'es',
-  lightMode: false,
+  lightMode: DEFAULT_LIGHT_MODE,
   ui: { ...DEFAULT_UI_STATE },
 
   setScreen: (screen) => set({ screen }),
@@ -215,7 +222,7 @@ export const useStore = create((set, get) => ({
     localStorage.removeItem('lingo_token');
     const ui = { ...DEFAULT_UI_STATE };
     const theme = applyTheme(DEFAULT_THEME.id);
-    applyPreferenceState(theme, ui, false);
+    applyPreferenceState(theme, ui, DEFAULT_LIGHT_MODE);
     set({
       user: null,
       sessionToken: null,
@@ -223,7 +230,7 @@ export const useStore = create((set, get) => ({
       gameResult: null,
       save: null,
       theme,
-      lightMode: false,
+      lightMode: DEFAULT_LIGHT_MODE,
       ui,
     });
   },

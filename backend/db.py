@@ -1,5 +1,77 @@
 import sqlite3
+import json
 from datetime import datetime, timezone
+
+DEFAULT_ACCENT_THEME = "sky"
+DEFAULT_UI_SETTINGS = {
+    "borderWidth": 1.47,
+    "radius": 4.17,
+    "glowSize": 14.81,
+    "canvasTint": 0.57,
+    "borderTint": 25.1,
+    "fontSize": 1.03,
+}
+DEFAULT_CUSTOM_COLORS = [
+    {
+        "id": "custom_#000000",
+        "label": "000000",
+        "accent": "#000000",
+        "accentDark": "#000000",
+        "accentRgb": "0,0,0",
+        "glow": "rgba(0,0,0,0.35)",
+        "custom": True,
+    },
+    {
+        "id": "custom_#ffffff",
+        "label": "FFFFFF",
+        "accent": "#ffffff",
+        "accentDark": "#a6a6a6",
+        "accentRgb": "255,255,255",
+        "glow": "rgba(255,255,255,0.35)",
+        "custom": True,
+    },
+    {
+        "id": "custom_#4322ff",
+        "label": "4322FF",
+        "accent": "#4322ff",
+        "accentDark": "#2c16a6",
+        "accentRgb": "67,34,255",
+        "glow": "rgba(67,34,255,0.35)",
+        "custom": True,
+    },
+    {
+        "id": "custom_#003dff",
+        "label": "003DFF",
+        "accent": "#003dff",
+        "accentDark": "#0028a6",
+        "accentRgb": "0,61,255",
+        "glow": "rgba(0,61,255,0.35)",
+        "custom": True,
+    },
+    {
+        "id": "custom_#0072ff",
+        "label": "0072FF",
+        "accent": "#0072ff",
+        "accentDark": "#004aa6",
+        "accentRgb": "0,114,255",
+        "glow": "rgba(0,114,255,0.35)",
+        "custom": True,
+    },
+]
+DEFAULT_ACTIVE_THEME = {
+    "id": "custom_#0072ff",
+    "label": "0072FF",
+    "accent": "#0072ff",
+    "accentDark": "#004aa6",
+    "accentRgb": "0,114,255",
+    "glow": "rgba(0,114,255,0.35)",
+    "custom": True,
+}
+DEFAULT_LIGHT_MODE = 1
+
+DEFAULT_UI_SETTINGS_JSON = json.dumps(DEFAULT_UI_SETTINGS, separators=(",", ":"))
+DEFAULT_CUSTOM_COLORS_JSON = json.dumps(DEFAULT_CUSTOM_COLORS, separators=(",", ":"))
+DEFAULT_ACTIVE_THEME_JSON = json.dumps(DEFAULT_ACTIVE_THEME, separators=(",", ":"))
 
 
 def _ensure_user_pref_columns(conn):
@@ -34,11 +106,11 @@ def init_db(db_path):
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             username     TEXT NOT NULL,
             username_norm TEXT UNIQUE NOT NULL,
-            accent_theme TEXT NOT NULL DEFAULT 'crimson',
+            accent_theme TEXT NOT NULL DEFAULT 'sky',
             ui_settings_json TEXT NOT NULL DEFAULT '{}',
             custom_colors_json TEXT NOT NULL DEFAULT '[]',
             active_theme_json TEXT,
-            light_mode   INTEGER NOT NULL DEFAULT 0,
+            light_mode   INTEGER NOT NULL DEFAULT 1,
             session_token TEXT UNIQUE,
             levels_completed TEXT NOT NULL DEFAULT '[]',
             created_at   TEXT NOT NULL
@@ -95,11 +167,23 @@ def upsert_user(conn, username):
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
         """
-        INSERT INTO users (username, username_norm, created_at)
-        VALUES (?, ?, ?)
+        INSERT INTO users (
+            username, username_norm, accent_theme, ui_settings_json,
+            custom_colors_json, active_theme_json, light_mode, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(username_norm) DO NOTHING
         """,
-        (canonical, norm, now),
+        (
+            canonical,
+            norm,
+            DEFAULT_ACCENT_THEME,
+            DEFAULT_UI_SETTINGS_JSON,
+            DEFAULT_CUSTOM_COLORS_JSON,
+            DEFAULT_ACTIVE_THEME_JSON,
+            DEFAULT_LIGHT_MODE,
+            now,
+        ),
     )
     return conn.execute(
         "SELECT * FROM users WHERE username_norm=?", (norm,)
