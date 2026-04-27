@@ -8,7 +8,7 @@ import ColorWheel from '../components/ColorWheel.jsx';
 
 const UI_DEFAULTS = {
   borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0.58,
-  borderTint: 0, shimmer: 0, shimmerSpeed: 2, shimmerPulses: 1, fontSize: 1.0,
+  borderTint: 0, fontSize: 1.0,
 };
 
 const PRESET_THEME_IDS = new Set(THEMES.map(t => t.id));
@@ -292,22 +292,6 @@ export default function SettingsPage() {
           <Slider label="HALO SIZE" value={ui.glowSize}
             min={0} max={64} unit="px"
             onChange={v => setUI('glowSize', v)} />
-        </Subsection>
-
-        <Subsection title="SHIMMER">
-          <Slider label="STRENGTH" value={ui.shimmer}
-            min={0} max={100} unit="%"
-            onChange={v => setUI('shimmer', v)} />
-          {ui.shimmer > 0 && (
-            <>
-              <Slider label="SPEED" value={ui.shimmerSpeed}
-                min={0.5} max={8} unit="s"
-                onChange={v => setUI('shimmerSpeed', v)} />
-              <Slider label="PULSES" value={ui.shimmerPulses}
-                min={1} max={4} step={1}
-                onChange={v => setUI('shimmerPulses', Math.round(v))} />
-            </>
-          )}
         </Subsection>
 
         {lightMode && (

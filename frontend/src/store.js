@@ -7,9 +7,6 @@ const DEFAULT_UI_STATE = {
   glowSize:    16,   // px, 0-48
   canvasTint:  0.58, // 0-1, light mode overlay strength
   borderTint:  0,    // 0-100, blend border toward accent color
-  shimmer:       0,  // 0-100, animated gradient shimmer on card borders
-  shimmerSpeed:  2,  // 0.5-8s, rotation period
-  shimmerPulses: 1,  // 1-4, number of bright sweeps per rotation
   customColors:  [],
   fontSize:    1.0,  // 0.75-1.5, page zoom scale
 };
@@ -119,22 +116,11 @@ function applyUI(ui) {
       ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
       : 'var(--border)'
   );
-  el.style.setProperty('--shimmer-str', `${(ui.shimmer ?? 0) / 100}`);
-
-  // Gradient injected via <style> so var(--shimmer-angle) is a live
-  // dependency of a real background property (browser tracks repaints).
-  let styleEl = document.getElementById('lingo-shimmer-style');
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'lingo-shimmer-style';
-    document.head.appendChild(styleEl);
-  }
-  styleEl.textContent = `.card::after { background: ${buildShimmerGradient(ui.shimmerPulses ?? 1)}; }`;
-
-  // Drive the rAF loop: only run while shimmer is visible
-  setShimmerSpeed(ui.shimmerSpeed ?? DEFAULT_UI_STATE.shimmerSpeed);
-  if (ui.shimmer > 0) startShimmerLoop();
-  else stopShimmerLoop();
+  // Shimmer settings were removed from the UI. Keep the effect disabled.
+  el.style.setProperty('--shimmer-str', '0');
+  stopShimmerLoop();
+  const styleEl = document.getElementById('lingo-shimmer-style');
+  if (styleEl) styleEl.remove();
   el.style.setProperty('--ui-scale', `${ui.fontSize ?? DEFAULT_UI_STATE.fontSize}`);
 }
 
@@ -187,10 +173,7 @@ export const useStore = create((set, get) => ({
 
   setCustomTheme: (themeObj) => {
     const t = applyRawTheme(themeObj);
-    set(s => {
-      if (s.ui.shimmer > 0) applyUI({ ...s.ui });
-      return { theme: t };
-    });
+    set(() => ({ theme: t }));
   },
 
   addCustomColor: (colorObj) => set(s => {
@@ -207,11 +190,7 @@ export const useStore = create((set, get) => ({
 
   setTheme: (themeId) => {
     const theme = applyTheme(themeId);
-    set(s => {
-      // Re-generate shimmer gradient so it picks up the new accent color
-      if (s.ui.shimmer > 0) applyUI({ ...s.ui });
-      return { theme, user: s.user ? { ...s.user, accent_theme: theme.id } : s.user };
-    });
+    set(s => ({ theme, user: s.user ? { ...s.user, accent_theme: theme.id } : s.user }));
   },
 
   updateWordBank: (words) => {
