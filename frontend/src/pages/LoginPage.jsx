@@ -64,7 +64,6 @@ export default function LoginPage() {
         style={{ userSelect: 'none', cursor: 'default' }}
       >LINGO</div>
       <div className="page-title" style={{ fontSize: 14, color: 'var(--text)' }}>DUNGEON</div>
-      <div style={{ fontSize: 7, color: '#22cc66', border: '1px solid #22cc66', borderRadius: 4, padding: '4px 10px', letterSpacing: 2 }}>STAGING ENVIRONMENT</div>
       <div className="subtitle" style={{ marginBottom: 24 }}>Learn Spanish. Survive the dungeon.</div>
 
       <div className="card" style={{ maxWidth: 320 }}>

@@ -2,12 +2,6 @@ import { TILE, MAP_W, MAP_H } from './dungeon.js';
 import { loadMouseImage } from './mouseAssets.js';
 
 const T = 32;
-const BOARD_W = MAP_W * T;
-const BOARD_H = MAP_H * T;
-let darkBuffer = null;
-let darkBufferCtx = null;
-let lightBuffer = null;
-let lightBufferCtx = null;
 
 // Deterministic tile variation hash
 function tvar(col, row) {
@@ -212,7 +206,7 @@ function drawChestClosed(ctx, x, y, accent) {
   ctx.strokeRect(x + 3.5, y + 10.5, T - 7, 17);
 }
 
-function drawChestOpen(ctx, x, y) {
+function drawChestOpen(ctx, x, y, displayChar) {
   drawFloor(ctx, x, y, 0, 0);
 
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -240,6 +234,123 @@ function drawChestOpen(ctx, x, y) {
   ctx.fillStyle = '#c8a020';
   ctx.fillRect(x + 4, y + 19, T - 8, 2);
   ctx.fillRect(x + 14, y + 10, 2, 14);
+
+  if (displayChar) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px "Noto Sans JP", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(displayChar, x + T/2, y + 22);
+  }
+}
+
+function drawMouse(ctx, x, y, color, displayChar, isOpen) {
+  drawFloor(ctx, x, y, 0, 0);
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(16, 27, 12, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const bodyColor = color || '#a0a0a0';
+  const earColor = '#ffc0cb';
+
+  // Helper function for paws with toes
+  function drawPaw(px, py, isFront, pcolor) {
+    ctx.fillStyle = pcolor;
+    ctx.beginPath();
+    ctx.ellipse(px, py, isFront ? 2 : 2.5, 1.2, 0, 0, Math.PI * 2); // Base pad
+    ctx.fill();
+    // Tiny toes
+    ctx.beginPath();
+    ctx.arc(px - 1.5, py + 0.5, 0.6, 0, Math.PI * 2);
+    ctx.arc(px,       py + 1.0, 0.6, 0, Math.PI * 2);
+    ctx.arc(px + 1.5, py + 0.5, 0.6, 0, Math.PI * 2);
+    if (!isFront) ctx.arc(px + 2.5, py + 0.0, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Tail
+  ctx.strokeStyle = bodyColor;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(24, 22);
+  ctx.bezierCurveTo(29, 18, 26, 28, 31, 26);
+  ctx.stroke();
+
+  // Far Legs
+  drawPaw(20, 26.5, false, bodyColor); // Far hind
+  drawPaw(10, 26.5, true, bodyColor);  // Far front
+
+  // Body (Elongated fancy mouse)
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  ctx.ellipse(16, 21, 9, 4.5, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head (Pointed snout, looking slightly down/forward)
+  ctx.beginPath();
+  ctx.ellipse(7, 22, 5.5, 3.5, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Near Legs (Connected)
+  // Hind leg thigh
+  ctx.beginPath();
+  ctx.ellipse(18, 23, 4, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawPaw(18, 27.5, false, bodyColor); // Near hind paw
+
+  // Front leg shoulder/arm
+  ctx.beginPath();
+  ctx.ellipse(8, 24, 2, 3, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  drawPaw(8, 27.5, true, bodyColor); // Near front paw
+
+  // Far Ear
+  ctx.beginPath(); ctx.ellipse(9, 17, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = earColor;
+  ctx.beginPath(); ctx.ellipse(9, 17, 1.5, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  
+  // Near Ear
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath(); ctx.ellipse(11.5, 18.5, 3.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = earColor;
+  ctx.beginPath(); ctx.ellipse(11.5, 18.5, 2, 2, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#000000';
+  ctx.beginPath();
+  ctx.arc(6, 20.5, 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nose
+  ctx.fillStyle = earColor;
+  ctx.beginPath();
+  ctx.arc(2, 23, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Whiskers
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(3, 22.5); ctx.lineTo(-2, 21);
+  ctx.moveTo(3, 23.5); ctx.lineTo(-2, 25);
+  ctx.stroke();
+
+  if (isOpen && displayChar) {
+    ctx.fillStyle = '#000000'; // Black font
+    ctx.font = 'normal 8px "Noto Sans JP", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(displayChar, 15.5, 21.5);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  ctx.restore();
 }
 
 function drawStairs(ctx, x, y, exitOpen) {
@@ -492,78 +603,19 @@ function drawPlayer(ctx, x, y, accent) {
   ctx.fillRect(x + 14, y + 14, 4, 1);
 }
 
-function drawMouse(ctx, x, y, color, displayChar, isOpen) {
-  drawFloor(ctx, x, y, 0, 0);
+// ─── Main export ──────────────────────────────────────────────────────────────
 
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.fillRect(x + 7, y + T - 5, T - 14, 4);
+export function render(ctx, state, accentColor, canvasTint = 0) {
+  const { grid, player, exitOpen, particles, npcs, levelN, language, locks, challenges } = state;
+  const light = canvasTint > 0;
 
-  // Body
-  ctx.fillStyle = color;
-  ctx.fillRect(x + 9, y + 16, 14, 10);
-  ctx.fillRect(x + 8, y + 18, 16, 6);
-
-  // Head
-  ctx.fillRect(x + 10, y + 9, 12, 9);
-
-  // Ears
-  ctx.fillRect(x + 8,  y + 3, 5, 8);
-  ctx.fillRect(x + 19, y + 3, 5, 8);
-  ctx.fillStyle = '#e07878';
-  ctx.fillRect(x + 9,  y + 4, 3, 6);
-  ctx.fillRect(x + 20, y + 4, 3, 6);
-
-  // Eyes
-  ctx.fillStyle = '#1a0808';
-  ctx.fillRect(x + 12, y + 12, 2, 2);
-  ctx.fillRect(x + 18, y + 12, 2, 2);
-  ctx.fillStyle = '#ff2222';
-  ctx.fillRect(x + 12, y + 12, 1, 1);
-  ctx.fillRect(x + 18, y + 12, 1, 1);
-
-  // Nose
-  ctx.fillStyle = '#f09090';
-  ctx.fillRect(x + 15, y + 15, 2, 2);
-
-  // Tail
-  ctx.fillStyle = color;
-  ctx.fillRect(x + 23, y + 20, 4, 2);
-  ctx.fillRect(x + 26, y + 18, 2, 3);
-  ctx.fillRect(x + 27, y + 15, 2, 4);
-
-  // Feet
-  ctx.fillStyle = color;
-  ctx.fillRect(x + 9,  y + 24, 5, 4);
-  ctx.fillRect(x + 18, y + 24, 5, 4);
-  ctx.fillStyle = '#e8b898';
-  ctx.fillRect(x + 9,  y + 26, 5, 2);
-  ctx.fillRect(x + 18, y + 26, 5, 2);
-
-  // Display char overlay
-  if (displayChar) {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x + 5, y + 16, T - 10, 9);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9px "Noto Sans JP", monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(displayChar, x + T / 2, y + 21);
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-  }
-}
-
-function drawScene(ctx, state, accentColor, useLightBoard) {
-  const { grid, player, exitOpen, particles, npcs, language, locks, challenges } = state;
-  ctx.clearRect(0, 0, BOARD_W, BOARD_H);
+  ctx.clearRect(0, 0, MAP_W * T, MAP_H * T);
 
   for (let r = 0; r < MAP_H; r++) {
     for (let c = 0; c < MAP_W; c++) {
       const t = grid[r][c];
-      const x = c * T;
-      const y = r * T;
-
+      const x = c * T, y = r * T;
+      
       // Japanese level critter — use pre-generated sprites when ready
       if (language === 'ja' && (t === TILE.CHEST_C || t === TILE.CHEST_O)) {
         const lockKey = `${c},${r}`;
@@ -577,8 +629,9 @@ function drawScene(ctx, state, accentColor, useLightBoard) {
         const img = loadMouseImage(critterColor || '#d0d0d0', imgChar);
 
         if (img.complete && img.naturalWidth > 0) {
-          drawFloor(ctx, x, y, c, r, useLightBoard);
+          drawFloor(ctx, x, y, c, r, light);
           ctx.drawImage(img, x, y, T, T);
+          // For multi-char display (no pre-baked image), overlay text
           if (isOpen && displayChar && displayChar.length > 1) {
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 7px "Noto Sans JP", sans-serif';
@@ -594,15 +647,15 @@ function drawScene(ctx, state, accentColor, useLightBoard) {
       }
 
       switch (t) {
-        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, useLightBoard); break;
-        case TILE.WALL:    drawWall(ctx, x, y, c, r, useLightBoard); break;
+        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, light); break;
+        case TILE.WALL:    drawWall(ctx, x, y, c, r, light); break;
         case TILE.DOOR_C:  drawDoorClosed(ctx, x, y, accentColor); break;
         case TILE.DOOR_O:  drawDoorOpen(ctx, x, y); break;
         case TILE.CHEST_C: drawChestClosed(ctx, x, y, accentColor); break;
-        case TILE.CHEST_O: drawChestOpen(ctx, x, y); break;
+        case TILE.CHEST_O: drawChestOpen(ctx, x, y, ''); break;
         case TILE.STAIRS:  drawStairs(ctx, x, y, exitOpen); break;
         case TILE.RUG:     drawRug(ctx, x, y, c, r); break;
-        default:           drawFloor(ctx, x, y, c, r, useLightBoard);
+        default:           drawFloor(ctx, x, y, c, r);
       }
     }
   }
@@ -612,6 +665,14 @@ function drawScene(ctx, state, accentColor, useLightBoard) {
   }
 
   if (player) drawPlayer(ctx, player.col * T, player.row * T, accentColor);
+
+  // Light mode: subtle unifying tint over already-light tiles
+  if (canvasTint > 0) {
+    ctx.globalAlpha = canvasTint * 0.25;
+    ctx.fillStyle = '#c8dcee';
+    ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
+    ctx.globalAlpha = 1;
+  }
 
   if (particles) {
     for (const p of particles) {
@@ -625,60 +686,8 @@ function drawScene(ctx, state, accentColor, useLightBoard) {
   }
 }
 
-function ensureBlendBuffers() {
-  if (typeof document === 'undefined') return false;
-
-  if (!darkBuffer) {
-    darkBuffer = document.createElement('canvas');
-    darkBufferCtx = darkBuffer.getContext('2d');
-  }
-  if (!lightBuffer) {
-    lightBuffer = document.createElement('canvas');
-    lightBufferCtx = lightBuffer.getContext('2d');
-  }
-  if (!darkBufferCtx || !lightBufferCtx) return false;
-
-  if (darkBuffer.width !== BOARD_W || darkBuffer.height !== BOARD_H) {
-    darkBuffer.width = BOARD_W;
-    darkBuffer.height = BOARD_H;
-  }
-  if (lightBuffer.width !== BOARD_W || lightBuffer.height !== BOARD_H) {
-    lightBuffer.width = BOARD_W;
-    lightBuffer.height = BOARD_H;
-  }
-  return true;
-}
-
-export function render(ctx, state, accentColor, canvasTint = 0) {
-  const blend = Math.max(0, Math.min(1, canvasTint));
-
-  if (blend <= 0) {
-    drawScene(ctx, state, accentColor, false);
-    return;
-  }
-  if (blend >= 1) {
-    drawScene(ctx, state, accentColor, true);
-    return;
-  }
-
-  if (!ensureBlendBuffers()) {
-    drawScene(ctx, state, accentColor, blend >= 0.5);
-    return;
-  }
-
-  drawScene(darkBufferCtx, state, accentColor, false);
-  drawScene(lightBufferCtx, state, accentColor, true);
-
-  ctx.clearRect(0, 0, BOARD_W, BOARD_H);
-  ctx.globalAlpha = 1;
-  ctx.drawImage(darkBuffer, 0, 0);
-  ctx.globalAlpha = blend;
-  ctx.drawImage(lightBuffer, 0, 0);
-  ctx.globalAlpha = 1;
-}
-
 export function getCanvasSize() {
-  return { width: BOARD_W, height: BOARD_H };
+  return { width: MAP_W * T, height: MAP_H * T };
 }
 
 export function drawTile(ctx, x, y, tileType, opts = {}) {
