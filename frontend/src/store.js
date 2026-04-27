@@ -135,9 +135,7 @@ function applyUI(ui) {
   setShimmerSpeed(ui.shimmerSpeed ?? DEFAULT_UI_STATE.shimmerSpeed);
   if (ui.shimmer > 0) startShimmerLoop();
   else stopShimmerLoop();
-
-  const root = document.getElementById('root');
-  if (root) root.style.zoom = ui.fontSize ?? 1;
+  el.style.setProperty('--ui-scale', `${ui.fontSize ?? DEFAULT_UI_STATE.fontSize}`);
 }
 
 export const useStore = create((set, get) => ({

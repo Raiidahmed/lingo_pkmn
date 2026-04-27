@@ -20,6 +20,7 @@
   --border-col: var(--border);
   --glow-size: 16px;
   --shimmer-str: 0;
+  --ui-scale: 1;
   --canvas-light: 0;
 }
 
@@ -66,6 +67,9 @@ input[type="range"].ui-slider {
   border-radius: 3px;
   outline: none;
   cursor: pointer;
+  touch-action: pan-x;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
   background: linear-gradient(
     to right,
     var(--accent) 0%,
@@ -200,7 +204,7 @@ html, body, #root {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 10px;
+  font-size: calc(10px * var(--ui-scale));
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }

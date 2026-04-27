@@ -13,8 +13,10 @@ export default function Slider({
   format,
   onChange,
 }) {
-  const fill = ((value - min) / (max - min)) * 100;
+  const range = max - min;
+  const fill = range === 0 ? 0 : ((value - min) / range) * 100;
   const display = format ? format(value) : `${value}${unit}`;
+  const handleInput = (e) => onChange(Number(e.currentTarget.value));
 
   return (
     <div className="slider-row">
@@ -29,7 +31,8 @@ export default function Slider({
         max={max}
         step={step}
         value={value}
-        onChange={e => onChange(Number(e.target.value))}
+        onInput={handleInput}
+        onChange={handleInput}
         style={{ '--fill': `${fill}%` }}
       />
     </div>

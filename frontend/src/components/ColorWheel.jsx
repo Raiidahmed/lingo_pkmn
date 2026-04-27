@@ -128,7 +128,8 @@ export default function ColorWheel({ onAdd }) {
           <span style={{ fontSize: 7, color: 'var(--accent)' }}>{sat}%</span>
         </div>
         <input type="range" className="ui-slider" min={10} max={100} value={sat}
-          onChange={e => setSat(Number(e.target.value))} />
+          onInput={e => setSat(Number(e.currentTarget.value))}
+          onChange={e => setSat(Number(e.currentTarget.value))} />
       </div>
 
       {/* Lightness */}
@@ -138,7 +139,8 @@ export default function ColorWheel({ onAdd }) {
           <span style={{ fontSize: 7, color: 'var(--accent)' }}>{lit}%</span>
         </div>
         <input type="range" className="ui-slider" min={20} max={78} value={lit}
-          onChange={e => setLit(Number(e.target.value))} />
+          onInput={e => setLit(Number(e.currentTarget.value))}
+          onChange={e => setLit(Number(e.currentTarget.value))} />
       </div>
 
       {/* Hex readout */}
