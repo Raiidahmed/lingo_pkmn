@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { HexColorInput, HexColorPicker } from 'react-colorful';
 
 const DEFAULT_COLOR = '#3b82f6';
@@ -48,23 +48,42 @@ function makeThemeFromHex(hex) {
 export default function ColorWheel({ onAdd }) {
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [dropperError, setDropperError] = useState('');
+  const fallbackPickerRef = useRef(null);
   const theme = useMemo(() => makeThemeFromHex(color), [color]);
   const handleColorChange = (next) => {
     const normalized = normalizeHex(next);
     if (normalized) setColor(normalized);
   };
-  const canUseDropper = typeof window !== 'undefined' && typeof window.EyeDropper === 'function';
+  const canUseDropper = typeof window !== 'undefined'
+    && window.isSecureContext
+    && typeof window.EyeDropper === 'function';
+
+  function openFallbackPicker() {
+    const picker = fallbackPickerRef.current;
+    if (!picker) return;
+    picker.value = theme.accent;
+    picker.click();
+  }
 
   async function handlePickFromScreen() {
-    if (!canUseDropper) return;
     setDropperError('');
+    if (!canUseDropper) {
+      openFallbackPicker();
+      return;
+    }
     try {
       const picker = new window.EyeDropper();
       const result = await picker.open();
-      handleColorChange(result?.sRGBHex || '');
+      const pickedColor = result?.sRGBHex || result?.srgbHex || '';
+      if (!pickedColor) {
+        setDropperError('Dropper did not return a color');
+        return;
+      }
+      handleColorChange(pickedColor);
     } catch (err) {
       if (err?.name !== 'AbortError') {
-        setDropperError('Dropper unavailable');
+        setDropperError('Dropper unavailable, using fallback picker');
+        openFallbackPicker();
       }
     }
   }
@@ -84,13 +103,28 @@ export default function ColorWheel({ onAdd }) {
         />
       </div>
 
+      <input
+        ref={fallbackPickerRef}
+        type="color"
+        value={theme.accent}
+        aria-label="Fallback color picker"
+        onChange={(event) => handleColorChange(event.target.value)}
+        tabIndex={-1}
+        style={{
+          position: 'absolute',
+          opacity: 0,
+          width: 1,
+          height: 1,
+          pointerEvents: 'none',
+        }}
+      />
+
       <button
         className="btn btn-ghost color-dropper-btn"
         type="button"
         onClick={handlePickFromScreen}
-        disabled={!canUseDropper}
       >
-        USE DROPPER
+        {canUseDropper ? 'USE DROPPER' : 'OPEN COLOR PICKER'}
       </button>
       {dropperError && <div className="color-picker-error">{dropperError}</div>}
 
