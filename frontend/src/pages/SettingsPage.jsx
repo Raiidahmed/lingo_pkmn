@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import Slider     from '../components/Slider.jsx';
 import Segmented  from '../components/Segmented.jsx';
 import ColorWheel from '../components/ColorWheel.jsx';
+import GameBoardPreview from '../components/GameBoardPreview.jsx';
 
 const UI_DEFAULTS = {
   borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0.58,
@@ -30,7 +31,7 @@ export default function SettingsPage() {
   const {
     setScreen, theme, setTheme, setCustomTheme,
     addCustomColor, removeCustomColor,
-    user, lightMode, toggleLightMode, ui, setUI,
+    user, language, lightMode, toggleLightMode, ui, setUI,
   } = useStore();
 
   const [mixerOpen, setMixerOpen] = useState(false);
@@ -300,6 +301,12 @@ export default function SettingsPage() {
               min={0} max={1}
               format={v => `${Math.round(v * 100)}%`}
               onChange={v => setUI('canvasTint', v)} />
+            <GameBoardPreview
+              accent={theme.accent}
+              language={language}
+              lightMode={lightMode}
+              canvasTint={ui.canvasTint}
+            />
           </Subsection>
         )}
 
