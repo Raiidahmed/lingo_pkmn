@@ -76,10 +76,10 @@ export default function StatusPage() {
                 onClick={() => setLanguage(lang.id)}
               >
                 <span style={{ fontSize: 22, lineHeight: 1 }}>{lang.flag}</span>
-                <span style={{ fontSize: 6, color: active ? 'var(--accent)' : 'var(--text)' }}>
+                <span style={{ fontSize: 6, color: 'var(--text)' }}>
                   {lang.name}
                 </span>
-                <span style={{ fontSize: 11, fontFamily: 'sans-serif', color: active ? 'var(--accent)' : 'var(--text-dim)' }}>
+                <span style={{ fontSize: 11, fontFamily: 'sans-serif', color: active ? 'var(--text)' : 'var(--text-dim)' }}>
                   {lang.native}
                 </span>
               </button>
@@ -107,7 +107,7 @@ export default function StatusPage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       borderColor: done ? 'var(--accent)' : undefined,
-                      color: done ? 'var(--accent)' : undefined,
+                      color: 'var(--text)',
                     }}
                     onClick={() => startGame(n, false)}
                   >

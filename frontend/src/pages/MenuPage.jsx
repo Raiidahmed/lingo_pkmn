@@ -18,7 +18,7 @@ export default function MenuPage() {
 
       <div className="card" style={{ textAlign: 'center' }}>
         <div className="card-title">WORD BANK</div>
-        <div style={{ fontSize: 18, color: 'var(--accent)' }}>{wordCount}</div>
+        <div style={{ fontSize: 18, color: 'var(--text)' }}>{wordCount}</div>
         <div style={{ fontSize: 7, color: 'var(--text-dim)' }}>words learned</div>
         {wordCount > 0 && (
           <div style={{ marginTop: 12, maxHeight: 100, overflowY: 'auto' }}>

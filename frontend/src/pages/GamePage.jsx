@@ -436,7 +436,7 @@ export default function GamePage() {
       {dialogue && (
         <div className="challenge-overlay">
           <div className="challenge-box">
-            <div className="challenge-label" style={{ color: dialogue.npc.color }}>
+            <div className="challenge-label" style={{ color: 'var(--text)' }}>
               {dialogue.npc.name}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text)', lineHeight: 1.8, minHeight: 60 }}>
@@ -459,8 +459,7 @@ export default function GamePage() {
                 fontSize: 56,
                 textAlign: 'center',
                 fontFamily: 'var(--font-ja)',
-                color: 'var(--accent)',
-                textShadow: '0 0 16px var(--accent-glow)',
+                color: 'var(--text)',
                 lineHeight: 1.1,
               }}>
                 {challenge.display}
@@ -470,7 +469,7 @@ export default function GamePage() {
               {challenge.prompt}
             </div>
             {showHint && (
-              <div style={{ fontSize: 7, color: '#c8a020', fontStyle: 'italic' }}>
+              <div style={{ fontSize: 7, color: 'var(--text)', fontStyle: 'italic', borderLeft: '4px solid #c8a020', paddingLeft: 8 }}>
                 💡 {challenge.hint}
               </div>
             )}

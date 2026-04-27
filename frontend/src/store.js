@@ -186,7 +186,7 @@ export const useStore = create((set, get) => ({
     set(s => {
       // Re-generate shimmer gradient so it picks up the new accent color
       if (s.ui.shimmer > 0) applyUI({ ...s.ui });
-      return { theme, user: s.user ? { ...s.user, accent_theme: themeId } : s.user };
+      return { theme, user: s.user ? { ...s.user, accent_theme: theme.id } : s.user };
     });
   },
 
@@ -197,8 +197,10 @@ export const useStore = create((set, get) => ({
   },
 
   refreshFromMe: (meData) => {
+    const theme = meData.user?.accent_theme ? applyTheme(meData.user.accent_theme) : get().theme;
     set(s => ({
-      user: s.user ? { ...s.user, ...meData.user } : meData.user,
+      user: s.user ? { ...s.user, ...meData.user, accent_theme: theme.id } : { ...meData.user, accent_theme: theme.id },
+      theme,
       save: meData.save ?? s.save,
     }));
   },

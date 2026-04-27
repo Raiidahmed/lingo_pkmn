@@ -14,7 +14,7 @@ export default function GameOverPage() {
 
   return (
     <div className="page" style={{ justifyContent: 'center', minHeight: '100dvh' }}>
-      <div className="page-title" style={{ color: isWin ? 'var(--green)' : 'var(--red-flash)' }}>
+      <div className="page-title" style={{ color: 'var(--text)' }}>
         {isWin ? 'VICTORY!' : 'GAME OVER'}
       </div>
       <div className="subtitle">

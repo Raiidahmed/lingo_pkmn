@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store.js';
 import { THEMES } from '../themes.js';
 import { api } from '../api.js';
@@ -28,15 +28,95 @@ export default function SettingsPage() {
   } = useStore();
 
   const [mixerOpen, setMixerOpen] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
+  const [saveError, setSaveError] = useState('');
+  const latestThemeIdRef = useRef(theme.id);
+  const saveTimerRef = useRef(null);
+  const savingRef = useRef(false);
+  const savePromiseRef = useRef(null);
+  const mountedRef = useRef(true);
 
-  function handleTheme(t) {
-    setTheme(t.id);
-    api.setTheme(t.id).catch(() => {});
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  async function persistLatestTheme() {
+    if (savingRef.current) return savePromiseRef.current;
+
+    savePromiseRef.current = (async () => {
+      const themeId = latestThemeIdRef.current;
+      savingRef.current = true;
+      if (mountedRef.current) {
+        setSaveState('saving');
+        setSaveError('');
+      }
+
+      try {
+        await api.setTheme(themeId);
+        if (mountedRef.current && latestThemeIdRef.current === themeId) {
+          setSaveState('saved');
+          window.setTimeout(() => {
+            if (mountedRef.current && latestThemeIdRef.current === themeId) {
+              setSaveState('idle');
+            }
+          }, 900);
+        }
+      } catch (err) {
+        if (mountedRef.current && latestThemeIdRef.current === themeId) {
+          setSaveState('error');
+          setSaveError(err.message || 'Theme could not be saved.');
+        }
+      } finally {
+        savingRef.current = false;
+        if (latestThemeIdRef.current !== themeId) {
+          await persistLatestTheme();
+        }
+      }
+    })();
+
+    return savePromiseRef.current;
+  }
+
+  function queueThemeSave(themeId) {
+    latestThemeIdRef.current = themeId;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null;
+      persistLatestTheme();
+    }, 180);
+  }
+
+  function handleTheme(themeId) {
+    if (theme.id === themeId && saveState !== 'error') return;
+    setTheme(themeId);
+    setSaveState('queued');
+    setSaveError('');
+    queueThemeSave(themeId);
   }
 
   function resetDefaults() {
     Object.entries(UI_DEFAULTS).forEach(([k, v]) => setUI(k, v));
   }
+
+  async function handleBack() {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      await persistLatestTheme();
+    } else if (savePromiseRef.current) {
+      await savePromiseRef.current;
+    }
+    setScreen('menu');
+  }
+
+  const statusText = {
+    queued: 'QUEUED',
+    saving: 'SAVING...',
+    saved: 'SAVED',
+    error: 'SAVE FAILED',
+  }[saveState];
 
   return (
     <div className="page" style={{ paddingBottom: 60 }}>
@@ -45,9 +125,9 @@ export default function SettingsPage() {
         <button
           className="btn btn-ghost"
           style={{ width: 'auto', padding: '8px 14px', fontSize: 7 }}
-          onClick={() => setScreen('menu')}
+          onClick={handleBack}
         >
-          ← BACK
+          {saveState === 'saving' ? 'SAVING...' : '← BACK'}
         </button>
         <div style={{ flex: 1 }} />
       </div>
@@ -59,7 +139,15 @@ export default function SettingsPage() {
 
       {/* ── Appearance ─────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="card-title">APPEARANCE</div>
+        <div className="settings-card-head">
+          <div className="card-title">APPEARANCE</div>
+          {statusText && (
+            <div className={`settings-status ${saveState}`} role="status" aria-live="polite">
+              {statusText}
+            </div>
+          )}
+        </div>
+        {saveError && <div className="settings-error">{saveError}</div>}
 
         <Subsection title="THEME">
           <Segmented
@@ -78,7 +166,7 @@ export default function SettingsPage() {
             {THEMES.map(t => (
               <button
                 key={t.id}
-                onClick={() => handleTheme(t)}
+                onClick={() => handleTheme(t.id)}
                 aria-label={t.label}
                 style={{
                   width: 44, height: 44, borderRadius: '50%',

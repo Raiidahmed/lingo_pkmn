@@ -80,7 +80,7 @@ export default function LoginPage() {
             autoFocus
             autoCapitalize="characters"
           />
-          {error && <div style={{ fontSize: 7, color: 'var(--red-flash)' }}>{error}</div>}
+          {error && <div style={{ fontSize: 7, color: 'var(--text)', borderLeft: '4px solid var(--red-flash)', paddingLeft: 8 }}>{error}</div>}
           <button className="btn btn-accent" type="submit" disabled={loading || !username.trim()}>
             {loading ? '...' : 'ENTER DUNGEON'}
           </button>
@@ -91,10 +91,10 @@ export default function LoginPage() {
 
       {debugVisible && (
         <div className="card" style={{ maxWidth: 320, borderColor: '#ff3355', marginTop: 16 }}>
-          <div className="card-title" style={{ color: '#ff3355' }}>DEBUG</div>
+          <div className="card-title" style={{ color: 'var(--text)' }}>DEBUG</div>
           <button
             className="btn"
-            style={{ borderColor: '#ff3355', color: '#ff3355' }}
+            style={{ borderColor: '#ff3355', color: 'var(--text)' }}
             onClick={handleWipe}
             disabled={wiping}
           >
