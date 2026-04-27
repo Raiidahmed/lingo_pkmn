@@ -270,9 +270,10 @@ export default function SettingsPage() {
         <div className="card-title">FEEL</div>
 
         <Subsection title="TYPOGRAPHY">
-          <Slider label="SCALE" value={Math.round(ui.fontSize * 100)}
-            min={75} max={150} unit="%"
-            onChange={v => setUI('fontSize', v / 100)} />
+          <Slider label="SCALE" value={ui.fontSize}
+            min={0.75} max={1.5}
+            format={v => `${Math.round(v * 100)}%`}
+            onChange={v => setUI('fontSize', v)} />
         </Subsection>
 
         <Subsection title="BORDERS">
@@ -300,20 +301,21 @@ export default function SettingsPage() {
           {ui.shimmer > 0 && (
             <>
               <Slider label="SPEED" value={ui.shimmerSpeed}
-                min={0.5} max={8} step={0.5} unit="s"
+                min={0.5} max={8} unit="s"
                 onChange={v => setUI('shimmerSpeed', v)} />
               <Slider label="PULSES" value={ui.shimmerPulses}
-                min={1} max={4}
-                onChange={v => setUI('shimmerPulses', v)} />
+                min={1} max={4} step={1}
+                onChange={v => setUI('shimmerPulses', Math.round(v))} />
             </>
           )}
         </Subsection>
 
         {lightMode && (
           <Subsection title="GAME BOARD">
-            <Slider label="LIGHT TINT" value={Math.round(ui.canvasTint * 100)}
-              min={0} max={100} unit="%"
-              onChange={v => setUI('canvasTint', v / 100)} />
+            <Slider label="LIGHT TINT" value={ui.canvasTint}
+              min={0} max={1}
+              format={v => `${Math.round(v * 100)}%`}
+              onChange={v => setUI('canvasTint', v)} />
           </Subsection>
         )}
 

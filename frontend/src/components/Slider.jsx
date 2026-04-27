@@ -8,17 +8,20 @@ export default function Slider({
   value,
   min,
   max,
-  step = 1,
+  step = 0.01,
   unit = '',
   format,
   onChange,
 }) {
-  const display = format ? format(value) : `${value}${unit}`;
+  const defaultDisplay = Number.isInteger(value)
+    ? `${value}${unit}`
+    : `${Number(value.toFixed(2))}${unit}`;
+  const display = format ? format(value) : defaultDisplay;
   const handleValueChange = (next) => {
     if (!Array.isArray(next)) return;
     const nextValue = next[0];
     if (typeof nextValue !== 'number' || Number.isNaN(nextValue)) return;
-    onChange(nextValue);
+    onChange(Number(nextValue.toFixed(4)));
   };
 
   return (
