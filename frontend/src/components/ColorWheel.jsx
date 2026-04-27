@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { HexColorInput, HexColorPicker } from 'react-colorful';
 
 const DEFAULT_COLOR = '#3b82f6';
@@ -48,27 +48,24 @@ function makeThemeFromHex(hex) {
 export default function ColorWheel({ onAdd }) {
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [dropperError, setDropperError] = useState('');
-  const fallbackPickerRef = useRef(null);
   const theme = useMemo(() => makeThemeFromHex(color), [color]);
   const handleColorChange = (next) => {
     const normalized = normalizeHex(next);
-    if (normalized) setColor(normalized);
+    if (normalized) {
+      setColor(normalized);
+      setDropperError('');
+    }
   };
-  const canUseDropper = typeof window !== 'undefined'
-    && window.isSecureContext
-    && typeof window.EyeDropper === 'function';
-
-  function openFallbackPicker() {
-    const picker = fallbackPickerRef.current;
-    if (!picker) return;
-    picker.value = theme.accent;
-    picker.click();
-  }
+  const hasEyeDropper = typeof window !== 'undefined' && typeof window.EyeDropper === 'function';
 
   async function handlePickFromScreen() {
     setDropperError('');
-    if (!canUseDropper) {
-      openFallbackPicker();
+    if (!hasEyeDropper) {
+      setDropperError('Dropper is not supported on this browser');
+      return;
+    }
+    if (!window.isSecureContext) {
+      setDropperError('Dropper requires HTTPS');
       return;
     }
     try {
@@ -82,8 +79,7 @@ export default function ColorWheel({ onAdd }) {
       handleColorChange(pickedColor);
     } catch (err) {
       if (err?.name !== 'AbortError') {
-        setDropperError('Dropper unavailable, using fallback picker');
-        openFallbackPicker();
+        setDropperError('Dropper unavailable on this device/browser');
       }
     }
   }
@@ -103,29 +99,23 @@ export default function ColorWheel({ onAdd }) {
         />
       </div>
 
-      <input
-        ref={fallbackPickerRef}
-        type="color"
-        value={theme.accent}
-        aria-label="Fallback color picker"
-        onChange={(event) => handleColorChange(event.target.value)}
-        tabIndex={-1}
-        style={{
-          position: 'absolute',
-          opacity: 0,
-          width: 1,
-          height: 1,
-          pointerEvents: 'none',
-        }}
-      />
-
       <button
         className="btn btn-ghost color-dropper-btn"
         type="button"
         onClick={handlePickFromScreen}
       >
-        {canUseDropper ? 'USE DROPPER' : 'OPEN COLOR PICKER'}
+        USE DROPPER
       </button>
+      <label className="btn btn-ghost color-dropper-btn color-dropper-native-btn">
+        OPEN COLOR PICKER
+        <input
+          type="color"
+          className="color-dropper-native-input"
+          value={theme.accent}
+          aria-label="Open color picker"
+          onChange={(event) => handleColorChange(event.target.value)}
+        />
+      </label>
       {dropperError && <div className="color-picker-error">{dropperError}</div>}
 
       <div className="color-preview-code" style={{ color: theme.accent }}>
