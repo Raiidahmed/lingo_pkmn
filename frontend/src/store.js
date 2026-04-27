@@ -203,10 +203,11 @@ export const useStore = create((set, get) => ({
   },
 
   refreshFromMe: (meData) => {
-    const theme = meData.user?.accent_theme ? applyTheme(meData.user.accent_theme) : get().theme;
     set(s => ({
-      user: s.user ? { ...s.user, ...meData.user, accent_theme: theme.id } : { ...meData.user, accent_theme: theme.id },
-      theme,
+      user: s.user ? { ...s.user, ...meData.user } : { ...meData.user },
+      theme: s.theme?.custom
+        ? s.theme
+        : (meData.user?.accent_theme ? applyTheme(meData.user.accent_theme) : s.theme),
       save: meData.save ?? s.save,
     }));
   },
