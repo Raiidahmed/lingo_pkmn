@@ -1,8 +1,8 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --accent: #5b2fb0;
-  --accent-dark: #35156f;
+  --accent: #cc0033;
+  --accent-dark: #7a001f;
   --ios-obscured-bottom: 0px;
 }
 

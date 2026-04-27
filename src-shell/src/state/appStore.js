@@ -16,8 +16,8 @@ export const SCREENS = Object.freeze({
 });
 
 export const ACCENT_THEMES = [
-  { id: 'violet', label: 'Dungeon Violet', value: '#5b2fb0', dark: '#35156f' },
   { id: 'crimson', label: 'Crimson Sigil', value: '#cc0033', dark: '#7a001f' },
+  { id: 'violet', label: 'Dungeon Violet', value: '#5b2fb0', dark: '#35156f' },
   { id: 'teal', label: 'Temple Teal', value: '#0f8f8f', dark: '#075959' },
   { id: 'amber', label: 'Torch Amber', value: '#c68400', dark: '#7b4f00' },
   { id: 'mint', label: 'Mint Rune', value: '#0f9d73', dark: '#076348' },
@@ -28,6 +28,7 @@ export const LEGACY_LEVEL_COUNT = 10;
 const TOKEN_KEY = 'lingoSpikeTokenV1';
 const ACCENT_KEY = 'lingoAccentTheme';
 const SOUND_KEY = 'lingoSound';
+const DEFAULT_ACCENT_THEME_ID = 'crimson';
 const DEFAULT_REFRESH_RETRIES = 3;
 const DEFAULT_REFRESH_RETRY_DELAY_MS = 250;
 
@@ -42,7 +43,9 @@ function safeSet(key, value) {
 }
 
 function resolveAccent(themeId) {
-  return ACCENT_THEMES.find(t => t.id === themeId) || ACCENT_THEMES[0];
+  return ACCENT_THEMES.find(t => t.id === themeId)
+    || ACCENT_THEMES.find(t => t.id === DEFAULT_ACCENT_THEME_ID)
+    || ACCENT_THEMES[0];
 }
 
 function readStoredSoundEnabled() {
@@ -130,7 +133,7 @@ export const useAppStore = create((set, get) => ({
   wordBank: [],
 
   // --- UI ---
-  accent: resolveAccent(safeGet(ACCENT_KEY)).id,
+  accent: resolveAccent(safeGet(ACCENT_KEY) || DEFAULT_ACCENT_THEME_ID).id,
   soundEnabled: readStoredSoundEnabled(),
   leaderboard: [],
 
