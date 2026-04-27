@@ -26,17 +26,28 @@ function buildShimmerGradient(pulses) {
 
 function applyUI(ui) {
   const el = document.documentElement;
-  el.style.setProperty('--border-w',         `${ui.borderWidth}px`);
-  el.style.setProperty('--radius',           `${ui.radius}px`);
-  el.style.setProperty('--glow-size',        `${ui.glowSize}px`);
+  el.style.setProperty('--border-w',      `${ui.borderWidth}px`);
+  el.style.setProperty('--radius',        `${ui.radius}px`);
+  el.style.setProperty('--glow-size',     `${ui.glowSize}px`);
   el.style.setProperty('--border-col',
     ui.borderTint > 0
       ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
       : 'var(--border)'
   );
-  el.style.setProperty('--shimmer-str',      ui.shimmer / 100);
-  el.style.setProperty('--shimmer-speed',    `${ui.shimmerSpeed}s`);
-  el.style.setProperty('--shimmer-gradient', buildShimmerGradient(ui.shimmerPulses ?? 1));
+  el.style.setProperty('--shimmer-str',   `${ui.shimmer / 100}`);
+  el.style.setProperty('--shimmer-speed', `${ui.shimmerSpeed}s`);
+
+  // Inject gradient directly into a <style> tag so var(--shimmer-angle) is
+  // a live dependency in the background property — custom properties don't
+  // track animation changes inside other custom property values.
+  let styleEl = document.getElementById('lingo-shimmer-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'lingo-shimmer-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `.card::after { background: ${buildShimmerGradient(ui.shimmerPulses ?? 1)}; }`;
+
   const root = document.getElementById('root');
   if (root) root.style.zoom = ui.fontSize ?? 1;
 }

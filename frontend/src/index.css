@@ -30,7 +30,6 @@
 
 :root {
   --shimmer-speed: 2s;
-  --shimmer-gradient: none;
 }
 
 @keyframes shimmer-spin {
@@ -51,10 +50,13 @@
 .card::after {
   content: '';
   position: absolute;
-  inset: 0;
+  /* inset: -border-w puts outer edge at card's border-box outer edge,
+     so the mask ring lands exactly on the visible border */
+  inset: calc(-1 * var(--border-w));
   border-radius: var(--radius);
   padding: var(--border-w);
-  background: var(--shimmer-gradient);
+  /* background injected by #lingo-shimmer-style so var(--shimmer-angle)
+     is visible directly in a background property — required for animation */
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
