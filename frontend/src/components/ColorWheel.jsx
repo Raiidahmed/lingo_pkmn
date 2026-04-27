@@ -47,11 +47,27 @@ function makeThemeFromHex(hex) {
 
 export default function ColorWheel({ onAdd }) {
   const [color, setColor] = useState(DEFAULT_COLOR);
+  const [dropperError, setDropperError] = useState('');
   const theme = useMemo(() => makeThemeFromHex(color), [color]);
   const handleColorChange = (next) => {
     const normalized = normalizeHex(next);
     if (normalized) setColor(normalized);
   };
+  const canUseDropper = typeof window !== 'undefined' && typeof window.EyeDropper === 'function';
+
+  async function handlePickFromScreen() {
+    if (!canUseDropper) return;
+    setDropperError('');
+    try {
+      const picker = new window.EyeDropper();
+      const result = await picker.open();
+      handleColorChange(result?.sRGBHex || '');
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        setDropperError('Dropper unavailable');
+      }
+    }
+  }
 
   return (
     <div className="color-picker-panel">
@@ -67,6 +83,16 @@ export default function ColorWheel({ onAdd }) {
           alpha={false}
         />
       </div>
+
+      <button
+        className="btn btn-ghost color-dropper-btn"
+        type="button"
+        onClick={handlePickFromScreen}
+        disabled={!canUseDropper}
+      >
+        USE DROPPER
+      </button>
+      {dropperError && <div className="color-picker-error">{dropperError}</div>}
 
       <div className="color-preview-code" style={{ color: theme.accent }}>
         {theme.accent.toUpperCase()}

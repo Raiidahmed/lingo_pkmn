@@ -64,7 +64,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: 20px;
+  height: 30px;
   touch-action: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -73,8 +73,8 @@
 .ui-slider-track {
   position: relative;
   flex-grow: 1;
-  height: 6px;
-  border-radius: 3px;
+  height: 10px;
+  border-radius: 5px;
   background: var(--surface2);
   box-shadow: inset 0 0 0 1px var(--border-col);
 }
@@ -88,9 +88,9 @@
 
 .ui-slider-thumb {
   display: block;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: var(--accent);
   border: 2px solid #fff;
   cursor: pointer;
@@ -205,9 +205,20 @@ html, body, #root {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: calc(10px * var(--ui-scale));
+  font-size: 10px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+#root {
+  transform-origin: top center;
+  transform: scale(var(--ui-scale));
+  width: calc(100% / var(--ui-scale));
+  min-height: calc(100% / var(--ui-scale));
 }
 
 .page {
@@ -622,6 +633,22 @@ canvas#dungeon {
   font-family: monospace;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+.color-dropper-btn {
+  width: 100%;
+  font-size: 7px;
+}
+
+.color-dropper-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.color-picker-error {
+  font-size: 7px;
+  color: var(--text-dim);
+  text-align: center;
 }
 
 .color-preview-code {
