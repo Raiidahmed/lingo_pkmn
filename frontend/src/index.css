@@ -7,10 +7,10 @@
   --border: #333;
   --text: #fff;
   --text-dim: #aaa;
-  --accent: #cc2244;
-  --accent-dark: #881122;
-  --accent-rgb: 204,34,68;
-  --accent-glow: rgba(204,34,68,0.3);
+  --accent: #ffffff;
+  --accent-dark: #bdbdbd;
+  --accent-rgb: 255,255,255;
+  --accent-glow: rgba(255,255,255,0.34);
   --radius: 8px;
   --font: 'Press Start 2P', monospace;
   --font-ja: 'Noto Sans JP', sans-serif;

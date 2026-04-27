@@ -1,5 +1,5 @@
 export const THEMES = [
-  { id: 'crimson', label: 'Crimson', accent: '#cc2244', accentDark: '#881122', accentRgb: '204,34,68', glow: 'rgba(204,34,68,0.3)' },
+  { id: 'crimson', label: 'White', accent: '#ffffff', accentDark: '#bdbdbd', accentRgb: '255,255,255', glow: 'rgba(255,255,255,0.34)' },
   { id: 'violet',  label: 'Violet',  accent: '#7c3aed', accentDark: '#4c1d95', accentRgb: '124,58,237', glow: 'rgba(124,58,237,0.3)' },
   { id: 'teal',    label: 'Teal',    accent: '#0d9488', accentDark: '#065f5f', accentRgb: '13,148,136', glow: 'rgba(13,148,136,0.3)' },
   { id: 'amber',   label: 'Amber',   accent: '#d97706', accentDark: '#92400e', accentRgb: '217,119,6', glow: 'rgba(217,119,6,0.3)' },

@@ -71,7 +71,7 @@ export default function StatusPage() {
                   alignItems: 'center',
                   gap: 6,
                   borderColor: active ? 'var(--accent)' : undefined,
-                  background: active ? 'rgba(var(--accent-rgb,204,34,68),0.08)' : undefined,
+                  background: active ? 'rgba(var(--accent-rgb,255,255,255),0.08)' : undefined,
                 }}
                 onClick={() => setLanguage(lang.id)}
               >
