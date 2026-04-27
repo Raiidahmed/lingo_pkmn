@@ -1,147 +1,77 @@
-import { useState, useRef } from 'react';
-import Slider from './Slider.jsx';
+import { useMemo, useState } from 'react';
+import { HexColorInput, HexColorPicker } from 'react-colorful';
 
-function hslToHex(h, s, l) {
-  s /= 100; l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = n => {
-    const k = (n + h / 30) % 12;
-    return Math.round(255 * (l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)))
-      .toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
+const DEFAULT_COLOR = '#3b82f6';
+
+function normalizeHex(value) {
+  const raw = String(value || '').trim().replace(/^#/, '').replace(/[^0-9a-fA-F]/g, '');
+  if (raw.length === 3) {
+    return `#${raw.split('').map((c) => c + c).join('').toLowerCase()}`;
+  }
+  if (raw.length === 6) return `#${raw.toLowerCase()}`;
+  return null;
 }
 
-function makeThemeFromHSL(h, s, l) {
-  const accent     = hslToHex(h, s, l);
-  const accentDark = hslToHex(h, Math.min(s + 10, 100), Math.max(l - 20, 8));
+function hexToRgb(hex) {
+  const normalized = normalizeHex(hex);
+  if (!normalized) return null;
+  const value = parseInt(normalized.slice(1), 16);
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
+function toHexByte(n) {
+  return Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+}
+
+function darkenHex(hex, ratio = 0.35) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return DEFAULT_COLOR;
+  const factor = Math.max(0, Math.min(1, 1 - ratio));
+  return `#${toHexByte(rgb[0] * factor)}${toHexByte(rgb[1] * factor)}${toHexByte(rgb[2] * factor)}`;
+}
+
+function makeThemeFromHex(hex) {
+  const accent = normalizeHex(hex) || DEFAULT_COLOR;
+  const rgb = hexToRgb(accent) || [59, 130, 246];
+  const accentRgb = `${rgb[0]},${rgb[1]},${rgb[2]}`;
   return {
-    id:         `custom_${accent}`,
-    label:      accent.toUpperCase().slice(1),
+    id: `custom_${accent}`,
+    label: accent.toUpperCase().slice(1),
     accent,
-    accentDark,
-    glow:       `hsla(${Math.round(h)}, ${Math.round(s)}%, ${Math.round(l)}%, 0.35)`,
-    custom:     true,
+    accentDark: darkenHex(accent),
+    accentRgb,
+    glow: `rgba(${accentRgb},0.35)`,
+    custom: true,
   };
 }
 
 export default function ColorWheel({ onAdd }) {
-  const [hue, setHue]   = useState(210);
-  const [sat, setSat]   = useState(80);
-  const [lit, setLit]   = useState(55);
-  const ringRef         = useRef(null);
-  const dragging        = useRef(false);
-
-  const SIZE  = 160;
-  const THICK = 28;   // ring thickness
-  const R     = SIZE / 2;
-  const MID   = R - THICK / 2;  // radius to center of ring
-
-  const accent    = `hsl(${hue}, ${sat}%, ${lit}%)`;
-  const accentHex = hslToHex(hue, sat, lit);
-  const theme     = makeThemeFromHSL(hue, sat, lit);
-
-  function angleFromEvent(e) {
-    const rect = ringRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width  / 2;
-    const cy = rect.top  + rect.height / 2;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const angle = Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI + 90;
-    return ((angle % 360) + 360) % 360;
-  }
-
-  function onPointerDown(e) {
-    dragging.current = true;
-    setHue(angleFromEvent(e));
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-  function onPointerMove(e) {
-    if (dragging.current) setHue(angleFromEvent(e));
-  }
-  function onPointerUp() { dragging.current = false; }
-
-  // Handle position on ring edge
-  const hx = R + MID * Math.sin(hue * Math.PI / 180);
-  const hy = R - MID * Math.cos(hue * Math.PI / 180);
+  const [color, setColor] = useState(DEFAULT_COLOR);
+  const theme = useMemo(() => makeThemeFromHex(color), [color]);
+  const handleColorChange = (next) => {
+    const normalized = normalizeHex(next);
+    if (normalized) setColor(normalized);
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+    <div className="color-picker-panel">
+      <HexColorPicker className="custom-color-picker" color={theme.accent} onChange={handleColorChange} />
 
-      {/* Hue ring */}
-      <div
-        ref={ringRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        style={{
-          position: 'relative',
-          width: SIZE, height: SIZE,
-          borderRadius: '50%',
-          background: 'conic-gradient(from -90deg, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff, #ff0080, #ff0000)',
-          cursor: 'crosshair',
-          touchAction: 'none',
-          userSelect: 'none',
-          flexShrink: 0,
-        }}
-      >
-        {/* Inner cutout to make it a ring */}
-        <div style={{
-          position: 'absolute',
-          inset: THICK,
-          borderRadius: '50%',
-          background: 'var(--surface)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-        }}>
-          {/* Live preview swatch in center */}
-          <div style={{
-            width: 52, height: 52,
-            borderRadius: '50%',
-            background: accent,
-            border: '2px solid var(--border-col)',
-            boxShadow: `0 0 14px ${accent}`,
-            transition: 'background 0.1s, box-shadow 0.1s',
-          }} />
-        </div>
-
-        {/* Draggable hue handle */}
-        <div style={{
-          position: 'absolute',
-          left: hx, top: hy,
-          width: 16, height: 16,
-          borderRadius: '50%',
-          background: accent,
-          border: '2.5px solid #fff',
-          boxShadow: `0 0 6px rgba(0,0,0,0.6), 0 0 10px ${accent}`,
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-          transition: 'background 0.05s',
-        }} />
+      <div className="color-picker-row">
+        <span className="color-picker-label">HEX</span>
+        <HexColorInput
+          className="text-input color-hex-input"
+          color={theme.accent}
+          onChange={handleColorChange}
+          prefixed
+          alpha={false}
+        />
       </div>
 
-      <div style={{ width: '100%' }}>
-        <Slider label="SATURATION" value={sat} min={10} max={100} unit="%" onChange={setSat} />
+      <div className="color-preview-code" style={{ color: theme.accent }}>
+        {theme.accent.toUpperCase()}
       </div>
 
-      <div style={{ width: '100%' }}>
-        <Slider label="LIGHTNESS" value={lit} min={20} max={78} unit="%" onChange={setLit} />
-      </div>
-
-      {/* Hex readout */}
-      <div style={{
-        fontSize: 9,
-        color: accentHex,
-        letterSpacing: 3,
-        textShadow: `0 0 10px ${accentHex}`,
-        fontFamily: 'monospace',
-      }}>
-        {accentHex.toUpperCase()}
-      </div>
-
-      {/* Add button */}
       <button
         className="btn btn-accent"
         style={{ fontSize: 7, width: '100%' }}

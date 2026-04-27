@@ -177,7 +177,10 @@ export const useStore = create((set, get) => ({
   },
 
   addCustomColor: (colorObj) => set(s => {
-    const colors = [...(s.ui.customColors || []), colorObj];
+    const colors = [...(s.ui.customColors || [])];
+    const idx = colors.findIndex((t) => t.id === colorObj.id || t.accent === colorObj.accent);
+    if (idx >= 0) colors[idx] = colorObj;
+    else colors.push(colorObj);
     localStorage.setItem('lingo_custom_colors', JSON.stringify(colors));
     return { ui: { ...s.ui, customColors: colors } };
   }),
