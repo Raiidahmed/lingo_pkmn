@@ -21,47 +21,30 @@
   --shimmer-str: 0;
 }
 
-/* ── Border shimmer (Apple Intelligence style) ──────────────────────────── */
+/* ── Border shimmer ─────────────────────────────────────────────────────── */
+/*
+  Angle is set every rAF tick by JS (store.startShimmer) directly on :root.
+  @property + inherits:true means the value cascades into .card::after,
+  and because the gradient string includes var(--shimmer-angle) literally
+  in a background property, the browser invalidates and repaints each frame.
+  This is more reliable than CSS animations of custom properties.
+*/
 @property --shimmer-angle {
   syntax: '<angle>';
   initial-value: 0deg;
   inherits: true;
 }
 
-:root {
-  --shimmer-speed: 2s;
-}
+.card { position: relative; }
 
-@keyframes shimmer-spin {
-  to { --shimmer-angle: 360deg; }
-}
-
-/* Animate on :root so all cards share one timeline — keeps them in sync */
-:root {
-  animation: shimmer-spin var(--shimmer-speed) linear infinite;
-}
-
-.card {
-  position: relative;
-}
-
-/*
-  inset: 0  →  ::after sits exactly over the card's border-box
-  padding: --border-w  →  mask ring = exactly one border-width thick
-  border-radius: --radius  →  outer ring edge matches card corners perfectly
-  Gradient is generated in JS (applyUI) so it can use var(--accent) + color-mix
-  for accent-aware pulses that update automatically on theme change.
-*/
 .card::after {
   content: '';
   position: absolute;
-  /* inset: -border-w puts outer edge at card's border-box outer edge,
-     so the mask ring lands exactly on the visible border */
+  /* outer edge sits exactly on card's border-box outer edge */
   inset: calc(-1 * var(--border-w));
   border-radius: var(--radius);
   padding: var(--border-w);
-  /* background injected by #lingo-shimmer-style so var(--shimmer-angle)
-     is visible directly in a background property — required for animation */
+  /* background is injected per-frame-equivalent by #lingo-shimmer-style */
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -69,35 +52,130 @@
   mask-composite: exclude;
   opacity: var(--shimmer-str, 0);
   pointer-events: none;
+  transition: opacity 200ms ease;
 }
 
-/* ── Playground slider ──────────────────────────────────────────────────── */
+/* ── Slider (gradient-fill track) ───────────────────────────────────────── */
 input[type="range"].ui-slider {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
+  height: 6px;
+  border-radius: 3px;
   outline: none;
   cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--fill, 50%),
+    var(--surface2) var(--fill, 50%),
+    var(--surface2) 100%
+  );
+  box-shadow: inset 0 0 0 1px var(--border-col);
 }
 input[type="range"].ui-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   background: var(--accent);
-  border-radius: 2px;
-  cursor: pointer;
-  box-shadow: 0 0 6px var(--accent-glow);
+  border: 2px solid #fff;
+  cursor: grab;
+  box-shadow: 0 0 0 1px var(--border-col), 0 0 12px var(--accent-glow);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+input[type="range"].ui-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+input[type="range"].ui-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.25);
+  box-shadow: 0 0 0 1px var(--border-col), 0 0 18px var(--accent);
 }
 input[type="range"].ui-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   background: var(--accent);
-  border-radius: 2px;
-  cursor: pointer;
+  border: 2px solid #fff;
+  cursor: grab;
+  box-shadow: 0 0 0 1px var(--border-col), 0 0 12px var(--accent-glow);
+}
+
+/* ── Segmented toggle ───────────────────────────────────────────────────── */
+.seg {
+  display: flex;
+  background: var(--surface2);
+  border: var(--border-w) solid var(--border-col);
+  border-radius: var(--radius);
+  padding: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.seg-btn {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 7px;
+  font-family: var(--font);
+  letter-spacing: 1.5px;
+  background: transparent;
   border: none;
-  box-shadow: 0 0 6px var(--accent-glow);
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: calc(var(--radius) - 4px);
+  transition: color 180ms ease, background 180ms ease;
+  position: relative;
+  z-index: 2;
+}
+.seg-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* ── Settings sub-section heading ───────────────────────────────────────── */
+.subsection-title {
+  font-size: 7px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.subsection-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.subsection-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border-col), transparent);
+}
+.subsection + .subsection {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-col);
+}
+
+/* Slider row */
+.slider-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.slider-row:last-child { margin-bottom: 0; }
+.slider-head { display: flex; justify-content: space-between; align-items: baseline; }
+.slider-label { font-size: 7px; color: var(--text-dim); letter-spacing: 1.2px; }
+.slider-value {
+  font-size: 9px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: right;
+  text-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* Light mode — overrides all surface/text vars; accent stays user-chosen */

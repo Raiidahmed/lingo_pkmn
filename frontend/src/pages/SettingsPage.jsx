@@ -1,157 +1,238 @@
+import { useState } from 'react';
 import { useStore } from '../store.js';
 import { THEMES } from '../themes.js';
 import { api } from '../api.js';
+import Slider     from '../components/Slider.jsx';
+import Segmented  from '../components/Segmented.jsx';
 import ColorWheel from '../components/ColorWheel.jsx';
 
-function SliderRow({ label, value, min, max, step = 1, unit = '', onChange }) {
+const UI_DEFAULTS = {
+  borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0.58,
+  borderTint: 0, shimmer: 0, shimmerSpeed: 2, shimmerPulses: 1, fontSize: 1.0,
+};
+
+function Subsection({ title, children }) {
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-        <span style={{ fontSize: 7, color: 'var(--text-dim)' }}>{label}</span>
-        <span style={{ fontSize: 9, color: 'var(--accent)', minWidth: 40, textAlign: 'right' }}>
-          {value}{unit}
-        </span>
-      </div>
-      <input
-        type="range" className="ui-slider"
-        min={min} max={max} step={step}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-      />
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-        <span style={{ fontSize: 6, color: 'var(--text-dim)' }}>{min}{unit}</span>
-        <span style={{ fontSize: 6, color: 'var(--text-dim)' }}>{max}{unit}</span>
-      </div>
+    <div className="subsection">
+      <div className="subsection-title">{title}</div>
+      {children}
     </div>
   );
 }
 
 export default function SettingsPage() {
-  const { setScreen, theme, setTheme, setCustomTheme, addCustomColor, removeCustomColor, user, lightMode, toggleLightMode, ui, setUI } = useStore();
+  const {
+    setScreen, theme, setTheme, setCustomTheme,
+    addCustomColor, removeCustomColor,
+    user, lightMode, toggleLightMode, ui, setUI,
+  } = useStore();
 
-  function handleTheme(themeId) {
-    setTheme(themeId);
-    api.setTheme(themeId).catch(() => {});
+  const [mixerOpen, setMixerOpen] = useState(false);
+
+  function handleTheme(t) {
+    setTheme(t.id);
+    api.setTheme(t.id).catch(() => {});
   }
 
-  const div = <div style={{ borderTop: 'var(--border-w) solid var(--border-col)', margin: '18px 0 14px' }} />;
+  function resetDefaults() {
+    Object.entries(UI_DEFAULTS).forEach(([k, v]) => setUI(k, v));
+  }
 
   return (
-    <div className="page">
-      <div className="page-title" style={{ fontSize: 14 }}>SETTINGS</div>
-      <button className="btn btn-ghost" style={{ width: 'auto', padding: '8px 16px' }}
-        onClick={() => setScreen('menu')}>BACK</button>
+    <div className="page" style={{ paddingBottom: 60 }}>
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          className="btn btn-ghost"
+          style={{ width: 'auto', padding: '8px 14px', fontSize: 7 }}
+          onClick={() => setScreen('menu')}
+        >
+          ← BACK
+        </button>
+        <div style={{ flex: 1 }} />
+      </div>
 
-      {/* ── Color theme ── */}
+      <div className="page-title" style={{ fontSize: 14, marginTop: 6 }}>SETTINGS</div>
+      <div className="subtitle" style={{ marginTop: -8, marginBottom: 8 }}>
+        customize your dungeon
+      </div>
+
+      {/* ── Appearance ─────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="card-title">COLOR THEME</div>
-        <div className="theme-grid">
-          {THEMES.map(t => (
-            <div key={t.id} className="theme-swatch" onClick={() => handleTheme(t.id)}>
-              <div className={`swatch-circle${theme.id === t.id ? ' active' : ''}`} style={{ background: t.accent }} />
-              <span className="swatch-label">{t.label.toUpperCase()}</span>
-            </div>
-          ))}
-          {(ui.customColors || []).map((t, i) => (
-            <div key={t.id} className="theme-swatch" style={{ position: 'relative' }}>
-              <div
-                className={`swatch-circle${theme.id === t.id ? ' active' : ''}`}
-                style={{ background: t.accent }}
-                onClick={() => setCustomTheme(t)}
-              />
+        <div className="card-title">APPEARANCE</div>
+
+        <Subsection title="THEME">
+          <Segmented
+            options={[{ value: 'dark', label: 'DARK' }, { value: 'light', label: 'LIGHT' }]}
+            value={lightMode ? 'light' : 'dark'}
+            onChange={() => toggleLightMode()}
+          />
+        </Subsection>
+
+        <Subsection title="ACCENT">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(56px, 1fr))',
+            gap: 12,
+          }}>
+            {THEMES.map(t => (
               <button
-                onClick={() => removeCustomColor(i)}
-                style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: 'var(--surface2)', border: '1px solid var(--border-col)', color: 'var(--text-dim)', fontSize: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 1, fontFamily: 'monospace' }}
-              >×</button>
-              <span className="swatch-label" style={{ fontSize: 5 }}>{t.label.slice(0, 6)}</span>
-            </div>
-          ))}
-        </div>
+                key={t.id}
+                onClick={() => handleTheme(t)}
+                aria-label={t.label}
+                style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  background: t.accent,
+                  border: theme.id === t.id ? '3px solid var(--text)' : '2px solid var(--border-col)',
+                  boxShadow: theme.id === t.id ? `0 0 16px ${t.accent}` : 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  margin: '0 auto',
+                  display: 'block',
+                  transition: 'transform 120ms ease, box-shadow 120ms ease',
+                }}
+              />
+            ))}
 
-        {div}
+            {(ui.customColors || []).map((t, i) => (
+              <div key={t.id} style={{ position: 'relative', width: 44, height: 44, margin: '0 auto' }}>
+                <button
+                  onClick={() => setCustomTheme(t)}
+                  aria-label={`Custom ${t.label}`}
+                  style={{
+                    width: 44, height: 44, borderRadius: '50%',
+                    background: t.accent,
+                    border: theme.id === t.id ? '3px solid var(--text)' : '2px solid var(--border-col)',
+                    boxShadow: theme.id === t.id ? `0 0 16px ${t.accent}` : 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    transition: 'transform 120ms ease',
+                  }}
+                />
+                <button
+                  onClick={() => removeCustomColor(i)}
+                  aria-label="Remove"
+                  style={{
+                    position: 'absolute',
+                    top: -4, right: -4,
+                    width: 16, height: 16,
+                    borderRadius: '50%',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border-col)',
+                    color: 'var(--text-dim)',
+                    fontSize: 9,
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    padding: 0,
+                    lineHeight: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >×</button>
+              </div>
+            ))}
 
-        <div style={{ fontSize: 7, color: 'var(--text-dim)', marginBottom: 8 }}>BACKGROUND</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-          {[{ id: 'dark', label: 'DARK' }, { id: 'light', label: 'LIGHT' }].map(opt => {
-            const active = opt.id === 'light' ? lightMode : !lightMode;
-            return (
-              <button key={opt.id} className="btn" style={{ flex: 1, padding: '10px 8px', fontSize: 7,
-                borderColor: active ? 'var(--accent)' : undefined, color: active ? 'var(--accent)' : undefined }}
-                onClick={() => { if (active) return; toggleLightMode(); }}>
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
+            <button
+              onClick={() => setMixerOpen(o => !o)}
+              aria-label="Open color mixer"
+              style={{
+                width: 44, height: 44, borderRadius: '50%',
+                background: mixerOpen
+                  ? 'var(--accent)'
+                  : 'conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+                border: '2px dashed var(--border-col)',
+                cursor: 'pointer',
+                padding: 0,
+                margin: '0 auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 14,
+                color: '#fff',
+                textShadow: '0 0 4px #000',
+              }}
+            >+</button>
+          </div>
+        </Subsection>
+
+        {mixerOpen && (
+          <Subsection title="COLOR MIXER">
+            <ColorWheel onAdd={(t) => { addCustomColor(t); setCustomTheme(t); }} />
+          </Subsection>
+        )}
       </div>
 
-      {/* ── Color mixer ── */}
+      {/* ── Feel ───────────────────────────────────────────────────────── */}
       <div className="card">
-        <div className="card-title">COLOR MIXER</div>
-        <ColorWheel onAdd={(t) => { addCustomColor(t); setCustomTheme(t); }} />
-      </div>
+        <div className="card-title">FEEL</div>
 
-      {/* ── UI Playground ── */}
-      <div className="card">
-        <div className="card-title">UI PLAYGROUND</div>
+        <Subsection title="TYPOGRAPHY">
+          <Slider label="SCALE" value={Math.round(ui.fontSize * 100)}
+            min={75} max={150} unit="%"
+            onChange={v => setUI('fontSize', v / 100)} />
+        </Subsection>
 
-        <SliderRow label="FONT SIZE" value={Math.round(ui.fontSize * 100)} min={75} max={150} unit="%"
-          onChange={v => setUI('fontSize', v / 100)} />
+        <Subsection title="BORDERS">
+          <Slider label="WIDTH" value={ui.borderWidth}
+            min={0} max={8} unit="px"
+            onChange={v => setUI('borderWidth', v)} />
+          <Slider label="RADIUS" value={ui.radius}
+            min={0} max={24} unit="px"
+            onChange={v => setUI('radius', v)} />
+          <Slider label="ACCENT TINT" value={ui.borderTint}
+            min={0} max={100} unit="%"
+            onChange={v => setUI('borderTint', v)} />
+        </Subsection>
 
-        {div}
+        <Subsection title="GLOW">
+          <Slider label="HALO SIZE" value={ui.glowSize}
+            min={0} max={64} unit="px"
+            onChange={v => setUI('glowSize', v)} />
+        </Subsection>
 
-        <SliderRow label="BORDER WIDTH" value={ui.borderWidth} min={0} max={8} unit="px"
-          onChange={v => setUI('borderWidth', v)} />
-
-        <SliderRow label="BORDER ACCENT" value={ui.borderTint} min={0} max={100} unit="%"
-          onChange={v => setUI('borderTint', v)} />
-
-        {div}
-
-        <SliderRow label="CORNER RADIUS" value={ui.radius} min={0} max={24} unit="px"
-          onChange={v => setUI('radius', v)} />
-
-        {div}
-
-        <SliderRow label="GLOW SIZE" value={ui.glowSize} min={0} max={64} unit="px"
-          onChange={v => setUI('glowSize', v)} />
-
-        <SliderRow label="BORDER SHIMMER" value={ui.shimmer} min={0} max={100} unit="%"
-          onChange={v => setUI('shimmer', v)} />
-
-        {ui.shimmer > 0 && (<>
-          <SliderRow label="SHIMMER SPEED" value={ui.shimmerSpeed} min={0.5} max={8} step={0.5} unit="s"
-            onChange={v => setUI('shimmerSpeed', v)} />
-          <SliderRow label="SHIMMER PULSES" value={ui.shimmerPulses} min={1} max={4} unit=""
-            onChange={v => setUI('shimmerPulses', v)} />
-        </>)}
+        <Subsection title="SHIMMER">
+          <Slider label="STRENGTH" value={ui.shimmer}
+            min={0} max={100} unit="%"
+            onChange={v => setUI('shimmer', v)} />
+          {ui.shimmer > 0 && (
+            <>
+              <Slider label="SPEED" value={ui.shimmerSpeed}
+                min={0.5} max={8} step={0.5} unit="s"
+                onChange={v => setUI('shimmerSpeed', v)} />
+              <Slider label="PULSES" value={ui.shimmerPulses}
+                min={1} max={4}
+                onChange={v => setUI('shimmerPulses', v)} />
+            </>
+          )}
+        </Subsection>
 
         {lightMode && (
-          <>
-            {div}
-            <SliderRow label="CANVAS TINT" value={Math.round(ui.canvasTint * 100)} min={0} max={100} unit="%"
+          <Subsection title="GAME BOARD">
+            <Slider label="LIGHT TINT" value={Math.round(ui.canvasTint * 100)}
+              min={0} max={100} unit="%"
               onChange={v => setUI('canvasTint', v / 100)} />
-          </>
+          </Subsection>
         )}
 
-        {div}
-
-        <button className="btn btn-ghost" style={{ fontSize: 7 }}
-          onClick={() => {
-            [
-              ['borderWidth', 1], ['radius', 8], ['glowSize', 16],
-              ['canvasTint', 0.58], ['borderTint', 0], ['shimmer', 0], ['shimmerSpeed', 2], ['shimmerPulses', 1], ['fontSize', 1.0],
-            ].forEach(([k, v]) => setUI(k, v));
-          }}>
-          RESET DEFAULTS
+        <button
+          className="btn btn-ghost"
+          style={{ marginTop: 22, fontSize: 7 }}
+          onClick={resetDefaults}
+        >
+          ↺ RESET DEFAULTS
         </button>
       </div>
 
-      {/* ── Account ── */}
+      {/* ── Account ────────────────────────────────────────────────────── */}
       <div className="card">
         <div className="card-title">ACCOUNT</div>
-        <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>Logged in as:</div>
-        <div style={{ fontSize: 10, color: 'var(--text)', marginTop: 4 }}>{user?.username ?? '?'}</div>
+        <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>
+          Logged in as
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6, textShadow: '0 0 8px var(--accent-glow)' }}>
+          {user?.username ?? '?'}
+        </div>
       </div>
     </div>
   );

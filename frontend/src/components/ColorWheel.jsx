@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 function hslToHex(h, s, l) {
   s /= 100; l /= 100;
@@ -12,22 +12,15 @@ function hslToHex(h, s, l) {
 }
 
 function makeThemeFromHSL(h, s, l) {
-  const accent    = hslToHex(h, s, l);
+  const accent     = hslToHex(h, s, l);
   const accentDark = hslToHex(h, Math.min(s + 10, 100), Math.max(l - 20, 8));
-  const [r, g, b] = [0, 8, 4].map(n => {
-    s /= 100; l /= 100;
-    const a2 = (s * 100 / 100) * Math.min(l, 1 - l);
-    const k = (n + h / 30) % 12;
-    return Math.round(255 * (l - a2 * Math.max(Math.min(k - 3, 9 - k, 1), -1)));
-    s *= 100; l *= 100;
-  });
   return {
-    id:        `custom_${accent}`,
-    label:     accent.toUpperCase().slice(1),
+    id:         `custom_${accent}`,
+    label:      accent.toUpperCase().slice(1),
     accent,
     accentDark,
-    glow:      `hsla(${Math.round(h)}, ${s}%, ${l}%, 0.35)`,
-    custom:    true,
+    glow:       `hsla(${Math.round(h)}, ${Math.round(s)}%, ${Math.round(l)}%, 0.35)`,
+    custom:     true,
   };
 }
 
