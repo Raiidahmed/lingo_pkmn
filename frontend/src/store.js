@@ -1,6 +1,40 @@
 import { create } from 'zustand';
 import { THEMES, DEFAULT_THEME, applyTheme, applyRawTheme } from './themes.js';
 
+const DEFAULT_UI_STATE = {
+  borderWidth: 1,    // px, 0-8
+  radius:      8,    // px, 0-24
+  glowSize:    16,   // px, 0-48
+  canvasTint:  0.58, // 0-1, light mode overlay strength
+  borderTint:  0,    // 0-100, blend border toward accent color
+  shimmer:       0,  // 0-100, animated gradient shimmer on card borders
+  shimmerSpeed:  2,  // 0.5-8s, rotation period
+  shimmerPulses: 1,  // 1-4, number of bright sweeps per rotation
+  customColors:  [],
+  fontSize:    1.0,  // 0.75-1.5, page zoom scale
+};
+
+function readJson(key, fallback) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readUIState() {
+  const savedUI = readJson('lingo_ui', {});
+  const savedCustomColors = readJson('lingo_custom_colors', null);
+  return {
+    ...DEFAULT_UI_STATE,
+    ...savedUI,
+    customColors: Array.isArray(savedCustomColors)
+      ? savedCustomColors
+      : (Array.isArray(savedUI.customColors) ? savedUI.customColors : []),
+  };
+}
+
 /*
   Build a continuous conic gradient with N evenly-spaced bright peaks.
   Every degree of the rotation has SOME color (a soft accent halo);
@@ -85,7 +119,7 @@ function applyUI(ui) {
       ? `color-mix(in srgb, var(--accent) ${ui.borderTint}%, var(--border))`
       : 'var(--border)'
   );
-  el.style.setProperty('--shimmer-str', `${ui.shimmer / 100}`);
+  el.style.setProperty('--shimmer-str', `${(ui.shimmer ?? 0) / 100}`);
 
   // Gradient injected via <style> so var(--shimmer-angle) is a live
   // dependency of a real background property (browser tracks repaints).
@@ -98,7 +132,7 @@ function applyUI(ui) {
   styleEl.textContent = `.card::after { background: ${buildShimmerGradient(ui.shimmerPulses ?? 1)}; }`;
 
   // Drive the rAF loop: only run while shimmer is visible
-  setShimmerSpeed(ui.shimmerSpeed);
+  setShimmerSpeed(ui.shimmerSpeed ?? DEFAULT_UI_STATE.shimmerSpeed);
   if (ui.shimmer > 0) startShimmerLoop();
   else stopShimmerLoop();
 
@@ -117,18 +151,7 @@ export const useStore = create((set, get) => ({
   save: null,   // { snapshot, status } from API
   language: 'es',
   lightMode: localStorage.getItem('lingo_light_mode') === '1',
-  ui: JSON.parse(localStorage.getItem('lingo_ui') || 'null') || {
-    borderWidth: 1,    // px, 0–8
-    radius:      8,    // px, 0–24
-    glowSize:    16,   // px, 0–48
-    canvasTint:  0.58, // 0–1, light mode overlay strength
-    borderTint:  0,    // 0–100, blend border toward accent color
-    shimmer:       0,  // 0–100, animated gradient shimmer on card borders
-    shimmerSpeed:  2,  // 0.5–8s, rotation period
-    shimmerPulses: 1,  // 1–4, number of bright sweeps per rotation
-    customColors:  JSON.parse(localStorage.getItem('lingo_custom_colors') || '[]'),
-    fontSize:    1.0,  // 0.75–1.5, page zoom scale
-  },
+  ui: readUIState(),
 
   setScreen: (screen) => set({ screen }),
   setLanguage: (language) => set({ language }),
@@ -166,7 +189,10 @@ export const useStore = create((set, get) => ({
 
   setCustomTheme: (themeObj) => {
     const t = applyRawTheme(themeObj);
-    set(s => ({ theme: t }));
+    set(s => {
+      if (s.ui.shimmer > 0) applyUI({ ...s.ui });
+      return { theme: t };
+    });
   },
 
   addCustomColor: (colorObj) => set(s => {

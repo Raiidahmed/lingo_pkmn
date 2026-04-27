@@ -22,10 +22,17 @@ export function applyTheme(themeId) {
 }
 
 export function applyRawTheme(t) {
+  const accentRgb = t.accentRgb || hexToRgbString(t.accent);
+  const theme = {
+    ...t,
+    accentDark: t.accentDark || t.accent,
+    accentRgb,
+    glow: t.glow || `rgba(${accentRgb},0.3)`,
+  };
   const root = document.documentElement;
-  root.style.setProperty('--accent',      t.accent);
-  root.style.setProperty('--accent-dark', t.accentDark);
-  root.style.setProperty('--accent-rgb',  t.accentRgb || hexToRgbString(t.accent));
-  root.style.setProperty('--accent-glow', t.glow);
-  return t;
+  root.style.setProperty('--accent',      theme.accent);
+  root.style.setProperty('--accent-dark', theme.accentDark);
+  root.style.setProperty('--accent-rgb',  theme.accentRgb);
+  root.style.setProperty('--accent-glow', theme.glow);
+  return theme;
 }

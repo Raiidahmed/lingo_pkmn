@@ -11,6 +11,12 @@ const UI_DEFAULTS = {
   borderTint: 0, shimmer: 0, shimmerSpeed: 2, shimmerPulses: 1, fontSize: 1.0,
 };
 
+const PRESET_THEME_IDS = new Set(THEMES.map(t => t.id));
+
+function isPresetThemeId(themeId) {
+  return PRESET_THEME_IDS.has(themeId);
+}
+
 function Subsection({ title, children }) {
   return (
     <div className="subsection">
@@ -39,14 +45,17 @@ export default function SettingsPage() {
   useEffect(() => {
     return () => {
       mountedRef.current = false;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
 
   async function persistLatestTheme() {
     if (savingRef.current) return savePromiseRef.current;
+    if (!isPresetThemeId(latestThemeIdRef.current)) return null;
 
     savePromiseRef.current = (async () => {
       const themeId = latestThemeIdRef.current;
+      if (!isPresetThemeId(themeId)) return;
       savingRef.current = true;
       if (mountedRef.current) {
         setSaveState('saving');
@@ -70,7 +79,7 @@ export default function SettingsPage() {
         }
       } finally {
         savingRef.current = false;
-        if (latestThemeIdRef.current !== themeId) {
+        if (latestThemeIdRef.current !== themeId && isPresetThemeId(latestThemeIdRef.current)) {
           await persistLatestTheme();
         }
       }
@@ -88,12 +97,37 @@ export default function SettingsPage() {
     }, 180);
   }
 
-  function handleTheme(themeId) {
+  function handlePresetTheme(themeId) {
     if (theme.id === themeId && saveState !== 'error') return;
     setTheme(themeId);
     setSaveState('queued');
     setSaveError('');
     queueThemeSave(themeId);
+  }
+
+  function handleCustomTheme(customTheme) {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    latestThemeIdRef.current = null;
+    setCustomTheme(customTheme);
+    setSaveState('idle');
+    setSaveError('');
+  }
+
+  function handleAddCustomTheme(customTheme) {
+    addCustomColor(customTheme);
+    handleCustomTheme(customTheme);
+  }
+
+  function handleRemoveCustomTheme(index, customTheme) {
+    removeCustomColor(index);
+    if (theme.id === customTheme.id) {
+      handlePresetTheme(user?.accent_theme && isPresetThemeId(user.accent_theme)
+        ? user.accent_theme
+        : THEMES[0].id);
+    }
   }
 
   function resetDefaults() {
@@ -166,7 +200,7 @@ export default function SettingsPage() {
             {THEMES.map(t => (
               <button
                 key={t.id}
-                onClick={() => handleTheme(t.id)}
+                onClick={() => handlePresetTheme(t.id)}
                 aria-label={t.label}
                 style={{
                   width: 44, height: 44, borderRadius: '50%',
@@ -185,7 +219,7 @@ export default function SettingsPage() {
             {(ui.customColors || []).map((t, i) => (
               <div key={t.id} style={{ position: 'relative', width: 44, height: 44, margin: '0 auto' }}>
                 <button
-                  onClick={() => setCustomTheme(t)}
+                  onClick={() => handleCustomTheme(t)}
                   aria-label={`Custom ${t.label}`}
                   style={{
                     width: 44, height: 44, borderRadius: '50%',
@@ -198,7 +232,7 @@ export default function SettingsPage() {
                   }}
                 />
                 <button
-                  onClick={() => removeCustomColor(i)}
+                  onClick={() => handleRemoveCustomTheme(i, t)}
                   aria-label="Remove"
                   style={{
                     position: 'absolute',
@@ -246,7 +280,7 @@ export default function SettingsPage() {
 
         {mixerOpen && (
           <Subsection title="COLOR MIXER">
-            <ColorWheel onAdd={(t) => { addCustomColor(t); setCustomTheme(t); }} />
+            <ColorWheel onAdd={handleAddCustomTheme} />
           </Subsection>
         )}
       </div>
