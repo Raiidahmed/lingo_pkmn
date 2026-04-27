@@ -492,6 +492,68 @@ function drawPlayer(ctx, x, y, accent) {
   ctx.fillRect(x + 14, y + 14, 4, 1);
 }
 
+function drawMouse(ctx, x, y, color, displayChar, isOpen) {
+  drawFloor(ctx, x, y, 0, 0);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillRect(x + 7, y + T - 5, T - 14, 4);
+
+  // Body
+  ctx.fillStyle = color;
+  ctx.fillRect(x + 9, y + 16, 14, 10);
+  ctx.fillRect(x + 8, y + 18, 16, 6);
+
+  // Head
+  ctx.fillRect(x + 10, y + 9, 12, 9);
+
+  // Ears
+  ctx.fillRect(x + 8,  y + 3, 5, 8);
+  ctx.fillRect(x + 19, y + 3, 5, 8);
+  ctx.fillStyle = '#e07878';
+  ctx.fillRect(x + 9,  y + 4, 3, 6);
+  ctx.fillRect(x + 20, y + 4, 3, 6);
+
+  // Eyes
+  ctx.fillStyle = '#1a0808';
+  ctx.fillRect(x + 12, y + 12, 2, 2);
+  ctx.fillRect(x + 18, y + 12, 2, 2);
+  ctx.fillStyle = '#ff2222';
+  ctx.fillRect(x + 12, y + 12, 1, 1);
+  ctx.fillRect(x + 18, y + 12, 1, 1);
+
+  // Nose
+  ctx.fillStyle = '#f09090';
+  ctx.fillRect(x + 15, y + 15, 2, 2);
+
+  // Tail
+  ctx.fillStyle = color;
+  ctx.fillRect(x + 23, y + 20, 4, 2);
+  ctx.fillRect(x + 26, y + 18, 2, 3);
+  ctx.fillRect(x + 27, y + 15, 2, 4);
+
+  // Feet
+  ctx.fillStyle = color;
+  ctx.fillRect(x + 9,  y + 24, 5, 4);
+  ctx.fillRect(x + 18, y + 24, 5, 4);
+  ctx.fillStyle = '#e8b898';
+  ctx.fillRect(x + 9,  y + 26, 5, 2);
+  ctx.fillRect(x + 18, y + 26, 5, 2);
+
+  // Display char overlay
+  if (displayChar) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x + 5, y + 16, T - 10, 9);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9px "Noto Sans JP", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(displayChar, x + T / 2, y + 21);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+  }
+}
+
 function drawScene(ctx, state, accentColor, useLightBoard) {
   const { grid, player, exitOpen, particles, npcs, language, locks, challenges } = state;
   ctx.clearRect(0, 0, BOARD_W, BOARD_H);
