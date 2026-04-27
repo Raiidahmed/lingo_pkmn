@@ -517,11 +517,20 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
 
   if (player) drawPlayer(ctx, player.col * T, player.row * T, accentColor);
 
-  // Light mode: subtle unifying tint over already-light tiles
+  // Light mode: wider tint response so the slider has obvious visual impact.
   if (canvasTint > 0) {
-    ctx.globalAlpha = canvasTint * 0.25;
-    ctx.fillStyle = '#c8dcee';
+    const tint = Math.max(0, Math.min(1, canvasTint));
+    ctx.globalAlpha = Math.pow(tint, 0.75) * 0.48;
+    ctx.fillStyle = '#d7e7f5';
     ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
+
+    // At higher tint values, add a soft white lift to make the upper range feel stronger.
+    if (tint > 0.35) {
+      ctx.globalAlpha = ((tint - 0.35) / 0.65) * 0.18;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
+    }
+
     ctx.globalAlpha = 1;
   }
 
