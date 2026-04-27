@@ -50,6 +50,28 @@ def create_app():
         token = auth[7:]
         return get_user_by_token(get_db(), token)
 
+    def parse_json_field(raw, fallback):
+        if raw is None:
+            return fallback
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            return fallback
+        return fallback if parsed is None else parsed
+
+    def build_user_payload(user, word_bank, levels_completed):
+        return {
+            "id": user["id"],
+            "username": user["username"],
+            "accent_theme": user["accent_theme"],
+            "ui_settings": parse_json_field(user["ui_settings_json"], {}),
+            "custom_colors": parse_json_field(user["custom_colors_json"], []),
+            "active_theme": parse_json_field(user["active_theme_json"], None),
+            "light_mode": bool(user["light_mode"]),
+            "word_bank": word_bank,
+            "levels_completed": levels_completed,
+        }
+
     @app.post("/api/login")
     def login():
         data = request.get_json(silent=True) or {}
@@ -67,13 +89,7 @@ def create_app():
         return jsonify(
             {
                 "token": token,
-                "user": {
-                    "id": user["id"],
-                    "username": user["username"],
-                    "accent_theme": user["accent_theme"],
-                    "word_bank": word_bank,
-                    "levels_completed": levels_completed,
-                },
+                "user": build_user_payload(user, word_bank, levels_completed),
                 "save": {
                     "snapshot": json.loads(save["snapshot_json"]) if save and save["snapshot_json"] else None,
                     "status": json.loads(save["status_json"]) if save and save["status_json"] else {},
@@ -100,13 +116,7 @@ def create_app():
         levels_completed = json.loads(user["levels_completed"] or "[]")
         return jsonify(
             {
-                "user": {
-                    "id": user["id"],
-                    "username": user["username"],
-                    "accent_theme": user["accent_theme"],
-                    "word_bank": word_bank,
-                    "levels_completed": levels_completed,
-                },
+                "user": build_user_payload(user, word_bank, levels_completed),
                 "word_bank": word_bank,
                 "save": {
                     "snapshot": json.loads(save["snapshot_json"]) if save and save["snapshot_json"] else None,
@@ -188,6 +198,68 @@ def create_app():
         conn.execute(
             "UPDATE users SET accent_theme=? WHERE id=?", (theme, user["id"])
         )
+        conn.commit()
+        return jsonify({"ok": True})
+
+    @app.post("/api/preferences")
+    def set_preferences():
+        user = require_auth()
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        data = request.get_json(silent=True) or {}
+        updates = []
+        params = []
+
+        if "ui_settings" in data:
+            ui_settings = data.get("ui_settings")
+            if not isinstance(ui_settings, dict):
+                return jsonify({"error": "ui_settings must be an object"}), 400
+            ui_json = json.dumps(ui_settings, separators=(",", ":"))
+            if len(ui_json) > 4096:
+                return jsonify({"error": "ui_settings too large"}), 400
+            updates.append("ui_settings_json=?")
+            params.append(ui_json)
+
+        if "custom_colors" in data:
+            custom_colors = data.get("custom_colors")
+            if not isinstance(custom_colors, list):
+                return jsonify({"error": "custom_colors must be an array"}), 400
+            if len(custom_colors) > 64:
+                return jsonify({"error": "too many custom colors"}), 400
+            colors_json = json.dumps(custom_colors, separators=(",", ":"))
+            if len(colors_json) > 16384:
+                return jsonify({"error": "custom_colors too large"}), 400
+            updates.append("custom_colors_json=?")
+            params.append(colors_json)
+
+        if "active_theme" in data:
+            active_theme = data.get("active_theme")
+            if active_theme is not None and not isinstance(active_theme, dict):
+                return jsonify({"error": "active_theme must be an object or null"}), 400
+            active_json = (
+                json.dumps(active_theme, separators=(",", ":"))
+                if active_theme is not None
+                else None
+            )
+            if active_json is not None and len(active_json) > 4096:
+                return jsonify({"error": "active_theme too large"}), 400
+            updates.append("active_theme_json=?")
+            params.append(active_json)
+
+        if "light_mode" in data:
+            light_mode = data.get("light_mode")
+            if not isinstance(light_mode, bool):
+                return jsonify({"error": "light_mode must be boolean"}), 400
+            updates.append("light_mode=?")
+            params.append(1 if light_mode else 0)
+
+        if not updates:
+            return jsonify({"ok": True})
+
+        conn = get_db()
+        params.append(user["id"])
+        conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE id=?", params)
         conn.commit()
         return jsonify({"ok": True})
 

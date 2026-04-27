@@ -2,6 +2,29 @@ import sqlite3
 from datetime import datetime, timezone
 
 
+def _ensure_user_pref_columns(conn):
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(users)").fetchall()
+    }
+    if "ui_settings_json" not in cols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN ui_settings_json TEXT NOT NULL DEFAULT '{}'"
+        )
+    if "custom_colors_json" not in cols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN custom_colors_json TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "active_theme_json" not in cols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN active_theme_json TEXT"
+        )
+    if "light_mode" not in cols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN light_mode INTEGER NOT NULL DEFAULT 0"
+        )
+
+
 def init_db(db_path):
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA journal_mode=WAL")
@@ -12,6 +35,10 @@ def init_db(db_path):
             username     TEXT NOT NULL,
             username_norm TEXT UNIQUE NOT NULL,
             accent_theme TEXT NOT NULL DEFAULT 'crimson',
+            ui_settings_json TEXT NOT NULL DEFAULT '{}',
+            custom_colors_json TEXT NOT NULL DEFAULT '[]',
+            active_theme_json TEXT,
+            light_mode   INTEGER NOT NULL DEFAULT 0,
             session_token TEXT UNIQUE,
             levels_completed TEXT NOT NULL DEFAULT '[]',
             created_at   TEXT NOT NULL
@@ -49,6 +76,7 @@ def init_db(db_path):
         CREATE INDEX IF NOT EXISTS idx_scores_user    ON scores(user_id);
         CREATE INDEX IF NOT EXISTS idx_word_bank_user ON word_bank(user_id);
     """)
+    _ensure_user_pref_columns(conn)
     conn.commit()
     conn.close()
 

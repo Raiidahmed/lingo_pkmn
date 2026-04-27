@@ -20,6 +20,7 @@ export const api = {
   submitScore: (level, score, time_ms) => req('POST', '/api/scores', { level, score, time_ms }),
   addWords: (words, source) => req('POST', '/api/word-bank', { words, source }),
   setTheme: (theme) => req('POST', '/api/theme', { theme }),
+  savePreferences: (prefs) => req('POST', '/api/preferences', prefs),
   saveGame: (snapshot, status) => req('POST', '/api/save', { snapshot, status }),
   markLevelComplete: (level) => req('POST', '/api/level-complete', { level }),
 };
