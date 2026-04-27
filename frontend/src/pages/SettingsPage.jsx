@@ -8,7 +8,7 @@ import ColorWheel from '../components/ColorWheel.jsx';
 import GameBoardPreview from '../components/GameBoardPreview.jsx';
 
 const UI_DEFAULTS = {
-  borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0.58,
+  borderWidth: 1, radius: 8, glowSize: 16, canvasTint: 0,
   borderTint: 0, fontSize: 1.0,
 };
 
@@ -296,14 +296,13 @@ export default function SettingsPage() {
         </Subsection>
 
         <Subsection title="GAME BOARD">
-          <Slider label="LIGHT TINT" value={ui.canvasTint}
+          <Slider label="BLACK / WHITE" value={ui.canvasTint}
             min={0} max={1}
-            format={v => `${Math.round(v * 100)}%`}
+            format={v => `${Math.round((1 - v) * 100)}B / ${Math.round(v * 100)}W`}
             onChange={v => setUI('canvasTint', v)} />
           <GameBoardPreview
             accent={theme.accent}
             language={language}
-            lightMode={lightMode}
             canvasTint={ui.canvasTint}
           />
         </Subsection>

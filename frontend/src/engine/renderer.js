@@ -1,6 +1,12 @@
 import { TILE, MAP_W, MAP_H } from './dungeon.js';
 
 const T = 32;
+const BOARD_W = MAP_W * T;
+const BOARD_H = MAP_H * T;
+let darkBuffer = null;
+let darkBufferCtx = null;
+let lightBuffer = null;
+let lightBufferCtx = null;
 
 // Deterministic tile variation hash
 function tvar(col, row) {
@@ -485,28 +491,25 @@ function drawPlayer(ctx, x, y, accent) {
   ctx.fillRect(x + 14, y + 14, 4, 1);
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-
-export function render(ctx, state, accentColor, canvasTint = 0) {
+function drawScene(ctx, state, accentColor, useLightBoard) {
   const { grid, player, exitOpen, particles, npcs } = state;
-  const light = canvasTint > 0;
-
-  ctx.clearRect(0, 0, MAP_W * T, MAP_H * T);
+  ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
   for (let r = 0; r < MAP_H; r++) {
     for (let c = 0; c < MAP_W; c++) {
       const t = grid[r][c];
-      const x = c * T, y = r * T;
+      const x = c * T;
+      const y = r * T;
       switch (t) {
-        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, light); break;
-        case TILE.WALL:    drawWall(ctx, x, y, c, r, light); break;
+        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, useLightBoard); break;
+        case TILE.WALL:    drawWall(ctx, x, y, c, r, useLightBoard); break;
         case TILE.DOOR_C:  drawDoorClosed(ctx, x, y, accentColor); break;
         case TILE.DOOR_O:  drawDoorOpen(ctx, x, y); break;
         case TILE.CHEST_C: drawChestClosed(ctx, x, y, accentColor); break;
         case TILE.CHEST_O: drawChestOpen(ctx, x, y); break;
         case TILE.STAIRS:  drawStairs(ctx, x, y, exitOpen); break;
         case TILE.RUG:     drawRug(ctx, x, y, c, r); break;
-        default:           drawFloor(ctx, x, y, c, r);
+        default:           drawFloor(ctx, x, y, c, r, useLightBoard);
       }
     }
   }
@@ -516,23 +519,6 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
   }
 
   if (player) drawPlayer(ctx, player.col * T, player.row * T, accentColor);
-
-  // Light mode: wider tint response so the slider has obvious visual impact.
-  if (canvasTint > 0) {
-    const tint = Math.max(0, Math.min(1, canvasTint));
-    ctx.globalAlpha = Math.pow(tint, 0.75) * 0.48;
-    ctx.fillStyle = '#d7e7f5';
-    ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
-
-    // At higher tint values, add a soft white lift to make the upper range feel stronger.
-    if (tint > 0.35) {
-      ctx.globalAlpha = ((tint - 0.35) / 0.65) * 0.18;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
-    }
-
-    ctx.globalAlpha = 1;
-  }
 
   if (particles) {
     for (const p of particles) {
@@ -546,6 +532,58 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
   }
 }
 
+function ensureBlendBuffers() {
+  if (typeof document === 'undefined') return false;
+
+  if (!darkBuffer) {
+    darkBuffer = document.createElement('canvas');
+    darkBufferCtx = darkBuffer.getContext('2d');
+  }
+  if (!lightBuffer) {
+    lightBuffer = document.createElement('canvas');
+    lightBufferCtx = lightBuffer.getContext('2d');
+  }
+  if (!darkBufferCtx || !lightBufferCtx) return false;
+
+  if (darkBuffer.width !== BOARD_W || darkBuffer.height !== BOARD_H) {
+    darkBuffer.width = BOARD_W;
+    darkBuffer.height = BOARD_H;
+  }
+  if (lightBuffer.width !== BOARD_W || lightBuffer.height !== BOARD_H) {
+    lightBuffer.width = BOARD_W;
+    lightBuffer.height = BOARD_H;
+  }
+  return true;
+}
+
+export function render(ctx, state, accentColor, canvasTint = 0) {
+  const blend = Math.max(0, Math.min(1, canvasTint));
+
+  if (blend <= 0) {
+    drawScene(ctx, state, accentColor, false);
+    return;
+  }
+  if (blend >= 1) {
+    drawScene(ctx, state, accentColor, true);
+    return;
+  }
+
+  if (!ensureBlendBuffers()) {
+    drawScene(ctx, state, accentColor, blend >= 0.5);
+    return;
+  }
+
+  drawScene(darkBufferCtx, state, accentColor, false);
+  drawScene(lightBufferCtx, state, accentColor, true);
+
+  ctx.clearRect(0, 0, BOARD_W, BOARD_H);
+  ctx.globalAlpha = 1;
+  ctx.drawImage(darkBuffer, 0, 0);
+  ctx.globalAlpha = blend;
+  ctx.drawImage(lightBuffer, 0, 0);
+  ctx.globalAlpha = 1;
+}
+
 export function getCanvasSize() {
-  return { width: MAP_W * T, height: MAP_H * T };
+  return { width: BOARD_W, height: BOARD_H };
 }

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { loadLevel } from '../engine/dungeon.js';
 import { render, getCanvasSize } from '../engine/renderer.js';
 
-function buildPreviewSrc({ accent, language, lightMode, canvasTint }) {
+function buildPreviewSrc({ accent, language, canvasTint }) {
   if (typeof document === 'undefined') return '';
 
   const level = loadLevel(1, language);
@@ -25,16 +25,16 @@ function buildPreviewSrc({ accent, language, lightMode, canvasTint }) {
       npcs: level.npcs || [],
     },
     accent,
-    lightMode ? canvasTint : 0
+    canvasTint
   );
 
   return canvas.toDataURL('image/png');
 }
 
-export default function GameBoardPreview({ accent, language, lightMode, canvasTint }) {
+export default function GameBoardPreview({ accent, language, canvasTint }) {
   const previewSrc = useMemo(
-    () => buildPreviewSrc({ accent, language, lightMode, canvasTint }),
-    [accent, language, lightMode, canvasTint]
+    () => buildPreviewSrc({ accent, language, canvasTint }),
+    [accent, language, canvasTint]
   );
 
   return (

@@ -5,7 +5,7 @@ const DEFAULT_UI_STATE = {
   borderWidth: 1,    // px, 0-8
   radius:      8,    // px, 0-24
   glowSize:    16,   // px, 0-48
-  canvasTint:  0.58, // 0-1, light mode overlay strength
+  canvasTint:  0,    // 0-1, board blend: dark (0) -> light (1)
   borderTint:  0,    // 0-100, blend border toward accent color
   customColors:  [],
   fontSize:    1.0,  // 0.75-1.5, page zoom scale

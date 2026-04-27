@@ -8,7 +8,7 @@ const MAX_HEARTS = 3;
 const MOVE_COOLDOWN = 120;
 
 export default function GamePage() {
-  const { startLevel, resumeMode, save, endGame, user, theme, language, lightMode, ui, updateWordBank, setScreen } = useStore();
+  const { startLevel, resumeMode, save, endGame, user, theme, language, ui, updateWordBank, setScreen } = useStore();
 
   // --- Mutable game state (refs, no re-render) ---
   const levelRef        = useRef(startLevel);
@@ -304,7 +304,7 @@ export default function GamePage() {
       exitOpen: isExitOpen(),
       particles: particlesRef.current,
       npcs: levelDataRef.current?.npcs ?? [],
-    }, theme.accent, (() => { const s = useStore.getState(); return s.lightMode ? (s.ui?.canvasTint ?? 0.58) : 0; })());
+    }, theme.accent, (() => { const s = useStore.getState(); return s.ui?.canvasTint ?? 0; })());
   }
 
   // --- Mount ---
