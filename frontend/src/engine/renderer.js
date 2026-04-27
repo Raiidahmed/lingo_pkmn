@@ -618,3 +618,18 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
 export function getCanvasSize() {
   return { width: BOARD_W, height: BOARD_H };
 }
+
+export function drawTile(ctx, x, y, tileType, opts = {}) {
+  const { col = 0, row = 0, accent = '#0072ff', exitOpen = false, light = false } = opts;
+  switch (tileType) {
+    case TILE.FLOOR:   drawFloor(ctx, x, y, col, row, light); break;
+    case TILE.WALL:    drawWall(ctx, x, y, col, row, light); break;
+    case TILE.DOOR_C:  drawDoorClosed(ctx, x, y, accent); break;
+    case TILE.DOOR_O:  drawDoorOpen(ctx, x, y); break;
+    case TILE.CHEST_C: drawChestClosed(ctx, x, y, accent); break;
+    case TILE.CHEST_O: drawChestOpen(ctx, x, y); break;
+    case TILE.STAIRS:  drawStairs(ctx, x, y, exitOpen); break;
+    case TILE.RUG:     drawRug(ctx, x, y, col, row); break;
+    default:           drawFloor(ctx, x, y, col, row, light);
+  }
+}

@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store.js';
 import { TILE, MAP_W, MAP_H } from '../engine/dungeon.js';
 import { getLevel as getJALevel } from '../engine/levels_ja.js';
 import { getLevel as getESLevel } from '../engine/levels.js';
+import { render as renderScene, drawTile as drawSingleTile } from '../engine/renderer.js';
+import { preloadMouseImages } from '../engine/mouseAssets.js';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -117,14 +119,33 @@ ${mapLines},
   }`;
 }
 
+// ── Tile palette preview ───────────────────────────────────────────────────────
+
+function TilePreview({ tileType, selected, onClick, size = 30, accent = '#0072ff' }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const c = ref.current; if (!c) return;
+    const ctx = c.getContext('2d');
+    drawSingleTile(ctx, 0, 0, tileType, { col: 0, row: 1, accent });
+  }, [tileType, accent]);
+  return (
+    <canvas ref={ref} width={32} height={32} title={TILE_LABEL[tileType]} onClick={onClick}
+      style={{
+        width: size, height: size, display: 'block', imageRendering: 'pixelated',
+        border: selected ? '2px solid var(--accent)' : B2,
+        borderRadius: 2, cursor: 'pointer', outline: 'none',
+      }} />
+  );
+}
+
 // ── style primitives ──────────────────────────────────────────────────────────
 
-const B = '1px solid #1e1e38';
-const B2 = '1px solid #2a2a48';
+const B = '1px solid rgba(0,114,255,0.18)';
+const B2 = '1px solid rgba(0,114,255,0.28)';
 
 function btn(extra = {}) {
   return {
-    background: 'none', border: B2, color: '#8888b8',
+    background: 'none', border: B2, color: '#555',
     padding: '3px 8px', cursor: 'pointer',
     fontFamily: '"Courier New", monospace', fontSize: 10,
     borderRadius: 2, whiteSpace: 'nowrap', ...extra,
@@ -135,14 +156,14 @@ function accentBtn(extra = {}) {
 }
 function inp(extra = {}) {
   return {
-    background: '#0d0d1e', border: B2, color: '#c0c0dc',
+    background: '#f0f5ff', border: B2, color: '#111',
     padding: '3px 6px', fontFamily: '"Courier New", monospace',
     fontSize: 10, outline: 'none', borderRadius: 2, ...extra,
   };
 }
 function lbl(extra = {}) {
   return {
-    display: 'block', fontSize: 8, color: '#505070',
+    display: 'block', fontSize: 8, color: '#888',
     textTransform: 'uppercase', letterSpacing: '0.1em',
     marginBottom: 3, ...extra,
   };
@@ -155,7 +176,7 @@ function sec(extra = {}) {
 }
 function secHead(txt) {
   return (
-    <div style={{ fontSize: 8, color: '#3a3a5a', textTransform: 'uppercase',
+    <div style={{ fontSize: 8, color: '#999', textTransform: 'uppercase',
       letterSpacing: '0.14em', marginBottom: 8, paddingBottom: 5, borderBottom: B }}>
       {txt}
     </div>
@@ -180,7 +201,7 @@ function ChallengePanel({ lockKey, lockType, challenge: ch, onUpdate, onRemoveLo
     <div>
       <div style={sec()}>
         {secHead(`${lockType?.toUpperCase() || 'LOCK'} CHALLENGE`)}
-        <div style={{ color: '#404060', fontSize: 8, marginBottom: 10 }}>tile: {lockKey}</div>
+        <div style={{ color: '#aaa', fontSize: 8, marginBottom: 10 }}>tile: {lockKey}</div>
 
         <Field label="Display char (hiragana / kanji)">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -242,9 +263,9 @@ function ChallengePanel({ lockKey, lockType, challenge: ch, onUpdate, onRemoveLo
               return (
                 <button key={s} onClick={() => u('choiceStyle', s === 'normal' ? undefined : s)}
                   style={btn({
-                    background: active ? '#161632' : 'none',
+                    background: active ? 'rgba(0,114,255,0.08)' : 'none',
                     borderColor: active ? 'var(--accent)' : '#2a2a48',
-                    color: active ? 'var(--accent)' : '#7070a0',
+                    color: active ? 'var(--accent)' : '#aaa',
                   })}>
                   {s.toUpperCase()}
                 </button>
@@ -327,7 +348,7 @@ function NpcPanel({ npc, onUpdate, onDelete }) {
     <div>
       <div style={sec()}>
         {secHead('NPC')}
-        <div style={{ color: '#404060', fontSize: 8, marginBottom: 10 }}>
+        <div style={{ color: '#888', fontSize: 8, marginBottom: 10 }}>
           position: ({npc.col}, {npc.row})
         </div>
 
@@ -342,9 +363,9 @@ function NpcPanel({ npc, onUpdate, onDelete }) {
               <button key={val} onClick={() => u('label', val)}
                 style={btn({
                   flex: 1,
-                  background: npc.label === val ? '#161632' : 'none',
-                  borderColor: npc.label === val ? 'var(--accent)' : '#2a2a48',
-                  color: npc.label === val ? 'var(--accent)' : '#7070a0',
+                  background: npc.label === val ? 'rgba(0,114,255,0.08)' : 'none',
+                  borderColor: npc.label === val ? 'var(--accent)' : 'rgba(0,114,255,0.28)',
+                  color: npc.label === val ? 'var(--accent)' : '#999',
                 })}>
                 {val} {lab}
               </button>
@@ -366,13 +387,13 @@ function NpcPanel({ npc, onUpdate, onDelete }) {
 
       <div style={sec()}>
         {secHead('Dialogue Tree')}
-        <div style={{ color: '#3a3a5a', fontSize: 8, marginBottom: 8 }}>
+        <div style={{ color: '#999', fontSize: 8, marginBottom: 8 }}>
           Lines play in order. Player presses Next/Close to advance.
         </div>
 
         {npc.dialogue.map((line, i) => (
           <div key={i} style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-            <div style={{ color: '#383858', fontSize: 8, paddingTop: 6,
+            <div style={{ color: '#bbb', fontSize: 8, paddingTop: 6,
               width: 14, textAlign: 'right', flexShrink: 0, fontWeight: 'bold' }}>
               {i + 1}
             </div>
@@ -433,9 +454,9 @@ function PropertiesPanel({ levelId, levelName, language, playerStart,
             {['ja', 'es'].map(l => (
               <button key={l} onClick={() => onLanguage(l)}
                 style={btn({
-                  background: language === l ? '#161632' : 'none',
-                  borderColor: language === l ? 'var(--accent)' : '#2a2a48',
-                  color: language === l ? 'var(--accent)' : '#7070a0',
+                  background: language === l ? 'rgba(0,114,255,0.08)' : 'none',
+                  borderColor: language === l ? 'var(--accent)' : 'rgba(0,114,255,0.28)',
+                  color: language === l ? 'var(--accent)' : '#999',
                   textTransform: 'uppercase', width: 48,
                 })}>
                 {l}
@@ -450,13 +471,13 @@ function PropertiesPanel({ levelId, levelName, language, playerStart,
         <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 20, color: '#22ee66' }}>▶</span>
           <div style={{ fontFamily: '"Courier New", monospace', fontSize: 10 }}>
-            <span style={{ color: '#505070' }}>col </span>
+            <span style={{ color: '#aaa' }}>col </span>
             <span style={{ color: 'var(--accent)' }}>{playerStart.col}</span>
-            <span style={{ color: '#505070' }}>  row </span>
+            <span style={{ color: '#aaa' }}>  row </span>
             <span style={{ color: 'var(--accent)' }}>{playerStart.row}</span>
           </div>
         </div>
-        <div style={{ fontSize: 8, color: '#383858' }}>
+        <div style={{ fontSize: 8, color: '#aaa' }}>
           Switch to PLAYER START tool and click any walkable tile to relocate.
         </div>
       </div>
@@ -471,9 +492,9 @@ function PropertiesPanel({ levelId, levelName, language, playerStart,
           ['Map tiles', MAP_W + '×' + MAP_H],
         ].map(([k, v]) => (
           <div key={k} style={{ display: 'flex', justifyContent: 'space-between',
-            fontSize: 10, color: '#5a5a80', marginBottom: 4 }}>
+            fontSize: 10, color: '#aaa', marginBottom: 4 }}>
             <span>{k}</span>
-            <span style={{ color: '#a0a0c8' }}>{v}</span>
+            <span style={{ color: '#555' }}>{v}</span>
           </div>
         ))}
       </div>
@@ -485,7 +506,7 @@ function PropertiesPanel({ levelId, levelName, language, playerStart,
             <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 12, height: 12, background: TILE_BG[t],
                 border: B2, borderRadius: 1, flexShrink: 0 }} />
-              <span style={{ fontSize: 8, color: '#505070' }}>{TILE_LABEL[t]}</span>
+              <span style={{ fontSize: 8, color: '#aaa' }}>{TILE_LABEL[t]}</span>
             </div>
           ))}
         </div>
@@ -518,6 +539,54 @@ export default function LevelEditorPage() {
 
   const isDragging = useRef(false);
   const fileInputRef = useRef(null);
+
+  const mapCanvasRef = useRef(null);
+
+  function getCellCoords(e) {
+    const canvas = mapCanvasRef.current;
+    if (!canvas) return { col: 0, row: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const col = Math.floor((e.clientX - rect.left) * (MAP_W * 32 / rect.width) / 32);
+    const row = Math.floor((e.clientY - rect.top) * (MAP_H * 32 / rect.height) / 32);
+    return {
+      col: Math.max(0, Math.min(MAP_W - 1, col)),
+      row: Math.max(0, Math.min(MAP_H - 1, row)),
+    };
+  }
+
+  // Canvas render
+  useEffect(() => {
+    const canvas = mapCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0072ff';
+
+    if (language === 'ja') preloadMouseImages(challenges);
+
+    renderScene(ctx, { grid: map, player: playerStart, exitOpen: false, particles: [], npcs, language, locks, challenges }, accent, 0);
+
+    const T = 32;
+
+    // Hover highlight
+    if (hoveredCell) {
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillRect(hoveredCell.col * T, hoveredCell.row * T, T, T);
+    }
+
+    // Selection outlines
+    if (selectedLockKey) {
+      const [sc, sr] = selectedLockKey.split(',').map(Number);
+      ctx.strokeStyle = accent || '#0072ff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sc * T + 1, sr * T + 1, T - 2, T - 2);
+    }
+    if (selectedNpcIdx !== null && npcs[selectedNpcIdx]) {
+      const n = npcs[selectedNpcIdx];
+      ctx.strokeStyle = accent || '#0072ff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(n.col * T + 1, n.row * T + 1, T - 2, T - 2);
+    }
+  }, [map, playerStart, npcs, locks, challenges, language, hoveredCell, selectedLockKey, selectedNpcIdx]);
 
   const panelMode = selectedLockKey ? 'challenge'
     : selectedNpcIdx !== null ? 'npc'
@@ -657,14 +726,47 @@ export default function LevelEditorPage() {
 
   // ── Image import ────────────────────────────────────────────────────────────
 
-  function handleFiles(e) {
-    Array.from(e.target.files || []).forEach(file => {
+  function trimAndScale(file) {
+    return new Promise(resolve => {
       const reader = new FileReader();
-      reader.onload = ev => setImportedImages(imgs => {
-        if (imgs.find(i => i.name === file.name)) return imgs;
-        return [...imgs, { name: file.name, url: ev.target.result }];
-      });
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const tmp = document.createElement('canvas');
+          tmp.width = img.width; tmp.height = img.height;
+          const ctx = tmp.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const px = ctx.getImageData(0, 0, img.width, img.height).data;
+          let x0 = img.width, y0 = img.height, x1 = 0, y1 = 0;
+          for (let y = 0; y < img.height; y++) {
+            for (let x = 0; x < img.width; x++) {
+              if (px[(y * img.width + x) * 4 + 3] > 8) {
+                if (x < x0) x0 = x; if (y < y0) y0 = y;
+                if (x > x1) x1 = x; if (y > y1) y1 = y;
+              }
+            }
+          }
+          const out = document.createElement('canvas');
+          out.width = 32; out.height = 32;
+          const outCtx = out.getContext('2d');
+          if (x0 <= x1 && y0 <= y1) {
+            outCtx.drawImage(tmp, x0, y0, x1 - x0 + 1, y1 - y0 + 1, 0, 0, 32, 32);
+          } else {
+            outCtx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 32, 32);
+          }
+          resolve({ name: file.name, url: out.toDataURL('image/png') });
+        };
+        img.src = ev.target.result;
+      };
       reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFiles(e) {
+    const results = await Promise.all(Array.from(e.target.files || []).map(trimAndScale));
+    setImportedImages(imgs => {
+      const names = new Set(imgs.map(i => i.name));
+      return [...imgs, ...results.filter(r => !names.has(r.name))];
     });
   }
 
@@ -687,35 +789,37 @@ export default function LevelEditorPage() {
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', height: '100vh',
-      background: '#06060f', color: '#b0b0cc',
+      position: 'fixed', inset: 0,
+      display: 'flex', flexDirection: 'column',
+      background: '#f5f8ff', color: '#333',
       fontFamily: '"Courier New", "Courier", monospace', fontSize: 11,
       overflow: 'hidden',
+      zIndex: 0,
     }}>
 
       {/* ── Toolbar ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 5,
-        padding: '5px 10px', background: '#09091a',
-        borderBottom: '2px solid var(--accent, #cc3344)',
+        padding: '5px 10px', background: '#fff',
+        borderBottom: '2px solid var(--accent, #0072ff)',
         flexShrink: 0, flexWrap: 'wrap',
       }}>
         <button onClick={() => setScreen('menu')}
-          style={btn({ color: '#505070', borderColor: '#1a1a30', padding: '3px 10px' })}>
+          style={btn({ color: '#aaa', borderColor: 'rgba(0,114,255,0.18)', padding: '3px 10px' })}>
           ← MENU
         </button>
 
-        <div style={{ width: 1, height: 20, background: '#1a1a30' }} />
+        <div style={{ width: 1, height: 20, background: 'rgba(0,114,255,0.15)' }} />
 
         <input value={levelName} onChange={e => setLevelName(e.target.value)}
           style={{
-            background: 'none', border: 'none', borderBottom: '1px solid #2a2a48',
+            background: 'none', border: 'none', borderBottom: '1px solid rgba(0,114,255,0.35)',
             color: 'var(--accent)', fontSize: 13, fontFamily: '"Courier New", monospace',
             fontWeight: 'bold', outline: 'none', width: 220, padding: '2px 4px',
           }}
           placeholder="Level name…" />
 
-        <div style={{ width: 1, height: 20, background: '#1a1a30' }} />
+        <div style={{ width: 1, height: 20, background: 'rgba(0,114,255,0.15)' }} />
 
         <select defaultValue=""
           onChange={e => {
@@ -743,7 +847,7 @@ export default function LevelEditorPage() {
         <div style={{ flex: 1 }} />
 
         {hoveredCell && (
-          <span style={{ color: '#383858', fontSize: 9 }}>
+          <span style={{ color: '#bbb', fontSize: 9 }}>
             ({hoveredCell.col}, {hoveredCell.row}) {TILE_LABEL[map[hoveredCell.row]?.[hoveredCell.col]] || ''}
           </span>
         )}
@@ -761,7 +865,7 @@ export default function LevelEditorPage() {
 
         {/* ── Left sidebar ── */}
         <div style={{
-          width: 148, flexShrink: 0, background: '#09091a',
+          width: 148, flexShrink: 0, background: '#fff',
           borderRight: B, padding: '8px 6px',
           overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10,
         }}>
@@ -780,9 +884,9 @@ export default function LevelEditorPage() {
                 style={btn({
                   display: 'flex', alignItems: 'center', gap: 6,
                   width: '100%', marginBottom: 3, textAlign: 'left',
-                  background: tool === t ? '#131330' : 'none',
-                  borderColor: tool === t ? 'var(--accent)' : '#1e1e38',
-                  color: tool === t ? 'var(--accent)' : '#6060a0',
+                  background: tool === t ? 'rgba(0,114,255,0.08)' : 'none',
+                  borderColor: tool === t ? 'var(--accent)' : 'rgba(0,114,255,0.18)',
+                  color: tool === t ? 'var(--accent)' : '#888',
                 })}>
                 <span style={{ fontSize: 13, width: 14, textAlign: 'center' }}>{icon}</span>
                 <span>{t}</span>
@@ -796,21 +900,11 @@ export default function LevelEditorPage() {
               <div style={lbl()}>Tile type</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, marginBottom: 4 }}>
                 {PAINTABLE.map(t => (
-                  <button key={t} title={TILE_LABEL[t]} onClick={() => setSelectedTile(t)}
-                    style={{
-                      aspectRatio: '1', cursor: 'pointer', borderRadius: 2,
-                      background: TILE_BG[t],
-                      border: selectedTile === t ? '2px solid var(--accent)' : B2,
-                      outline: 'none',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 9, color: 'rgba(255,255,255,0.3)',
-                    }}>
-                    {t === TILE.STAIRS ? '⌃' : t === TILE.RUG ? '◈'
-                      : t === TILE.DOOR_C ? 'D' : t === TILE.CHEST_C ? 'C' : ''}
-                  </button>
+                  <TilePreview key={t} tileType={t} selected={selectedTile === t}
+                    onClick={() => setSelectedTile(t)} size={40} />
                 ))}
               </div>
-              <div style={{ fontSize: 8, color: '#505070' }}>{TILE_LABEL[selectedTile]}</div>
+              <div style={{ fontSize: 8, color: '#aaa' }}>{TILE_LABEL[selectedTile]}</div>
             </div>
           )}
 
@@ -831,7 +925,7 @@ export default function LevelEditorPage() {
                 </button>
 
                 {importedImages.length === 0 && (
-                  <div style={{ fontSize: 8, color: '#383858', textAlign: 'center', padding: '6px 0' }}>
+                  <div style={{ fontSize: 8, color: '#ccc', textAlign: 'center', padding: '6px 0' }}>
                     no textures yet
                   </div>
                 )}
@@ -840,12 +934,12 @@ export default function LevelEditorPage() {
                   {importedImages.map((img, i) => (
                     <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center',
                       border: B, borderRadius: 2, padding: '2px 4px',
-                      cursor: 'pointer', background: '#0d0d1e' }}
+                      cursor: 'pointer', background: '#f0f5ff' }}
                       title={`Click to copy URL: ${img.name}`}
                       onClick={() => navigator.clipboard.writeText(img.url).then(() => flash('URL copied'))}>
                       <img src={img.url} alt="" style={{ width: 22, height: 22,
                         objectFit: 'cover', flexShrink: 0, borderRadius: 1 }} />
-                      <span style={{ fontSize: 8, color: '#4a4a6a', overflow: 'hidden',
+                      <span style={{ fontSize: 8, color: '#aaa', overflow: 'hidden',
                         textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                         {img.name}
                       </span>
@@ -860,16 +954,16 @@ export default function LevelEditorPage() {
         {/* ── Map canvas ── */}
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: '#06060f', overflow: 'auto', padding: 20,
+          background: '#edf1f8', overflow: 'auto', padding: 20,
         }}>
           <div>
             {/* Coordinate ruler top */}
             <div style={{
-              display: 'grid', gridTemplateColumns: `repeat(${MAP_W}, ${CELL}px)`,
-              marginBottom: 2, paddingLeft: 0,
+              display: 'grid', gridTemplateColumns: `repeat(${MAP_W}, 32px)`,
+              marginBottom: 2,
             }}>
               {Array.from({ length: MAP_W }, (_, c) => (
-                <div key={c} style={{ textAlign: 'center', fontSize: 7, color: '#282840',
+                <div key={c} style={{ textAlign: 'center', fontSize: 7, color: '#b0bcd8',
                   fontFamily: '"Courier New", monospace' }}>{c}</div>
               ))}
             </div>
@@ -879,114 +973,50 @@ export default function LevelEditorPage() {
               <div style={{ display: 'flex', flexDirection: 'column',
                 justifyContent: 'space-around', marginRight: 2 }}>
                 {Array.from({ length: MAP_H }, (_, r) => (
-                  <div key={r} style={{ height: CELL, display: 'flex', alignItems: 'center',
-                    justifyContent: 'flex-end', fontSize: 7, color: '#282840', width: 14 }}>
+                  <div key={r} style={{ height: 32, display: 'flex', alignItems: 'center',
+                    justifyContent: 'flex-end', fontSize: 7, color: '#b0bcd8', width: 14 }}>
                     {r}
                   </div>
                 ))}
               </div>
 
-              {/* The grid */}
-              <div
-                onMouseLeave={() => { isDragging.current = false; setHoveredCell(null); }}
+              {/* Canvas map */}
+              <canvas
+                ref={mapCanvasRef}
+                width={MAP_W * 32}
+                height={MAP_H * 32}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${MAP_W}, ${CELL}px)`,
-                  gridTemplateRows: `repeat(${MAP_H}, ${CELL}px)`,
-                  border: '1px solid #1a1a30',
+                  display: 'block',
+                  imageRendering: 'pixelated',
                   cursor: cursorMap[tool] || 'default',
-                  boxShadow: '0 0 60px rgba(0,0,0,0.9)',
-                }}>
-                {Array.from({ length: MAP_H }, (_, row) =>
-                  Array.from({ length: MAP_W }, (_, col) => {
-                    const key = `${col},${row}`;
-                    const tile = map[row][col];
-                    const isPlayer = playerStart.col === col && playerStart.row === row;
-                    const npcHere = npcs.find(n => n.col === col && n.row === row);
-                    const lockHere = locks[key];
-                    const chColor = lockHere ? (challenges[lockHere.challengeId]?.color || '#fff') : null;
-                    const isSelLock = selectedLockKey === key;
-                    const isSelNpc = npcHere && npcs.indexOf(npcHere) === selectedNpcIdx;
-                    const isHov = hoveredCell?.col === col && hoveredCell?.row === row;
-
-                    return (
-                      <div key={key}
-                        onMouseDown={() => { isDragging.current = true; applyTool(col, row); }}
-                        onMouseUp={() => { isDragging.current = false; }}
-                        onMouseEnter={() => {
-                          setHoveredCell({ col, row });
-                          if (isDragging.current && (tool === 'PAINT' || tool === 'ERASE'))
-                            applyTool(col, row);
-                        }}
-                        style={{
-                          width: CELL, height: CELL, boxSizing: 'border-box',
-                          background: TILE_BG[tile] ?? '#18182e',
-                          position: 'relative', overflow: 'hidden',
-                          border: isSelLock || isSelNpc
-                            ? '2px solid var(--accent)'
-                            : isHov
-                            ? '1px solid #3a3a60'
-                            : '1px solid rgba(255,255,255,0.025)',
-                        }}>
-
-                        {/* Player start marker */}
-                        {isPlayer && !npcHere && (
-                          <div style={{
-                            position: 'absolute', inset: 0, display: 'flex',
-                            alignItems: 'center', justifyContent: 'center',
-                            fontSize: 14, color: '#22ee66', pointerEvents: 'none',
-                            textShadow: '0 0 6px #22ee66',
-                          }}>▶</div>
-                        )}
-
-                        {/* NPC circle */}
-                        {npcHere && (
-                          <div style={{
-                            position: 'absolute', inset: 0, display: 'flex',
-                            alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
-                          }}>
-                            <div style={{
-                              width: 18, height: 18, borderRadius: 9,
-                              background: npcHere.color || '#8888cc',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 8, fontWeight: 'bold', color: '#000',
-                              boxShadow: `0 0 4px ${npcHere.color || '#8888cc'}88`,
-                            }}>
-                              {npcHere.label || '?'}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Challenge color dot */}
-                        {lockHere && chColor && (
-                          <div style={{
-                            position: 'absolute', bottom: 2, right: 2,
-                            width: 6, height: 6, borderRadius: 3,
-                            background: chColor, pointerEvents: 'none',
-                            boxShadow: `0 0 3px ${chColor}`,
-                          }} />
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                  border: '1px solid rgba(0,114,255,0.25)',
+                  boxShadow: '0 4px 24px rgba(0,114,255,0.12)',
+                }}
+                onMouseDown={e => { isDragging.current = true; applyTool(...Object.values(getCellCoords(e))); }}
+                onMouseUp={() => { isDragging.current = false; }}
+                onMouseMove={e => {
+                  const { col, row } = getCellCoords(e);
+                  setHoveredCell({ col, row });
+                  if (isDragging.current && (tool === 'PAINT' || tool === 'ERASE')) applyTool(col, row);
+                }}
+                onMouseLeave={() => { isDragging.current = false; setHoveredCell(null); }}
+              />
             </div>
           </div>
         </div>
 
         {/* ── Right panel ── */}
         <div style={{
-          width: 276, flexShrink: 0, background: '#09091a',
+          width: 276, flexShrink: 0, background: '#fff',
           borderLeft: B, overflowY: 'auto', fontSize: 10,
         }}>
           {/* Panel header */}
           <div style={{
             padding: '6px 12px', borderBottom: B, display: 'flex',
             alignItems: 'center', justifyContent: 'space-between',
-            background: '#0b0b1e',
+            background: '#f5f8ff',
           }}>
-            <span style={{ fontSize: 9, color: '#3a3a5a', textTransform: 'uppercase',
+            <span style={{ fontSize: 9, color: '#aaa', textTransform: 'uppercase',
               letterSpacing: '0.1em' }}>
               {panelMode === 'challenge' ? `${locks[selectedLockKey]?.type?.toUpperCase() || 'LOCK'} @ ${selectedLockKey}`
                 : panelMode === 'npc' ? `NPC @ ${npcs[selectedNpcIdx]?.col},${npcs[selectedNpcIdx]?.row}`
@@ -1038,14 +1068,14 @@ export default function LevelEditorPage() {
       {/* ── Status bar ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14,
-        padding: '2px 10px', background: '#09091a', borderTop: B,
-        flexShrink: 0, fontSize: 8, color: '#303050',
+        padding: '2px 10px', background: '#fff', borderTop: B,
+        flexShrink: 0, fontSize: 8, color: '#bbb',
       }}>
-        <span>TOOL: <span style={{ color: '#5050a0' }}>{tool}</span></span>
-        {tool === 'PAINT' && <span>TILE: <span style={{ color: '#5050a0' }}>{TILE_LABEL[selectedTile]}</span></span>}
-        <span>LOCKS: <span style={{ color: '#5050a0' }}>{Object.keys(locks).length}</span></span>
-        <span>NPC: <span style={{ color: '#5050a0' }}>{npcs.length}</span></span>
-        <span>LANG: <span style={{ color: '#5050a0' }}>{language.toUpperCase()}</span></span>
+        <span>TOOL: <span style={{ color: 'var(--accent)' }}>{tool}</span></span>
+        {tool === 'PAINT' && <span>TILE: <span style={{ color: 'var(--accent)' }}>{TILE_LABEL[selectedTile]}</span></span>}
+        <span>LOCKS: <span style={{ color: 'var(--accent)' }}>{Object.keys(locks).length}</span></span>
+        <span>NPC: <span style={{ color: 'var(--accent)' }}>{npcs.length}</span></span>
+        <span>LANG: <span style={{ color: 'var(--accent)' }}>{language.toUpperCase()}</span></span>
         <span style={{ flex: 1 }} />
         <span>LINGO PKMN · LEVEL EDITOR</span>
       </div>
@@ -1054,7 +1084,7 @@ export default function LevelEditorPage() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 36, left: '50%', transform: 'translateX(-50%)',
-          background: toast.err ? '#180808' : '#081808',
+          background: toast.err ? '#fff5f5' : '#f5fff8',
           border: `1px solid ${toast.err ? '#cc2222' : '#22aa44'}`,
           color: toast.err ? '#ff5555' : '#44cc66',
           padding: '5px 16px', borderRadius: 3, fontSize: 11,
