@@ -569,53 +569,6 @@ canvas#dungeon {
   margin-bottom: 0;
 }
 
-.settings-status {
-  font-size: 6px;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-}
-
-.settings-status.saving,
-.settings-status.queued {
-  color: var(--text);
-}
-
-.settings-status.saved {
-  color: var(--text);
-}
-
-.settings-status.error,
-.settings-error {
-  color: var(--text);
-}
-
-.settings-status::before {
-  content: "";
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  vertical-align: 1px;
-}
-
-.settings-status.saved::before {
-  background: var(--green);
-}
-
-.settings-status.error::before {
-  background: var(--red-flash);
-}
-
-.settings-error {
-  margin-top: 12px;
-  padding-left: 10px;
-  border-left: 4px solid var(--red-flash);
-  font-size: 7px;
-  line-height: 1.7;
-}
-
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));

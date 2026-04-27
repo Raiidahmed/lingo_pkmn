@@ -35,7 +35,6 @@ export default function SettingsPage() {
 
   const [mixerOpen, setMixerOpen] = useState(false);
   const [saveState, setSaveState] = useState('idle');
-  const [saveError, setSaveError] = useState('');
   const latestThemeIdRef = useRef(theme.id);
   const saveTimerRef = useRef(null);
   const savingRef = useRef(false);
@@ -57,10 +56,7 @@ export default function SettingsPage() {
       const themeId = latestThemeIdRef.current;
       if (!isPresetThemeId(themeId)) return;
       savingRef.current = true;
-      if (mountedRef.current) {
-        setSaveState('saving');
-        setSaveError('');
-      }
+      if (mountedRef.current) setSaveState('saving');
 
       try {
         await api.setTheme(themeId);
@@ -75,7 +71,6 @@ export default function SettingsPage() {
       } catch (err) {
         if (mountedRef.current && latestThemeIdRef.current === themeId) {
           setSaveState('error');
-          setSaveError(err.message || 'Theme could not be saved.');
         }
       } finally {
         savingRef.current = false;
@@ -101,7 +96,6 @@ export default function SettingsPage() {
     if (theme.id === themeId && saveState !== 'error') return;
     setTheme(themeId);
     setSaveState('queued');
-    setSaveError('');
     queueThemeSave(themeId);
   }
 
@@ -113,7 +107,6 @@ export default function SettingsPage() {
     latestThemeIdRef.current = null;
     setCustomTheme(customTheme);
     setSaveState('idle');
-    setSaveError('');
   }
 
   function handleAddCustomTheme(customTheme) {
@@ -145,13 +138,6 @@ export default function SettingsPage() {
     setScreen('menu');
   }
 
-  const statusText = {
-    queued: 'QUEUED',
-    saving: 'SAVING...',
-    saved: 'SAVED',
-    error: 'SAVE FAILED',
-  }[saveState];
-
   return (
     <div className="page" style={{ paddingBottom: 60 }}>
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -161,7 +147,7 @@ export default function SettingsPage() {
           style={{ width: 'auto', padding: '8px 14px', fontSize: 7 }}
           onClick={handleBack}
         >
-          {saveState === 'saving' ? 'SAVING...' : '← BACK'}
+          ← BACK
         </button>
         <div style={{ flex: 1 }} />
       </div>
@@ -175,13 +161,7 @@ export default function SettingsPage() {
       <div className="card">
         <div className="settings-card-head">
           <div className="card-title">APPEARANCE</div>
-          {statusText && (
-            <div className={`settings-status ${saveState}`} role="status" aria-live="polite">
-              {statusText}
-            </div>
-          )}
         </div>
-        {saveError && <div className="settings-error">{saveError}</div>}
 
         <Subsection title="THEME">
           <Segmented
