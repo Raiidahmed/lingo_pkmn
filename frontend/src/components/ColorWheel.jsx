@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Slider from './Slider.jsx';
 
 function hslToHex(h, s, l) {
   s /= 100; l /= 100;
@@ -121,26 +122,12 @@ export default function ColorWheel({ onAdd }) {
         }} />
       </div>
 
-      {/* Saturation */}
       <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 6, color: 'var(--text-dim)' }}>SATURATION</span>
-          <span style={{ fontSize: 7, color: 'var(--accent)' }}>{sat}%</span>
-        </div>
-        <input type="range" className="ui-slider" min={10} max={100} value={sat}
-          onInput={e => setSat(Number(e.currentTarget.value))}
-          onChange={e => setSat(Number(e.currentTarget.value))} />
+        <Slider label="SATURATION" value={sat} min={10} max={100} unit="%" onChange={setSat} />
       </div>
 
-      {/* Lightness */}
       <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 6, color: 'var(--text-dim)' }}>LIGHTNESS</span>
-          <span style={{ fontSize: 7, color: 'var(--accent)' }}>{lit}%</span>
-        </div>
-        <input type="range" className="ui-slider" min={20} max={78} value={lit}
-          onInput={e => setLit(Number(e.currentTarget.value))}
-          onChange={e => setLit(Number(e.currentTarget.value))} />
+        <Slider label="LIGHTNESS" value={lit} min={20} max={78} unit="%" onChange={setLit} />
       </div>
 
       {/* Hex readout */}

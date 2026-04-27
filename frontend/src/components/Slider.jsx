@@ -1,7 +1,7 @@
+import * as SliderPrimitive from '@radix-ui/react-slider';
+
 /*
-  Premium-feeling slider with a gradient-fill track.
-  --fill is set inline so the CSS `linear-gradient` paints the
-  filled portion in the accent color and the unfilled in surface2.
+  Premium-feeling slider using Radix primitives for reliable pointer/touch handling.
 */
 export default function Slider({
   label,
@@ -13,10 +13,13 @@ export default function Slider({
   format,
   onChange,
 }) {
-  const range = max - min;
-  const fill = range === 0 ? 0 : ((value - min) / range) * 100;
   const display = format ? format(value) : `${value}${unit}`;
-  const handleInput = (e) => onChange(Number(e.currentTarget.value));
+  const handleValueChange = (next) => {
+    if (!Array.isArray(next)) return;
+    const nextValue = next[0];
+    if (typeof nextValue !== 'number' || Number.isNaN(nextValue)) return;
+    onChange(nextValue);
+  };
 
   return (
     <div className="slider-row">
@@ -24,17 +27,20 @@ export default function Slider({
         <span className="slider-label">{label}</span>
         <span className="slider-value">{display}</span>
       </div>
-      <input
-        type="range"
+      <SliderPrimitive.Root
         className="ui-slider"
+        aria-label={label}
         min={min}
         max={max}
         step={step}
-        value={value}
-        onInput={handleInput}
-        onChange={handleInput}
-        style={{ '--fill': `${fill}%` }}
-      />
+        value={[value]}
+        onValueChange={handleValueChange}
+      >
+        <SliderPrimitive.Track className="ui-slider-track">
+          <SliderPrimitive.Range className="ui-slider-range" />
+        </SliderPrimitive.Track>
+        <SliderPrimitive.Thumb className="ui-slider-thumb" />
+      </SliderPrimitive.Root>
     </div>
   );
 }

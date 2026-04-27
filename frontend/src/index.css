@@ -58,55 +58,56 @@
   transition: opacity 200ms ease;
 }
 
-/* ── Slider (gradient-fill track) ───────────────────────────────────────── */
-input[type="range"].ui-slider {
-  -webkit-appearance: none;
-  appearance: none;
+/* ── Slider (Radix) ─────────────────────────────────────────────────────── */
+.ui-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
+  height: 20px;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ui-slider-track {
+  position: relative;
+  flex-grow: 1;
   height: 6px;
   border-radius: 3px;
-  outline: none;
-  cursor: pointer;
-  touch-action: pan-x;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  background: linear-gradient(
-    to right,
-    var(--accent) 0%,
-    var(--accent) var(--fill, 50%),
-    var(--surface2) var(--fill, 50%),
-    var(--surface2) 100%
-  );
+  background: var(--surface2);
   box-shadow: inset 0 0 0 1px var(--border-col);
 }
-input[type="range"].ui-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
+
+.ui-slider-range {
+  position: absolute;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.ui-slider-thumb {
+  display: block;
   width: 18px;
   height: 18px;
   border-radius: 4px;
   background: var(--accent);
   border: 2px solid #fff;
-  cursor: grab;
+  cursor: pointer;
   box-shadow: 0 0 0 1px var(--border-col), 0 0 12px var(--accent-glow);
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
-input[type="range"].ui-slider::-webkit-slider-thumb:hover {
+.ui-slider-thumb:hover {
   transform: scale(1.15);
 }
-input[type="range"].ui-slider:active::-webkit-slider-thumb {
-  cursor: grabbing;
+.ui-slider-thumb:active {
   transform: scale(1.25);
   box-shadow: 0 0 0 1px var(--border-col), 0 0 18px var(--accent);
 }
-input[type="range"].ui-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: var(--accent);
-  border: 2px solid #fff;
-  cursor: grab;
-  box-shadow: 0 0 0 1px var(--border-col), 0 0 12px var(--accent-glow);
+
+.ui-slider-thumb:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 /* ── Segmented toggle ───────────────────────────────────────────────────── */
