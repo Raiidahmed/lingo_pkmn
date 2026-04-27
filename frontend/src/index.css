@@ -212,13 +212,16 @@ html, body, #root {
 
 body {
   overflow-x: hidden;
+  display: flex;
+  justify-content: center;
 }
 
 #root {
   transform-origin: top center;
   transform: scale(var(--ui-scale));
-  width: calc(100% / var(--ui-scale));
+  width: min(100%, calc(100% / var(--ui-scale)));
   min-height: calc(100% / var(--ui-scale));
+  margin: 0 auto;
 }
 
 .page {
