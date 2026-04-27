@@ -295,20 +295,18 @@ export default function SettingsPage() {
             onChange={v => setUI('glowSize', v)} />
         </Subsection>
 
-        {lightMode && (
-          <Subsection title="GAME BOARD">
-            <Slider label="LIGHT TINT" value={ui.canvasTint}
-              min={0} max={1}
-              format={v => `${Math.round(v * 100)}%`}
-              onChange={v => setUI('canvasTint', v)} />
-            <GameBoardPreview
-              accent={theme.accent}
-              language={language}
-              lightMode={lightMode}
-              canvasTint={ui.canvasTint}
-            />
-          </Subsection>
-        )}
+        <Subsection title="GAME BOARD">
+          <Slider label="LIGHT TINT" value={ui.canvasTint}
+            min={0} max={1}
+            format={v => `${Math.round(v * 100)}%`}
+            onChange={v => setUI('canvasTint', v)} />
+          <GameBoardPreview
+            accent={theme.accent}
+            language={language}
+            lightMode={lightMode}
+            canvasTint={ui.canvasTint}
+          />
+        </Subsection>
 
         <button
           className="btn btn-ghost"
