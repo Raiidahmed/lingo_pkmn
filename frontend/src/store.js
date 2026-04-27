@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { THEMES, DEFAULT_THEME, applyTheme, applyRawTheme } from './themes.js';
 
+const ACTIVE_THEME_KEY = 'lingo_active_theme';
+const PRESET_THEME_BY_ID = new Map(THEMES.map((theme) => [theme.id, theme]));
+
 const DEFAULT_UI_STATE = {
   borderWidth: 1,    // px, 0-8
   radius:      8,    // px, 0-24
@@ -18,6 +21,43 @@ function readJson(key, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function writeJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // best-effort local persistence
+  }
+}
+
+function normalizeSavedTheme(theme) {
+  if (!theme || typeof theme !== 'object') return null;
+
+  const preset = typeof theme.id === 'string' ? PRESET_THEME_BY_ID.get(theme.id) : null;
+  if (preset && !theme.custom) return preset;
+
+  if (theme.custom && typeof theme.accent === 'string') {
+    return {
+      id: String(theme.id || `custom_${theme.accent}`),
+      label: String(theme.label || theme.accent.replace('#', '').toUpperCase()),
+      accent: theme.accent,
+      accentDark: typeof theme.accentDark === 'string' ? theme.accentDark : theme.accent,
+      accentRgb: typeof theme.accentRgb === 'string' ? theme.accentRgb : undefined,
+      glow: typeof theme.glow === 'string' ? theme.glow : undefined,
+      custom: true,
+    };
+  }
+
+  return null;
+}
+
+function readActiveTheme() {
+  return normalizeSavedTheme(readJson(ACTIVE_THEME_KEY, null));
+}
+
+function saveActiveTheme(theme) {
+  writeJson(ACTIVE_THEME_KEY, theme);
 }
 
 function readUIState() {
@@ -128,7 +168,7 @@ export const useStore = create((set, get) => ({
   screen: 'login',
   user: null,
   sessionToken: null,
-  theme: DEFAULT_THEME,
+  theme: readActiveTheme() ?? DEFAULT_THEME,
   gameResult: null,
   startLevel: 1,
   resumeMode: false,
@@ -158,11 +198,16 @@ export const useStore = create((set, get) => ({
   initUI: () => {
     const ui = get().ui;
     applyUI(ui);
+    applyRawTheme(get().theme);
   },
 
   login: (user, token, saveData = null) => {
     localStorage.setItem('lingo_token', token);
-    const theme = applyTheme(user.accent_theme);
+    const savedTheme = readActiveTheme();
+    const theme = savedTheme?.custom
+      ? applyRawTheme(savedTheme)
+      : applyTheme(user.accent_theme);
+    saveActiveTheme(theme);
     set({ user, sessionToken: token, theme, screen: 'menu', save: saveData });
   },
 
@@ -173,6 +218,7 @@ export const useStore = create((set, get) => ({
 
   setCustomTheme: (themeObj) => {
     const t = applyRawTheme(themeObj);
+    saveActiveTheme(t);
     set(() => ({ theme: t }));
   },
 
@@ -193,6 +239,7 @@ export const useStore = create((set, get) => ({
 
   setTheme: (themeId) => {
     const theme = applyTheme(themeId);
+    saveActiveTheme(theme);
     set(s => ({ theme, user: s.user ? { ...s.user, accent_theme: theme.id } : s.user }));
   },
 
@@ -203,11 +250,14 @@ export const useStore = create((set, get) => ({
   },
 
   refreshFromMe: (meData) => {
+    const currentTheme = get().theme;
+    const theme = currentTheme?.custom
+      ? currentTheme
+      : (meData.user?.accent_theme ? applyTheme(meData.user.accent_theme) : currentTheme);
+    saveActiveTheme(theme);
     set(s => ({
       user: s.user ? { ...s.user, ...meData.user } : { ...meData.user },
-      theme: s.theme?.custom
-        ? s.theme
-        : (meData.user?.accent_theme ? applyTheme(meData.user.accent_theme) : s.theme),
+      theme,
       save: meData.save ?? s.save,
     }));
   },
