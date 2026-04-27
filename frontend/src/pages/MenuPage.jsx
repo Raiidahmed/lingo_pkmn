@@ -43,6 +43,10 @@ export default function MenuPage() {
         </button>
         <button className="btn" onClick={() => setScreen('leaderboard')}>🏆 LEADERBOARD</button>
         <button className="btn" onClick={() => setScreen('settings')}>⚙ SETTINGS</button>
+        <button className="btn" onClick={() => setScreen('editor')}
+          style={{ borderStyle: 'dashed', opacity: 0.7 }}>
+          🗺 LEVEL EDITOR
+        </button>
         <div className="spacer" />
         <button className="btn btn-ghost" onClick={logout}>LOGOUT</button>
       </div>

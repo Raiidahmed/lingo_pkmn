@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import GamePage from './pages/GamePage.jsx';
 import GameOverPage from './pages/GameOverPage.jsx';
 import StatusPage from './pages/StatusPage.jsx';
+import LevelEditorPage from './pages/LevelEditorPage.jsx';
 
 export default function App() {
   const { screen, login, lightMode, initUI } = useStore();
@@ -41,6 +42,7 @@ export default function App() {
       {screen === 'status'      && <StatusPage />}
       {screen === 'game'        && <GamePage />}
       {screen === 'game_over'   && <GameOverPage />}
+      {screen === 'editor'      && <LevelEditorPage />}
     </>
   );
 }
