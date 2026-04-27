@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { loadLevel, tryMove, TILE, MAP_W, MAP_H } from '../engine/dungeon.js';
+import { preloadMouseImages } from '../engine/mouseAssets.js';
 import { render, getCanvasSize } from '../engine/renderer.js';
 
 const MAX_HEARTS = 3;
@@ -86,6 +87,8 @@ export default function GamePage() {
     levelRef.current = n;
     setLevelN(n);
     setLevelName(data.name);
+
+    if (language === 'ja') preloadMouseImages(data.challenges);
   }
 
   function isExitOpen() {
@@ -304,6 +307,9 @@ export default function GamePage() {
       exitOpen: isExitOpen(),
       particles: particlesRef.current,
       npcs: levelDataRef.current?.npcs ?? [],
+      language: language,
+      locks: levelDataRef.current?.locks,
+      challenges: levelDataRef.current?.challenges,
     }, theme.accent, (() => { const s = useStore.getState(); return s.ui?.canvasTint ?? 0; })());
   }
 

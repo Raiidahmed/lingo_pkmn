@@ -1,4 +1,5 @@
 import { TILE, MAP_W, MAP_H } from './dungeon.js';
+import { loadMouseImage } from './mouseAssets.js';
 
 const T = 32;
 const BOARD_W = MAP_W * T;
@@ -492,7 +493,7 @@ function drawPlayer(ctx, x, y, accent) {
 }
 
 function drawScene(ctx, state, accentColor, useLightBoard) {
-  const { grid, player, exitOpen, particles, npcs } = state;
+  const { grid, player, exitOpen, particles, npcs, language, locks, challenges } = state;
   ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
   for (let r = 0; r < MAP_H; r++) {
@@ -500,6 +501,36 @@ function drawScene(ctx, state, accentColor, useLightBoard) {
       const t = grid[r][c];
       const x = c * T;
       const y = r * T;
+
+      // Japanese level critter — use pre-generated sprites when ready
+      if (language === 'ja' && (t === TILE.CHEST_C || t === TILE.CHEST_O)) {
+        const lockKey = `${c},${r}`;
+        const lockInfo = locks ? locks[lockKey] : null;
+        const challenge = (lockInfo && challenges) ? challenges[lockInfo.challengeId] : null;
+        const displayChar = challenge ? (challenge.display || '') : '';
+        const critterColor = challenge ? challenge.color : null;
+        const isOpen = t === TILE.CHEST_O;
+
+        const imgChar = isOpen ? displayChar : null;
+        const img = loadMouseImage(critterColor || '#d0d0d0', imgChar);
+
+        if (img.complete && img.naturalWidth > 0) {
+          drawFloor(ctx, x, y, c, r, useLightBoard);
+          ctx.drawImage(img, x, y, T, T);
+          if (isOpen && displayChar && displayChar.length > 1) {
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 7px "Noto Sans JP", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(displayChar, x + T / 2, y + 21);
+            ctx.textBaseline = 'alphabetic';
+          }
+        } else {
+          drawMouse(ctx, x, y, critterColor || '#d0d0d0', displayChar, isOpen);
+        }
+        continue;
+      }
+
       switch (t) {
         case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, useLightBoard); break;
         case TILE.WALL:    drawWall(ctx, x, y, c, r, useLightBoard); break;
