@@ -1,12 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@400;700&display=swap');
 
 :root {
-  --bg: #f4efe4;
-  --surface: #fffaf0;
-  --surface2: #eee5d5;
-  --border: #d8cdbc;
-  --text: #191714;
-  --text-dim: #5f574f;
+  --bg: #000;
+  --surface: #050505;
+  --surface2: #111;
+  --border: #333;
+  --text: #fff;
+  --text-dim: #aaa;
   --accent: #cc2244;
   --accent-dark: #881122;
   --accent-rgb: 204,34,68;
@@ -20,6 +20,7 @@
   --border-col: var(--border);
   --glow-size: 16px;
   --shimmer-str: 0;
+  --canvas-light: 0;
 }
 
 /* ── Border shimmer ─────────────────────────────────────────────────────── */
@@ -181,12 +182,12 @@ input[type="range"].ui-slider::-moz-range-thumb {
 
 /* Light mode — overrides all surface/text vars; accent stays user-chosen */
 .light-mode {
-  --bg: #c8dced;
-  --surface: #d8eaf8;
-  --surface2: #bdd4e8;
-  --border: #8aaecc;
-  --text: #1a2a40;
-  --text-dim: #3d5a78;
+  --bg: #fff;
+  --surface: #fff;
+  --surface2: #f2f2f2;
+  --border: #d0d0d0;
+  --text: #111;
+  --text-dim: #555;
   --green: #1a9e4a;
   --red-flash: #cc1133;
   --canvas-light: 1;
