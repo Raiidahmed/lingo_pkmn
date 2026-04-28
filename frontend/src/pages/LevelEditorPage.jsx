@@ -536,9 +536,19 @@ export default function LevelEditorPage() {
   const [showImages,      setShowImages]      = useState(false);
   const [hoveredCell,     setHoveredCell]     = useState(null);
   const [toast,           setToast]           = useState(null);
+  const [uiAssets,        setUiAssets]        = useState([]);
+  const [assetCat,        setAssetCat]        = useState('environment');
 
   const isDragging = useRef(false);
   const fileInputRef = useRef(null);
+
+  // Load UI asset manifest
+  useEffect(() => {
+    fetch('/ui_assets/manifest.json')
+      .then(r => r.json())
+      .then(data => setUiAssets(data.assets || []))
+      .catch(() => {});
+  }, []);
 
   const mapCanvasRef = useRef(null);
 
@@ -908,44 +918,94 @@ export default function LevelEditorPage() {
             </div>
           )}
 
-          {/* Image import */}
+          {/* UI Asset Gallery */}
           <div>
-            <button onClick={() => setShowImages(s => !s)}
-              style={btn({ width: '100%', textAlign: 'left', padding: '3px 6px' })}>
-              {showImages ? '▾' : '▸'} TEXTURES ({importedImages.length})
-            </button>
-            {showImages && (
-              <div style={{ marginTop: 5 }}>
-                <input ref={fileInputRef} type="file" multiple
-                  accept="image/png,image/jpeg,image/gif,image/webp"
-                  onChange={handleFiles} style={{ display: 'none' }} />
-                <button onClick={() => fileInputRef.current?.click()}
-                  style={accentBtn({ width: '100%', marginBottom: 5 })}>
-                  + IMPORT FILES
-                </button>
+            <div style={lbl()}>Assets</div>
 
-                {importedImages.length === 0 && (
-                  <div style={{ fontSize: 8, color: '#ccc', textAlign: 'center', padding: '6px 0' }}>
-                    no textures yet
+            {/* Category tabs */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 5 }}>
+              {['environment', 'critters', 'enemies', 'items', 'ui'].map(cat => (
+                <button key={cat} onClick={() => setAssetCat(cat)}
+                  style={btn({
+                    padding: '2px 5px', fontSize: 7, textTransform: 'uppercase',
+                    background: assetCat === cat ? 'rgba(0,114,255,0.08)' : 'none',
+                    borderColor: assetCat === cat ? 'var(--accent)' : 'rgba(0,114,255,0.18)',
+                    color: assetCat === cat ? 'var(--accent)' : '#888',
+                  })}>
+                  {cat.slice(0, 3)}
+                </button>
+              ))}
+            </div>
+
+            {/* Asset thumbnails */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
+              {uiAssets
+                .filter(a => a.category === assetCat && a.url.endsWith('.png'))
+                .map(a => {
+                  const alreadyAdded = importedImages.some(i => i.url === a.url);
+                  return (
+                    <img key={a.id} src={a.url} alt={a.name} title={a.name}
+                      style={{
+                        width: '100%', aspectRatio: '1/1', objectFit: 'contain',
+                        cursor: 'pointer', borderRadius: 2, background: '#edf1f8',
+                        border: alreadyAdded ? '2px solid var(--accent)' : B2,
+                        boxSizing: 'border-box',
+                      }}
+                      onClick={() => {
+                        if (!alreadyAdded) {
+                          setImportedImages(imgs => [...imgs, { name: a.name, url: a.url }]);
+                          flash(a.name);
+                        }
+                      }} />
+                  );
+                })}
+              {uiAssets.filter(a => a.category === assetCat && a.url.endsWith('.png')).length === 0 && (
+                <div style={{ gridColumn: '1/-1', fontSize: 8, color: '#ccc',
+                  textAlign: 'center', padding: '8px 0' }}>
+                  {uiAssets.length === 0 ? 'loading…' : 'none'}
+                </div>
+              )}
+            </div>
+
+            {/* Custom file import */}
+            <div style={{ marginTop: 6 }}>
+              <input ref={fileInputRef} type="file" multiple
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                onChange={handleFiles} style={{ display: 'none' }} />
+              <button onClick={() => fileInputRef.current?.click()}
+                style={btn({ width: '100%', fontSize: 8, padding: '3px 6px' })}>
+                + import file
+              </button>
+            </div>
+
+            {/* Currently added images */}
+            {importedImages.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <button onClick={() => setShowImages(s => !s)}
+                  style={btn({ width: '100%', textAlign: 'left', padding: '2px 6px', fontSize: 8 })}>
+                  {showImages ? '▾' : '▸'} added ({importedImages.length})
+                </button>
+                {showImages && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 3 }}>
+                    {importedImages.map((img, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center',
+                        border: B, borderRadius: 2, padding: '2px 4px',
+                        cursor: 'pointer', background: '#f0f5ff' }}
+                        title={img.name}
+                        onClick={() => navigator.clipboard.writeText(img.url).then(() => flash('URL copied'))}>
+                        <img src={img.url} alt="" style={{ width: 20, height: 20,
+                          objectFit: 'contain', flexShrink: 0, borderRadius: 1, background: '#edf1f8' }} />
+                        <span style={{ fontSize: 7, color: '#aaa', overflow: 'hidden',
+                          textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {img.name}
+                        </span>
+                        <button onClick={e => { e.stopPropagation(); setImportedImages(imgs => imgs.filter((_, j) => j !== i)); }}
+                          style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer',
+                            fontSize: 10, padding: 0, lineHeight: 1 }}>×</button>
+                      </div>
+                    ))}
                   </div>
                 )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {importedImages.map((img, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center',
-                      border: B, borderRadius: 2, padding: '2px 4px',
-                      cursor: 'pointer', background: '#f0f5ff' }}
-                      title={`Click to copy URL: ${img.name}`}
-                      onClick={() => navigator.clipboard.writeText(img.url).then(() => flash('URL copied'))}>
-                      <img src={img.url} alt="" style={{ width: 22, height: 22,
-                        objectFit: 'cover', flexShrink: 0, borderRadius: 1 }} />
-                      <span style={{ fontSize: 8, color: '#aaa', overflow: 'hidden',
-                        textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                        {img.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>
