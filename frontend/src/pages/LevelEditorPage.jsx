@@ -539,6 +539,8 @@ export default function LevelEditorPage() {
   const [uiAssets,        setUiAssets]        = useState([]);
   const [assetCat,        setAssetCat]        = useState('environment');
   const [publishing,      setPublishing]      = useState(false);
+  const [loadedKey,       setLoadedKey]       = useState('');
+  const isDirty = useRef(false);
 
   const isDragging = useRef(false);
   const fileInputRef = useRef(null);
@@ -609,7 +611,10 @@ export default function LevelEditorPage() {
 
   // ── Level load ──────────────────────────────────────────────────────────────
 
-  function loadLevel(num, lang) {
+  function loadLevel(num, lang, force = false) {
+    if (!force && isDirty.current) {
+      if (!window.confirm('You have unsaved changes. Load anyway?')) return;
+    }
     try {
       const data = lang === 'ja' ? getJALevel(num) : getESLevel(num);
       if (!data) { flash('Level not found', true); return; }
@@ -623,6 +628,8 @@ export default function LevelEditorPage() {
       setLanguage(lang);
       setSelectedLockKey(null);
       setSelectedNpcIdx(null);
+      setLoadedKey(`${lang}-${num}`);
+      isDirty.current = false;
       flash('Loaded: ' + data.name);
     } catch (e) {
       flash('Load failed', true);
@@ -637,6 +644,7 @@ export default function LevelEditorPage() {
   // ── Tool application ────────────────────────────────────────────────────────
 
   function applyTool(col, row) {
+    isDirty.current = true;
     const key = `${col},${row}`;
 
     if (tool === 'ERASE') {
@@ -703,6 +711,7 @@ export default function LevelEditorPage() {
   function updateChallenge(lockKey, ch) {
     const lk = locks[lockKey];
     if (!lk) return;
+    isDirty.current = true;
     setChallenges(cs => { const n = [...cs]; n[lk.challengeId] = ch; return n; });
   }
 
@@ -714,6 +723,7 @@ export default function LevelEditorPage() {
   }
 
   function updateNpc(idx, npc) {
+    isDirty.current = true;
     setNpcs(ns => ns.map((n, i) => i === idx ? npc : n));
   }
 
@@ -735,6 +745,7 @@ export default function LevelEditorPage() {
       });
       const result = await res.json();
       if (result.ok) {
+        isDirty.current = false;
         flash(`Published! Level ${levelId} live (${result.total} total).`);
       } else {
         flash(`Publish failed: ${result.error}`, true);
@@ -856,12 +867,11 @@ export default function LevelEditorPage() {
 
         <div style={{ width: 1, height: 20, background: 'rgba(0,114,255,0.15)' }} />
 
-        <select defaultValue=""
+        <select value={loadedKey}
           onChange={e => {
             if (!e.target.value) return;
             const [lang, num] = e.target.value.split('-');
             loadLevel(Number(num), lang);
-            e.target.value = '';
           }}
           style={inp({ cursor: 'pointer' })}>
           <option value="">Load existing level…</option>
@@ -873,9 +883,11 @@ export default function LevelEditorPage() {
         </select>
 
         <button onClick={() => {
+          if (isDirty.current && !window.confirm('Discard unsaved changes?')) return;
           setMap(emptyMap()); setLocks({}); setChallenges([]); setNpcs([]);
           setPlayerStart({ col: 1, row: 1 }); setLevelName('New Level');
           setSelectedLockKey(null); setSelectedNpcIdx(null);
+          setLoadedKey(''); isDirty.current = false;
           flash('New level');
         }} style={btn()}>NEW</button>
 
