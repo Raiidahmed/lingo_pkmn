@@ -3,6 +3,41 @@ import { loadMouseImage } from './mouseAssets.js';
 
 const T = 32;
 
+// ── Custom-texture support ────────────────────────────────────────────────────
+// Editor and levels can specify textures.{player,stairs,floor,wall,door,chest,...},
+// textures.tiles["col,row"] for per-tile overrides, textures.npcs[npc.id] for per-NPC.
+const _texCache = new Map();
+function loadTextureImg(url) {
+  if (!url) return null;
+  if (!_texCache.has(url)) {
+    const img = new Image();
+    img.src = url;
+    _texCache.set(url, img);
+  }
+  return _texCache.get(url);
+}
+function tryDrawTexture(ctx, url, x, y) {
+  const img = loadTextureImg(url);
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, x, y, T, T);
+    return true;
+  }
+  return false;
+}
+function tileTextureKey(tile) {
+  switch (tile) {
+    case TILE.FLOOR:   return 'floor';
+    case TILE.WALL:    return 'wall';
+    case TILE.DOOR_C:  return 'door';
+    case TILE.DOOR_O:  return 'doorOpen';
+    case TILE.CHEST_C: return 'chest';
+    case TILE.CHEST_O: return 'chestOpen';
+    case TILE.STAIRS:  return 'stairs';
+    case TILE.RUG:     return 'rug';
+    default:           return null;
+  }
+}
+
 // Deterministic tile variation hash
 function tvar(col, row) {
   return (((col * 73856093) ^ (row * 19349663)) * 2654435761 >>> 0) / 4294967296;
@@ -606,8 +641,9 @@ function drawPlayer(ctx, x, y, accent) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function render(ctx, state, accentColor, canvasTint = 0) {
-  const { grid, player, exitOpen, particles, npcs, levelN, language, locks, challenges } = state;
+  const { grid, player, exitOpen, particles, npcs, levelN, language, locks, challenges, textures } = state;
   const light = canvasTint > 0;
+  const T_textures = textures || {};
 
   ctx.clearRect(0, 0, MAP_W * T, MAP_H * T);
 
@@ -615,7 +651,18 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
     for (let c = 0; c < MAP_W; c++) {
       const t = grid[r][c];
       const x = c * T, y = r * T;
-      
+
+      // Custom texture overrides (per-tile takes precedence, then per-class)
+      const tileKey = `${c},${r}`;
+      const perTileUrl = T_textures.tiles && T_textures.tiles[tileKey];
+      const classKey = tileTextureKey(t);
+      const classUrl = classKey ? T_textures[classKey] : null;
+      const customUrl = perTileUrl || classUrl;
+
+      if (customUrl && tryDrawTexture(ctx, customUrl, x, y)) {
+        continue;
+      }
+
       // Japanese level critter — use pre-generated sprites when ready
       if (language === 'ja' && (t === TILE.CHEST_C || t === TILE.CHEST_O)) {
         const lockKey = `${c},${r}`;
@@ -631,7 +678,6 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
         if (img.complete && img.naturalWidth > 0) {
           drawFloor(ctx, x, y, c, r, light);
           ctx.drawImage(img, x, y, T, T);
-          // For multi-char display (no pre-baked image), overlay text
           if (isOpen && displayChar && displayChar.length > 1) {
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 7px "Noto Sans JP", sans-serif';
@@ -661,10 +707,19 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
   }
 
   if (npcs) {
-    for (const npc of npcs) drawNPC(ctx, npc.col * T, npc.row * T, npc);
+    for (const npc of npcs) {
+      const npcUrl = (T_textures.npcs && T_textures.npcs[npc.id]) || npc.texture;
+      if (npcUrl && tryDrawTexture(ctx, npcUrl, npc.col * T, npc.row * T)) continue;
+      drawNPC(ctx, npc.col * T, npc.row * T, npc);
+    }
   }
 
-  if (player) drawPlayer(ctx, player.col * T, player.row * T, accentColor);
+  if (player) {
+    const playerUrl = T_textures.player;
+    if (!(playerUrl && tryDrawTexture(ctx, playerUrl, player.col * T, player.row * T))) {
+      drawPlayer(ctx, player.col * T, player.row * T, accentColor);
+    }
+  }
 
   // Light mode: subtle unifying tint over already-light tiles
   if (canvasTint > 0) {

@@ -191,9 +191,60 @@ function Field({ label: l, children, style }) {
   );
 }
 
+function TextureField({ label: l, currentUrl, onChange, importedImages }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={fieldWrap()}>
+      <span style={lbl()}>{l}</span>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        {currentUrl ? (
+          <img src={currentUrl} style={{ width: 28, height: 28, objectFit: 'contain',
+            border: B2, borderRadius: 2, background: '#f0f5ff', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 28, height: 28, border: B2, borderRadius: 2,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 7, color: '#bbb', background: '#f0f5ff', flexShrink: 0 }}>none</div>
+        )}
+        <button onClick={() => setOpen(s => !s)} style={btn({ flex: 1 })}>
+          {open ? 'close' : (currentUrl ? 'change' : 'pick image')}
+        </button>
+        {currentUrl && (
+          <button onClick={() => onChange(null)} style={btn({ color: '#cc4444',
+            borderColor: 'rgba(204,68,68,0.4)' })} title="Clear texture">×</button>
+        )}
+      </div>
+      {open && (
+        <div style={{
+          marginTop: 4, padding: 4, border: B, borderRadius: 2,
+          maxHeight: 140, overflowY: 'auto',
+          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2,
+          background: '#fff',
+        }}>
+          {importedImages.length === 0 && (
+            <div style={{ gridColumn: '1/-1', fontSize: 8, color: '#bbb', textAlign: 'center', padding: '12px 4px' }}>
+              No imported images yet. Click any asset in the left sidebar gallery.
+            </div>
+          )}
+          {importedImages.map(img => (
+            <img key={img.url} src={img.url} title={img.name}
+              onClick={() => { onChange(img.url); setOpen(false); }}
+              style={{
+                width: '100%', aspectRatio: '1/1', objectFit: 'contain',
+                cursor: 'pointer', background: '#edf1f8', borderRadius: 2,
+                border: img.url === currentUrl ? '2px solid var(--accent)' : B2,
+                boxSizing: 'border-box',
+              }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Challenge Panel ───────────────────────────────────────────────────────────
 
-function ChallengePanel({ lockKey, lockType, challenge: ch, onUpdate, onRemoveLock, importedImages }) {
+function ChallengePanel({ lockKey, lockType, challenge: ch, onUpdate, onRemoveLock, importedImages,
+                          tileTexture, onTileTextureChange }) {
   const u = (k, v) => onUpdate({ ...ch, [k]: v });
   const uChoice = (i, v) => { const c = [...ch.choices]; c[i] = v; onUpdate({ ...ch, choices: c }); };
 
@@ -202,6 +253,11 @@ function ChallengePanel({ lockKey, lockType, challenge: ch, onUpdate, onRemoveLo
       <div style={sec()}>
         {secHead(`${lockType?.toUpperCase() || 'LOCK'} CHALLENGE`)}
         <div style={{ color: '#aaa', fontSize: 8, marginBottom: 10 }}>tile: {lockKey}</div>
+
+        <TextureField label="Tile sprite (this specific tile)"
+          currentUrl={tileTexture || null}
+          onChange={onTileTextureChange}
+          importedImages={importedImages || []} />
 
         <Field label="Display char (hiragana / kanji)">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -333,7 +389,7 @@ function ChallengePanel({ lockKey, lockType, challenge: ch, onUpdate, onRemoveLo
 
 // ── NPC Panel ─────────────────────────────────────────────────────────────────
 
-function NpcPanel({ npc, onUpdate, onDelete }) {
+function NpcPanel({ npc, onUpdate, onDelete, importedImages }) {
   const u = (k, v) => onUpdate({ ...npc, [k]: v });
   const uLine = (i, v) => { const d = [...npc.dialogue]; d[i] = v; u('dialogue', d); };
   const addLine = () => u('dialogue', [...npc.dialogue, '...']);
@@ -383,6 +439,11 @@ function NpcPanel({ npc, onUpdate, onDelete }) {
               background: npc.color, border: B2, flexShrink: 0 }} />
           </div>
         </Field>
+
+        <TextureField label="Sprite (overrides procedural drawing)"
+          currentUrl={npc.texture || null}
+          onChange={url => u('texture', url || undefined)}
+          importedImages={importedImages || []} />
       </div>
 
       <div style={sec()}>
@@ -429,7 +490,8 @@ function NpcPanel({ npc, onUpdate, onDelete }) {
 // ── Properties Panel ──────────────────────────────────────────────────────────
 
 function PropertiesPanel({ levelId, levelName, language, playerStart,
-  onLevelId, onLevelName, onLanguage, map, locks, npcs, challenges }) {
+  onLevelId, onLevelName, onLanguage, map, locks, npcs, challenges,
+  textures, onTextureChange, importedImages }) {
   const doors = Object.values(locks).filter(l => l.type === 'door').length;
   const chests = Object.values(locks).filter(l => l.type === 'chest').length;
 
@@ -483,6 +545,25 @@ function PropertiesPanel({ levelId, levelName, language, playerStart,
       </div>
 
       <div style={sec()}>
+        {secHead('Sprite Overrides')}
+        <div style={{ fontSize: 8, color: '#aaa', marginBottom: 8 }}>
+          Pick from imported images. Leave blank to use procedural pixel-art.
+        </div>
+        <TextureField label="Player" currentUrl={textures.player || null}
+          onChange={url => onTextureChange('player', url)} importedImages={importedImages || []} />
+        <TextureField label="Stairs (exit)" currentUrl={textures.stairs || null}
+          onChange={url => onTextureChange('stairs', url)} importedImages={importedImages || []} />
+        <TextureField label="Floor (all)" currentUrl={textures.floor || null}
+          onChange={url => onTextureChange('floor', url)} importedImages={importedImages || []} />
+        <TextureField label="Wall (all)" currentUrl={textures.wall || null}
+          onChange={url => onTextureChange('wall', url)} importedImages={importedImages || []} />
+        <TextureField label="Door (all locked)" currentUrl={textures.door || null}
+          onChange={url => onTextureChange('door', url)} importedImages={importedImages || []} />
+        <TextureField label="Chest (all locked)" currentUrl={textures.chest || null}
+          onChange={url => onTextureChange('chest', url)} importedImages={importedImages || []} />
+      </div>
+
+      <div style={sec()}>
         {secHead('Level Stats')}
         {[
           ['Doors',     doors],
@@ -517,8 +598,26 @@ function PropertiesPanel({ levelId, levelName, language, playerStart,
 
 // ── Main editor ───────────────────────────────────────────────────────────────
 
+// localStorage helpers for drafts
+const DRAFT_PREFIX = 'lingo-draft-';
+function listDrafts() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(DRAFT_PREFIX)) {
+      try {
+        const d = JSON.parse(localStorage.getItem(k));
+        if (d && d.id !== undefined && d.language) out.push({ key: k, ...d });
+      } catch {}
+    }
+  }
+  return out.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+}
+
 export default function LevelEditorPage() {
   const { setScreen } = useStore();
+  const lightMode    = useStore(s => s.lightMode);
+  const canvasTintUI = useStore(s => s.ui?.canvasTint ?? 0.58);
 
   const [tool,            setTool]            = useState('PAINT');
   const [selectedTile,    setSelectedTile]    = useState(TILE.WALL);
@@ -540,7 +639,17 @@ export default function LevelEditorPage() {
   const [assetCat,        setAssetCat]        = useState('environment');
   const [publishing,      setPublishing]      = useState(false);
   const [loadedKey,       setLoadedKey]       = useState('');
+  const [textures,        setTextures]        = useState({ tiles: {}, npcs: {} });
+  const [textureTarget,   setTextureTarget]   = useState(null); // 'player'|'stairs'|'floor'|'wall'|'door'|'chest'|`tile:c,r`|`npc:id`
+  const [drafts,          setDrafts]          = useState([]);
+  const [showNewForm,     setShowNewForm]     = useState(false);
+  const [newLevelLang,    setNewLevelLang]    = useState('ja');
+  const [newLevelId,      setNewLevelId]      = useState(6);
+  const [newLevelName,    setNewLevelName]    = useState('Untitled');
   const isDirty = useRef(false);
+
+  // Refresh draft list once on mount
+  useEffect(() => { setDrafts(listDrafts()); }, []);
 
   const isDragging = useRef(false);
   const fileInputRef = useRef(null);
@@ -576,7 +685,16 @@ export default function LevelEditorPage() {
 
     if (language === 'ja') preloadMouseImages(challenges);
 
-    renderScene(ctx, { grid: map, player: playerStart, exitOpen: false, particles: [], npcs, language, locks, challenges }, accent, 0);
+    const tint = lightMode ? canvasTintUI : 0;
+    const drawOnce = () => renderScene(ctx,
+      { grid: map, player: playerStart, exitOpen: false, particles: [], npcs, language, locks, challenges, textures },
+      accent, tint);
+    drawOnce();
+
+    // Texture images load asynchronously — re-render twice to catch them as they decode.
+    const t1 = setTimeout(drawOnce, 120);
+    const t2 = setTimeout(drawOnce, 600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
 
     const T = 32;
 
@@ -599,7 +717,7 @@ export default function LevelEditorPage() {
       ctx.lineWidth = 2;
       ctx.strokeRect(n.col * T + 1, n.row * T + 1, T - 2, T - 2);
     }
-  }, [map, playerStart, npcs, locks, challenges, language, hoveredCell, selectedLockKey, selectedNpcIdx]);
+  }, [map, playerStart, npcs, locks, challenges, language, hoveredCell, selectedLockKey, selectedNpcIdx, textures, lightMode, canvasTintUI]);
 
   const panelMode = selectedLockKey ? 'challenge'
     : selectedNpcIdx !== null ? 'npc'
@@ -626,6 +744,9 @@ export default function LevelEditorPage() {
       setLevelName(data.name);
       setLevelId(data.id);
       setLanguage(lang);
+      setTextures(data.textures
+        ? { tiles: {}, npcs: {}, ...data.textures }
+        : { tiles: {}, npcs: {} });
       setSelectedLockKey(null);
       setSelectedNpcIdx(null);
       setLoadedKey(`${lang}-${num}`);
@@ -732,12 +853,78 @@ export default function LevelEditorPage() {
     setSelectedNpcIdx(null);
   }
 
+  // ── Drafts (localStorage) ───────────────────────────────────────────────────
+
+  function saveDraft() {
+    const key = `${DRAFT_PREFIX}${language}-${levelId}`;
+    const data = {
+      key, id: levelId, name: levelName, language,
+      playerStart, map, locks, challenges, npcs, textures,
+      savedAt: Date.now(),
+    };
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      setDrafts(listDrafts());
+      isDirty.current = false;
+      flash(`Draft saved: ${language.toUpperCase()} ${levelId}`);
+    } catch (e) { flash('Draft save failed: ' + e.message, true); }
+  }
+
+  function loadDraft(key, force = false) {
+    if (!force && isDirty.current) {
+      if (!window.confirm('You have unsaved changes. Load draft anyway?')) return;
+    }
+    try {
+      const d = JSON.parse(localStorage.getItem(key));
+      if (!d) { flash('Draft not found', true); return; }
+      setMap(d.map.map(r => [...r]));
+      setLocks({ ...d.locks });
+      setChallenges([...(d.challenges || [])]);
+      setNpcs([...(d.npcs || [])]);
+      setPlayerStart({ ...d.playerStart });
+      setLevelName(d.name);
+      setLevelId(d.id);
+      setLanguage(d.language);
+      setTextures(d.textures || { tiles: {}, npcs: {} });
+      setSelectedLockKey(null);
+      setSelectedNpcIdx(null);
+      setLoadedKey(key);
+      isDirty.current = false;
+      flash(`Draft loaded: ${d.name}`);
+    } catch (e) { flash('Draft load failed', true); }
+  }
+
+  function deleteDraft(key) {
+    if (!window.confirm('Delete this draft?')) return;
+    localStorage.removeItem(key);
+    setDrafts(listDrafts());
+    if (loadedKey === key) setLoadedKey('');
+    flash('Draft deleted');
+  }
+
+  // ── New level ───────────────────────────────────────────────────────────────
+
+  function createNewLevel() {
+    if (isDirty.current && !window.confirm('Discard unsaved changes?')) return;
+    setMap(emptyMap()); setLocks({}); setChallenges([]); setNpcs([]);
+    setPlayerStart({ col: 1, row: 1 });
+    setLevelName(newLevelName || 'Untitled');
+    setLevelId(newLevelId);
+    setLanguage(newLevelLang);
+    setTextures({ tiles: {}, npcs: {} });
+    setSelectedLockKey(null); setSelectedNpcIdx(null);
+    setLoadedKey('');
+    isDirty.current = false;
+    setShowNewForm(false);
+    flash(`New ${newLevelLang.toUpperCase()} level ${newLevelId}: ${newLevelName}`);
+  }
+
   // ── Publish ─────────────────────────────────────────────────────────────────
 
   async function publishLevel() {
     setPublishing(true);
     try {
-      const payload = { id: levelId, name: levelName, language, playerStart, map, locks, challenges, npcs };
+      const payload = { id: levelId, name: levelName, language, playerStart, map, locks, challenges, npcs, textures };
       const res = await fetch('/api/admin/save-level', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -869,27 +1056,45 @@ export default function LevelEditorPage() {
 
         <select value={loadedKey}
           onChange={e => {
-            if (!e.target.value) return;
-            const [lang, num] = e.target.value.split('-');
+            const v = e.target.value;
+            if (!v) return;
+            if (v.startsWith(DRAFT_PREFIX)) { loadDraft(v); return; }
+            const [lang, num] = v.split('-');
             loadLevel(Number(num), lang);
           }}
           style={inp({ cursor: 'pointer' })}>
-          <option value="">Load existing level…</option>
-          {levelOptions.map(l => (
-            <option key={`${l.lang}-${l.num}`} value={`${l.lang}-${l.num}`}>
-              {l.lang.toUpperCase()} {l.num}: {l.name}
-            </option>
-          ))}
+          <option value="">Load level…</option>
+          {drafts.length > 0 && (
+            <optgroup label="Drafts">
+              {drafts.map(d => (
+                <option key={d.key} value={d.key}>
+                  📝 {d.language.toUpperCase()} {d.id}: {d.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          <optgroup label="Published">
+            {levelOptions.map(l => (
+              <option key={`${l.lang}-${l.num}`} value={`${l.lang}-${l.num}`}>
+                {l.lang.toUpperCase()} {l.num}: {l.name}
+              </option>
+            ))}
+          </optgroup>
         </select>
 
-        <button onClick={() => {
-          if (isDirty.current && !window.confirm('Discard unsaved changes?')) return;
-          setMap(emptyMap()); setLocks({}); setChallenges([]); setNpcs([]);
-          setPlayerStart({ col: 1, row: 1 }); setLevelName('New Level');
-          setSelectedLockKey(null); setSelectedNpcIdx(null);
-          setLoadedKey(''); isDirty.current = false;
-          flash('New level');
-        }} style={btn()}>NEW</button>
+        <button onClick={() => setShowNewForm(s => !s)} style={btn()}>+ NEW</button>
+
+        <button onClick={saveDraft} style={btn()} title="Save current state to browser localStorage">
+          💾 DRAFT
+        </button>
+
+        {loadedKey.startsWith(DRAFT_PREFIX) && (
+          <button onClick={() => deleteDraft(loadedKey)}
+            style={btn({ color: '#cc4444', borderColor: 'rgba(204,68,68,0.4)' })}
+            title="Delete this draft">
+            🗑
+          </button>
+        )}
 
         <div style={{ flex: 1 }} />
 
@@ -911,6 +1116,45 @@ export default function LevelEditorPage() {
           COPY JSON
         </button>
       </div>
+
+      {/* ── New level form (inline popover) ── */}
+      {showNewForm && (
+        <div style={{
+          padding: '8px 12px', background: '#fff', borderBottom: B,
+          display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+        }}>
+          <span style={lbl({ marginBottom: 0 })}>New level:</span>
+          <span style={{ fontSize: 8, color: '#888' }}>Lang</span>
+          <div style={{ display: 'flex', gap: 3 }}>
+            {['ja', 'es'].map(l => (
+              <button key={l} onClick={() => setNewLevelLang(l)}
+                style={btn({
+                  background: newLevelLang === l ? 'rgba(0,114,255,0.08)' : 'none',
+                  borderColor: newLevelLang === l ? 'var(--accent)' : 'rgba(0,114,255,0.28)',
+                  color: newLevelLang === l ? 'var(--accent)' : '#999',
+                  width: 32, textTransform: 'uppercase',
+                })}>{l}</button>
+            ))}
+          </div>
+          <span style={{ fontSize: 8, color: '#888' }}>ID</span>
+          <input type="number" min={1} max={99} value={newLevelId}
+            onChange={e => setNewLevelId(Number(e.target.value))}
+            style={inp({ width: 50 })} />
+          <span style={{ fontSize: 8, color: '#888' }}>Name</span>
+          <input value={newLevelName} onChange={e => setNewLevelName(e.target.value)}
+            style={inp({ width: 200 })} placeholder="Level name…" />
+          <button onClick={createNewLevel} style={accentBtn({ padding: '3px 12px' })}>
+            CREATE
+          </button>
+          <button onClick={() => setShowNewForm(false)} style={btn()}>cancel</button>
+          <div style={{ flex: 1 }} />
+          {drafts.length > 0 && (
+            <span style={{ fontSize: 8, color: '#aaa' }}>
+              {drafts.length} draft{drafts.length !== 1 ? 's' : ''} stored locally
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ── Main layout ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -994,9 +1238,23 @@ export default function LevelEditorPage() {
                         boxSizing: 'border-box',
                       }}
                       onClick={() => {
+                        // Always ensure it's in the imports list
                         if (!alreadyAdded) {
                           setImportedImages(imgs => [...imgs, { name: a.name, url: a.url }]);
-                          flash(a.name);
+                        }
+                        // If something is selected, apply directly
+                        if (selectedNpcIdx !== null && npcs[selectedNpcIdx]) {
+                          updateNpc(selectedNpcIdx, { ...npcs[selectedNpcIdx], texture: a.url });
+                          flash(`Applied to NPC: ${a.name}`);
+                        } else if (selectedLockKey) {
+                          isDirty.current = true;
+                          setTextures(t => ({
+                            ...t,
+                            tiles: { ...(t.tiles || {}), [selectedLockKey]: a.url }
+                          }));
+                          flash(`Applied to ${selectedLockKey}: ${a.name}`);
+                        } else {
+                          flash(`Added: ${a.name}`);
                         }
                       }} />
                   );
@@ -1138,6 +1396,15 @@ export default function LevelEditorPage() {
               onUpdate={ch => updateChallenge(selectedLockKey, ch)}
               onRemoveLock={() => removeLock(selectedLockKey)}
               importedImages={importedImages}
+              tileTexture={textures.tiles?.[selectedLockKey] || null}
+              onTileTextureChange={(url) => {
+                isDirty.current = true;
+                setTextures(t => {
+                  const tiles = { ...(t.tiles || {}) };
+                  if (url) tiles[selectedLockKey] = url; else delete tiles[selectedLockKey];
+                  return { ...t, tiles };
+                });
+              }}
             />
           )}
 
@@ -1146,6 +1413,7 @@ export default function LevelEditorPage() {
               npc={npcs[selectedNpcIdx]}
               onUpdate={npc => updateNpc(selectedNpcIdx, npc)}
               onDelete={() => deleteNpc(selectedNpcIdx)}
+              importedImages={importedImages}
             />
           )}
 
@@ -1162,6 +1430,16 @@ export default function LevelEditorPage() {
               locks={locks}
               npcs={npcs}
               challenges={challenges}
+              textures={textures}
+              importedImages={importedImages}
+              onTextureChange={(field, url) => {
+                isDirty.current = true;
+                setTextures(t => {
+                  const next = { ...t };
+                  if (url) next[field] = url; else delete next[field];
+                  return next;
+                });
+              }}
             />
           )}
         </div>
