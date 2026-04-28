@@ -1,5 +1,6 @@
 import os
 import secrets
+import subprocess
 from pathlib import Path
 
 from flask import Flask, request, jsonify, send_from_directory, g
@@ -274,6 +275,71 @@ def create_app():
         conn.execute("UPDATE users SET levels_completed='[]'")
         conn.commit()
         return jsonify({"ok": True, "message": "Scores, saves, and level progress wiped."})
+
+    @app.post("/api/admin/save-level")
+    def save_level():
+        data = request.get_json(silent=True)
+        if not data or data.get("id") is None:
+            return jsonify({"error": "missing level id"}), 400
+
+        level_id   = data["id"]
+        language   = data.get("language", "es")
+        engine_dir = Path(__file__).parent.parent / "frontend" / "src" / "engine"
+        frontend_dir = Path(__file__).parent.parent / "frontend"
+
+        if language == "ja":
+            levels_file = engine_dir / "levels_ja.js"
+            array_var   = "LEVELS_JA"
+            header      = "// Japanese levels — TILE: FLOOR=0, WALL=1, DOOR_C=2, DOOR_O=3, CHEST_C=4, CHEST_O=5, STAIRS=6, RUG=7\n"
+            var_decl    = "const LEVELS_JA"
+            get_fn      = "\nexport function getLevel(n) {\n  return LEVELS_JA[Math.min(Math.max(n - 1, 0), LEVELS_JA.length - 1)];\n}\n"
+        else:
+            levels_file = engine_dir / "levels.js"
+            array_var   = "LEVELS"
+            header      = "// LingoDungeon — Level data ported from lingo_pkmn\n// TILE constants: FLOOR=0, WALL=1, DOOR_C=2, DOOR_O=3, CHEST_C=4, CHEST_O=5, STAIRS=6, RUG=7\n"
+            var_decl    = "export const LEVELS"
+            get_fn      = "\nexport function getLevel(n) {\n  return LEVELS[Math.min(Math.max(n - 1, 0), LEVELS.length - 1)];\n}\n"
+
+        # Use Node to safely eval the existing JS array (handles both JSON and JS-object syntax)
+        node_extract = (
+            "const fs=require('fs');"
+            f"const c=fs.readFileSync({json.dumps(str(levels_file))},'utf-8');"
+            f"const m=c.match(/(?:const {array_var}|export const {array_var})\\s*=\\s*([\\s\\S]*?);\\s*\\nexport/);"
+            "if(!m){console.log('[]');process.exit(0);}"
+            "try{console.log(JSON.stringify((new Function('return '+m[1])).call(null)));}catch(e){console.log('[]');}"
+        )
+        node_result = subprocess.run(
+            ["node", "-e", node_extract],
+            capture_output=True, text=True, timeout=10
+        )
+        try:
+            levels = json.loads(node_result.stdout.strip() or "[]")
+        except Exception:
+            levels = []
+
+        # Replace existing level or append
+        idx = next((i for i, lv in enumerate(levels) if lv.get("id") == level_id), None)
+        if idx is not None:
+            levels[idx] = data
+        else:
+            levels.append(data)
+
+        # Write back as clean JSON-in-JS
+        levels_json = json.dumps(levels, indent=2, ensure_ascii=False)
+        new_content = f"{header}\n{var_decl} = {levels_json};\n{get_fn}"
+        levels_file.write_text(new_content, encoding="utf-8")
+
+        # Rebuild frontend (blocking ~5s)
+        build = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(frontend_dir),
+            capture_output=True, text=True, timeout=120
+        )
+        if build.returncode != 0:
+            return jsonify({"error": "build failed", "details": build.stderr[-1500:]}), 500
+
+        return jsonify({"ok": True, "id": level_id, "language": language,
+                        "total": len(levels)})
 
     # Serve React SPA for all non-API routes
     @app.get("/")

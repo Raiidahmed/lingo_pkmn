@@ -538,6 +538,7 @@ export default function LevelEditorPage() {
   const [toast,           setToast]           = useState(null);
   const [uiAssets,        setUiAssets]        = useState([]);
   const [assetCat,        setAssetCat]        = useState('environment');
+  const [publishing,      setPublishing]      = useState(false);
 
   const isDragging = useRef(false);
   const fileInputRef = useRef(null);
@@ -721,6 +722,30 @@ export default function LevelEditorPage() {
     setSelectedNpcIdx(null);
   }
 
+  // ── Publish ─────────────────────────────────────────────────────────────────
+
+  async function publishLevel() {
+    setPublishing(true);
+    try {
+      const payload = { id: levelId, name: levelName, language, playerStart, map, locks, challenges, npcs };
+      const res = await fetch('/api/admin/save-level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        flash(`Published! Level ${levelId} live (${result.total} total).`);
+      } else {
+        flash(`Publish failed: ${result.error}`, true);
+      }
+    } catch (e) {
+      flash('Publish failed: ' + e.message, true);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   // ── Export ──────────────────────────────────────────────────────────────────
 
   function doExport(asJson) {
@@ -862,7 +887,12 @@ export default function LevelEditorPage() {
           </span>
         )}
 
-        <button onClick={() => doExport(false)} style={accentBtn({ padding: '3px 12px' })}>
+        <button onClick={publishLevel} disabled={publishing}
+          style={accentBtn({ padding: '3px 14px', opacity: publishing ? 0.6 : 1,
+            background: 'rgba(0,114,255,0.12)', fontWeight: 'bold' })}>
+          {publishing ? '⏳ PUBLISHING…' : '⬆ PUBLISH'}
+        </button>
+        <button onClick={() => doExport(false)} style={btn()}>
           EXPORT JS
         </button>
         <button onClick={() => doExport(true)} style={btn()}>
