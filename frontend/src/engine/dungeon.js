@@ -29,6 +29,7 @@ export function loadLevel(levelN, lang = 'es') {
     locks: { ...data.locks },          // "col,row" -> { type, challengeId }
     npcs: data.npcs,
     challenges: data.challenges,
+    textureSet: data.textureSet,
     name: data.name,
     numLocks: Object.keys(data.locks).length,
   };

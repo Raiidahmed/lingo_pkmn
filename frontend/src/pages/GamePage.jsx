@@ -64,14 +64,15 @@ export default function GamePage() {
 
   // --- Level loading ---
   function initLevel(n, snapshot = null) {
-    const data = loadLevel(n, language);
+    const safeLevel = Math.min(Math.max(n, 1), getLevelCount(language));
+    const data = loadLevel(safeLevel, language);
     levelDataRef.current = data;
     renderCacheRef.current.key = '';
     // Deep copy grid so mutations don't affect the source
     gridRef.current = data.grid.map(row => [...row]);
     solvedLocksRef.current = new Set();
 
-    if (snapshot && snapshot.levelIndex === n) {
+    if (snapshot && snapshot.levelIndex === safeLevel) {
       // Restore from snapshot
       playerRef.current = snapshot.playerPos;
       scoreRef.current  = snapshot.score;
@@ -97,8 +98,8 @@ export default function GamePage() {
       setScore(0);
     }
 
-    levelRef.current = n;
-    setLevelN(n);
+    levelRef.current = safeLevel;
+    setLevelN(safeLevel);
     setLevelName(data.name);
 
     if (language === 'ja') preloadMouseImages(data.challenges);
@@ -344,6 +345,7 @@ export default function GamePage() {
       language: language,
       locks: levelDataRef.current?.locks,
       challenges: levelDataRef.current?.challenges,
+      textureSet: levelDataRef.current?.textureSet,
     }, viewRef.current.accent, viewRef.current.canvasTint, renderCacheRef.current);
   }
 

@@ -4,6 +4,84 @@ import { loadMouseImage } from './mouseAssets.js';
 const T = 32;
 const CANVAS_W = MAP_W * T;
 const CANVAS_H = MAP_H * T;
+let textureVersion = 0;
+
+const TEXTURE_SETS = {
+  garden: {
+    floor: ['/environment/cherry_blossom_grass_floor_tile_.png', '/environment/garden_dirt_path_floor_tile_topd.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/traditional_japanese_tatami_mat_.png'],
+  },
+  dojo: {
+    floor: ['/environment/garden_dirt_path_floor_tile_topd.png', '/environment/traditional_japanese_tatami_mat_.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/traditional_japanese_tatami_mat_.png'],
+  },
+  grove: {
+    floor: ['/environment/cherry_blossom_grass_floor_tile_.png', '/environment/garden_dirt_path_floor_tile_topd.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/cherry_blossom_grass_floor_tile_.png'],
+  },
+  temple: {
+    floor: ['/environment/traditional_japanese_tatami_mat_.png', '/environment/garden_dirt_path_floor_tile_topd.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/traditional_japanese_tatami_mat_.png'],
+  },
+  forest: {
+    floor: ['/environment/cherry_blossom_grass_floor_tile_.png', '/environment/garden_dirt_path_floor_tile_topd.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/cherry_blossom_grass_floor_tile_.png'],
+  },
+  onsen: {
+    floor: ['/environment/traditional_japanese_tatami_mat_.png', '/environment/garden_dirt_path_floor_tile_topd.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/zen_pond_water_tile_with_small_l.png'],
+  },
+  market: {
+    floor: ['/environment/garden_dirt_path_floor_tile_topd.png', '/environment/cherry_blossom_grass_floor_tile_.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/traditional_japanese_tatami_mat_.png'],
+  },
+  river: {
+    floor: ['/environment/garden_dirt_path_floor_tile_topd.png', '/environment/cherry_blossom_grass_floor_tile_.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/zen_pond_water_tile_with_small_l.png'],
+  },
+  gate: {
+    floor: ['/environment/garden_dirt_path_floor_tile_topd.png', '/environment/traditional_japanese_tatami_mat_.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/cherry_blossom_grass_floor_tile_.png'],
+  },
+  review: {
+    floor: ['/environment/traditional_japanese_tatami_mat_.png', '/environment/cherry_blossom_grass_floor_tile_.png'],
+    wall: ['/environment/zen_garden_stone_wall_tile_topdo.png'],
+    rug: ['/environment/zen_pond_water_tile_with_small_l.png'],
+  },
+};
+
+const textureCache = new Map();
+
+function loadTexture(path) {
+  if (!path || typeof Image === 'undefined') return null;
+  if (!textureCache.has(path)) {
+    const img = new Image();
+    img.onload = () => { textureVersion += 1; };
+    img.src = path;
+    textureCache.set(path, img);
+  }
+  return textureCache.get(path);
+}
+
+function drawTexture(ctx, textureSet, role, x, y, col, row) {
+  const set = TEXTURE_SETS[textureSet] || TEXTURE_SETS.garden;
+  const paths = set[role];
+  if (!paths?.length) return false;
+  const path = paths[Math.floor(tvar(col, row) * paths.length) % paths.length];
+  const img = loadTexture(path);
+  if (!img?.complete || img.naturalWidth <= 0) return false;
+  ctx.drawImage(img, x, y, T, T);
+  return true;
+}
 
 // Deterministic tile variation hash
 function tvar(col, row) {
@@ -629,9 +707,11 @@ function isDynamicJapaneseCritter(language, tile) {
   return language === 'ja' && (tile === TILE.CHEST_C || tile === TILE.CHEST_O);
 }
 
-function getGridCacheKey(grid, exitOpen, accentColor, light, language) {
+function getGridCacheKey(grid, exitOpen, accentColor, light, language, textureSet) {
   return [
     language,
+    textureSet || '',
+    textureVersion,
     exitOpen ? 1 : 0,
     light ? 1 : 0,
     accentColor,
@@ -640,7 +720,7 @@ function getGridCacheKey(grid, exitOpen, accentColor, light, language) {
 }
 
 function drawStaticMap(ctx, state, accentColor, light) {
-  const { grid, exitOpen, language } = state;
+  const { grid, exitOpen, language, textureSet } = state;
 
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
@@ -650,19 +730,25 @@ function drawStaticMap(ctx, state, accentColor, light) {
       const x = c * T, y = r * T;
 
       if (isDynamicJapaneseCritter(language, t)) {
-        drawFloor(ctx, x, y, c, r, light);
+        if (!drawTexture(ctx, textureSet, 'floor', x, y, c, r)) drawFloor(ctx, x, y, c, r, light);
         continue;
       }
 
       switch (t) {
-        case TILE.FLOOR:   drawFloor(ctx, x, y, c, r, light); break;
-        case TILE.WALL:    drawWall(ctx, x, y, c, r, light); break;
+        case TILE.FLOOR:
+          if (language !== 'ja' || !drawTexture(ctx, textureSet, 'floor', x, y, c, r)) drawFloor(ctx, x, y, c, r, light);
+          break;
+        case TILE.WALL:
+          if (language !== 'ja' || !drawTexture(ctx, textureSet, 'wall', x, y, c, r)) drawWall(ctx, x, y, c, r, light);
+          break;
         case TILE.DOOR_C:  drawDoorClosed(ctx, x, y, accentColor); break;
         case TILE.DOOR_O:  drawDoorOpen(ctx, x, y); break;
         case TILE.CHEST_C: drawChestClosed(ctx, x, y, accentColor); break;
         case TILE.CHEST_O: drawChestOpen(ctx, x, y, ''); break;
         case TILE.STAIRS:  drawStairs(ctx, x, y, exitOpen); break;
-        case TILE.RUG:     drawRug(ctx, x, y, c, r); break;
+        case TILE.RUG:
+          if (language !== 'ja' || !drawTexture(ctx, textureSet, 'rug', x, y, c, r)) drawRug(ctx, x, y, c, r);
+          break;
         default:           drawFloor(ctx, x, y, c, r);
       }
     }
@@ -708,13 +794,13 @@ function drawJapaneseCritters(ctx, state) {
 }
 
 export function render(ctx, state, accentColor, canvasTint = 0, cache = null) {
-  const { grid, player, exitOpen, particles, npcs, language } = state;
+  const { grid, player, exitOpen, particles, npcs, language, textureSet } = state;
   const light = canvasTint > 0;
 
   if (!grid) return;
 
   if (cache) {
-    const key = getGridCacheKey(grid, exitOpen, accentColor, light, language);
+    const key = getGridCacheKey(grid, exitOpen, accentColor, light, language, textureSet);
     const layerCtx = ensureStaticLayer(cache);
     if (cache.key !== key) {
       drawStaticMap(layerCtx, state, accentColor, light);
