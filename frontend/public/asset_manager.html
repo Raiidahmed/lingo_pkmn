@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lingo PKMN — Asset Manager</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090912;--bg2:#0b0b18;--panel:#0f0f1e;--panel2:#141428;
+  --border:#1e1e38;--border2:#252545;
+  --text:#b0b0d0;--dim:#484868;--mid:#6868a0;--bright:#d0d0f0;
+  --accent:#6060e0;--acdim:#28285a;--acglow:rgba(96,96,224,0.15);
+  --green:#40b870;--red:#e04848;--blue:#4898e0;--gold:#c8a030;
+  --npc:#4898e0;--anm:#40b870;--door:#d05c28;--chest:#c89830;
+  --cell:32px;--lw:200px;--rw:280px;
+}
+body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:12px}
+/* TOPBAR */
+#topbar{height:36px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
+#topbar .logo{font-size:10px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;flex:1}
+#topbar .logo span{color:var(--dim)}
+.tbtn{background:none;border:1px solid var(--border2);color:var(--mid);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:9px;letter-spacing:.12em;text-transform:uppercase;border-radius:2px;transition:all .12s}
+.tbtn:hover{border-color:var(--mid);color:var(--bright)}
+.tbtn.ac{border-color:var(--acdim);color:var(--accent)}
+.tbtn.ac:hover{background:var(--acglow);border-color:var(--accent)}
+/* LAYOUT */
+#main{flex:1;display:flex;overflow:hidden}
+#left{width:var(--lw);flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#center{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#right{width:var(--rw);flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto}
+/* TABS */
+.tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:7px 0;font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.15em;cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:inherit;transition:all .12s;text-align:center}
+.tab:hover{color:var(--mid)}.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+/* LEFT BODY */
+#left-body{flex:1;overflow-y:auto}
+.cat{border-bottom:1px solid var(--border)}
+.cat-head{display:flex;align-items:center;gap:7px;padding:7px 10px;cursor:pointer;font-size:9px;color:var(--mid);text-transform:uppercase;letter-spacing:.12em;user-select:none;transition:background .1s}
+.cat-head:hover{background:var(--panel2)}
+.cdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.caret{margin-left:auto;font-size:8px;color:var(--dim);transition:transform .15s;display:inline-block}
+.cat.open .caret{transform:rotate(90deg)}
+.ccount{font-size:8px;color:var(--dim);background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0 5px;min-width:18px;text-align:center}
+.cat-items{display:none}.cat.open .cat-items{display:block}
+.ar{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 20px;cursor:pointer;font-size:10px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.025);transition:background .08s;user-select:none}
+.ar:hover{background:var(--panel2)}.ar.sel{background:var(--acdim);color:var(--bright)}
+.adot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.aname{flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apos{font-size:8px;color:var(--dim);flex-shrink:0}
+.adel{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;flex-shrink:0;transition:color .1s}
+.adel:hover{color:var(--red)}
+.cat-add{width:100%;background:none;border:none;border-top:1px solid var(--border);color:var(--dim);padding:6px;cursor:pointer;font-family:inherit;font-size:8px;letter-spacing:.12em;text-transform:uppercase;text-align:center;display:block;transition:all .1s}
+.cat-add:hover{background:var(--panel2);color:var(--accent)}
+/* TEXTURE SLOTS */
+.tslot{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);transition:background .08s}
+.tslot:hover{background:var(--panel2)}
+.tthumb{width:28px;height:28px;border:1px solid var(--border2);border-radius:2px;background-size:cover;background-position:center;flex-shrink:0}
+.tinfo{flex:1}.tname{font-size:9px;color:var(--text);text-transform:uppercase;letter-spacing:.08em}.tstat{font-size:8px;color:var(--dim);margin-top:1px}
+.tbtn2{background:none;border:1px solid var(--border2);color:var(--dim);font-family:inherit;font-size:8px;padding:2px 7px;cursor:pointer;border-radius:2px;transition:all .1s;text-transform:uppercase;letter-spacing:.08em}
+.tbtn2:hover{border-color:var(--accent);color:var(--accent)}
+.tbtn2.clr:hover{border-color:var(--red);color:var(--red)}
+/* TOOLBAR */
+#toolbar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.tgrp{display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.ttb{background:none;border:none;border-right:1px solid var(--border);color:var(--dim);padding:4px 9px;cursor:pointer;font-family:inherit;font-size:8px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;transition:all .1s}
+.ttb:last-child{border-right:none}.ttb:hover{background:var(--panel2);color:var(--text)}.ttb.on{background:var(--acdim);color:var(--bright)}
+/* MAP */
+#map-wrap{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px}
+#map-grid{display:grid;grid-template-columns:repeat(15,var(--cell));grid-template-rows:repeat(13,var(--cell));border:1px solid var(--border2);position:relative;cursor:crosshair;user-select:none}
+.mc{width:var(--cell);height:var(--cell);position:relative;overflow:hidden;border-right:1px solid rgba(255,255,255,.035);border-bottom:1px solid rgba(255,255,255,.035);transition:filter .08s}
+.mc:hover{filter:brightness(1.3)}.mc.selc{outline:2px solid var(--accent);outline-offset:-1px;z-index:5}
+.mcbg{position:absolute;inset:0;background-size:cover;background-position:center}
+.mce{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.edot{width:20px;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.pring{position:absolute;inset:3px;border:2px solid #4af;border-radius:50%;pointer-events:none;box-shadow:0 0 6px rgba(68,170,255,.5)}
+.mcbadge{position:absolute;top:1px;right:1px;font-size:6px;background:rgba(0,0,0,.85);color:var(--gold);padding:1px 2px;border-radius:1px;pointer-events:none;line-height:1}
+/* RIGHT PANEL */
+.rhead{padding:10px 12px 8px;font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.15em;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.rbadge{font-size:7px;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.08em}
+.rbadge.npc{background:rgba(72,152,224,.2);color:var(--npc);border:1px solid rgba(72,152,224,.3)}
+.rbadge.anm{background:rgba(64,184,112,.2);color:var(--anm);border:1px solid rgba(64,184,112,.3)}
+.rbadge.door{background:rgba(208,92,40,.2);color:var(--door);border:1px solid rgba(208,92,40,.3)}
+.rbadge.chest{background:rgba(200,152,48,.2);color:var(--chest);border:1px solid rgba(200,152,48,.3)}
+.rsec{padding:10px 12px;border-bottom:1px solid var(--border)}
+.rstitle{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px}
+.field{margin-bottom:8px}.field:last-child{margin-bottom:0}
+.fl{display:block;font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:3px}
+.fi{width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--bright);padding:4px 7px;font-family:inherit;font-size:11px;border-radius:2px;outline:none;transition:border-color .1s}
+.fi:focus{border-color:var(--accent)}
+select.fi{appearance:none;cursor:pointer}
+textarea.fi{resize:vertical;min-height:52px;line-height:1.5;font-size:10px}
+.row2{display:flex;gap:6px}.row2 .field{flex:1}
+.crow{display:flex;gap:6px;align-items:center}
+.crow input[type=color]{width:30px;height:26px;padding:0;border:none;cursor:pointer;background:none;border-radius:2px;flex-shrink:0}
+.cswatch{width:20px;height:20px;border-radius:10px;border:1px solid var(--border2);flex-shrink:0}
+.tprev{width:100%;height:56px;background:var(--bg2);border:1px solid var(--border2);border-radius:2px;display:flex;align-items:center;justify-content:center;margin-bottom:5px;background-size:contain;background-position:center;background-repeat:no-repeat}
+.tprev span{font-size:8px;color:var(--dim)}
+.flex-row{display:flex;gap:6px;align-items:center}
+/* DIALOGUE */
+.dline{display:flex;gap:4px;align-items:flex-start;margin-bottom:4px}
+.dnum{font-size:8px;color:var(--dim);padding-top:5px;width:14px;text-align:right;flex-shrink:0}
+.dta{flex:1;background:var(--bg2);border:1px solid var(--border2);color:var(--bright);padding:4px 6px;font-family:inherit;font-size:10px;border-radius:2px;outline:none;resize:none;min-height:36px;transition:border-color .1s}
+.dta:focus{border-color:var(--accent)}
+.dbtns{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.dbtn{background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;font-size:9px;padding:2px 4px;line-height:1;border-radius:2px;transition:all .1s}
+.dbtn:hover{color:var(--accent);border-color:var(--accent)}.dbtn.del:hover{color:var(--red);border-color:var(--red)}
+/* CHALLENGE */
+.cch{display:flex;gap:5px;align-items:center;margin-bottom:4px}
+.cradio{accent-color:var(--green);flex-shrink:0;cursor:pointer}
+.cci{flex:1;background:var(--bg2);border:1px solid var(--border2);color:var(--bright);padding:3px 5px;font-family:inherit;font-size:10px;border-radius:2px;outline:none;transition:border-color .1s}
+.cci:focus{border-color:var(--accent)}.cci.ok{border-color:var(--green)}
+.stog{display:flex;gap:3px}
+.sopt{flex:1;padding:3px;font-size:9px;text-align:center;cursor:pointer;border:1px solid var(--border2);color:var(--dim);background:none;font-family:inherit;text-transform:uppercase;letter-spacing:.08em;border-radius:2px;transition:all .1s}
+.sopt:hover{color:var(--text);border-color:var(--mid)}.sopt.on{background:var(--acdim);color:var(--bright);border-color:var(--accent)}
+/* BUTTONS */
+.danger{width:100%;background:none;border:1px solid rgba(224,72,72,.35);color:var(--red);font-family:inherit;font-size:9px;padding:5px;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:.1em;transition:all .1s}
+.danger:hover{background:rgba(224,72,72,.1)}
+.mini{background:none;border:1px solid var(--border2);color:var(--mid);font-family:inherit;font-size:9px;padding:3px 9px;cursor:pointer;border-radius:2px;transition:all .1s;text-transform:uppercase;letter-spacing:.08em}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+.full{width:100%;background:none;border:1px solid var(--border2);color:var(--mid);font-family:inherit;font-size:9px;padding:5px;cursor:pointer;border-radius:2px;text-align:center;text-transform:uppercase;letter-spacing:.1em;transition:all .1s}
+.full:hover{border-color:var(--accent);color:var(--accent);background:var(--acglow)}
+.rempty{padding:30px 16px;text-align:center;color:var(--dim);font-size:10px;line-height:2}
+/* MODAL */
+#modal{display:none;position:fixed;inset:0;background:rgba(4,4,12,.88);z-index:500;align-items:center;justify-content:center}
+#modal.open{display:flex}
+#mbox{background:var(--panel);border:1px solid var(--border2);border-radius:4px;width:700px;max-height:85vh;display:flex;flex-direction:column;gap:10px;padding:16px}
+#mbox h2{font-size:10px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase}
+#jout{flex:1;background:#050510;border:1px solid var(--border);color:#50d890;font-family:'Courier New',monospace;font-size:10px;padding:10px;resize:none;min-height:320px;outline:none;border-radius:2px;line-height:1.5}
+.mfoot{display:flex;gap:8px;justify-content:flex-end}
+/* TOAST */
+#toast{position:fixed;bottom:16px;right:16px;background:var(--panel2);border:1px solid var(--border2);color:var(--bright);padding:7px 14px;font-size:10px;border-radius:3px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999}
+#toast.show{opacity:1}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--acdim)}
+.mt4{margin-top:4px}.mt8{margin-top:8px}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div class="logo">Lingo PKMN <span>·</span> Asset Manager</div>
+  <button class="tbtn" onclick="triggerImport()">↑ Import JSON</button>
+  <button class="tbtn ac" onclick="openExport()">↓ Export JSON</button>
+</div>
+<div id="main">
+  <div id="left">
+    <div class="tab-bar">
+      <button class="tab on" id="tab-a" onclick="setLTab('assets')">Assets</button>
+      <button class="tab" id="tab-t" onclick="setLTab('textures')">Textures</button>
+    </div>
+    <div id="left-body"></div>
+  </div>
+  <div id="center">
+    <div id="toolbar"></div>
+    <div id="map-wrap"><div id="map-grid"></div></div>
+  </div>
+  <div id="right"><div id="rbody"></div></div>
+</div>
+<div id="modal">
+  <div id="mbox">
+    <h2>Export JSON</h2>
+    <textarea id="jout" readonly></textarea>
+    <div class="mfoot">
+      <button class="tbtn" onclick="dlJSON()">↓ Download</button>
+      <button class="tbtn" onclick="copyJSON()">Copy</button>
+      <button class="tbtn ac" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="file-tex" accept="image/*" style="display:none">
+<input type="file" id="file-imp" accept=".json,application/json" style="display:none">
+<div id="toast"></div>
+
+<script>
+'use strict';
+const TILE={FLOOR:0,WALL:1,DOOR_C:2,DOOR_O:3,CHEST_C:4,CHEST_O:5,STAIRS:6,RUG:7};
+const MAP_W=15,MAP_H=13;
+const TILE_BG={0:'#18182e',1:'#050510',2:'#4a1800',3:'#0a0a18',4:'#4a2808',5:'#2a1404',6:'#0a180a',7:'#14103a'};
+const TILE_LBL={0:'FLOOR',1:'WALL',2:'DOOR',3:'DOOR_O',4:'CHEST',5:'CHEST_O',6:'STAIRS',7:'RUG'};
+const NPC_NAMES={G:'Guard',S:'Sage','?':'Stranger'};
+
+let _id=1;
+const uid=p=>`${p}_${String(_id++).padStart(3,'0')}`;
+
+// ── STATE ─────────────────────────────────────────────────────────
+const S={
+  map:Array.from({length:MAP_H},()=>Array(MAP_W).fill(0)),
+  playerStart:{col:7,row:10},
+  npcs:[],animals:[],
+  locks:{},challenges:[],
+  textures:{classes:{},instances:{}},
+  tool:'floor',
+  selId:null,selCell:null,
+  ltab:'assets',
+  open:{npc:true,animal:true,door:false,chest:false},
+  texTarget:null,
+};
+
+(function initMap(){
+  for(let r=0;r<MAP_H;r++)for(let c=0;c<MAP_W;c++)
+    S.map[r][c]=(r===0||r===MAP_H-1||c===0||c===MAP_W-1)?TILE.WALL:TILE.FLOOR;
+})();
+
+// ── HELPERS ───────────────────────────────────────────────────────
+const npcAt=(c,r)=>S.npcs.find(n=>n.col===c&&n.row===r);
+const anmAt=(c,r)=>S.animals.find(a=>a.col===c&&a.row===r);
+const entAt=(c,r)=>npcAt(c,r)||anmAt(c,r);
+const lockAt=(c,r)=>S.locks[`${c},${r}`]||null;
+const byId=id=>S.npcs.find(n=>n.id===id)||S.animals.find(a=>a.id===id);
+const isNpc=id=>S.npcs.some(n=>n.id===id);
+
+function getOrMakeChallenge(lockKey){
+  const lk=S.locks[lockKey];if(!lk)return null;
+  let ch=S.challenges.find(c=>c.id===lk.challengeId);
+  if(!ch){ch={id:lk.challengeId,prompt:'Which is correct?',choices:['','','',''],answer:0,color:'#a0c4ff',hint:'',reward:"''",display:'',choiceStyle:undefined};S.challenges.push(ch);}
+  return ch;
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+let _tt=null;
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');if(_tt)clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2000);}
+
+// ── SELECTION ─────────────────────────────────────────────────────
+function selEnt(id){S.selId=id;const e=byId(id);S.selCell=e?{col:e.col,row:e.row}:null;renderAll();}
+function selCell(c,r){S.selCell={col:c,row:r};const e=entAt(c,r);S.selId=e?e.id:null;renderAll();}
+
+// ── MAP CLICK ─────────────────────────────────────────────────────
+function cellClick(c,r){
+  const t=S.tool;
+  if(t==='select'){selCell(c,r);return;}
+  if(t==='player'){S.playerStart={col:c,row:r};renderMap();return;}
+  if(t==='erase'){
+    S.npcs=S.npcs.filter(n=>!(n.col===c&&n.row===r));
+    S.animals=S.animals.filter(a=>!(a.col===c&&a.row===r));
+    delete S.locks[`${c},${r}`];
+    S.map[r][c]=TILE.FLOOR;
+    if(S.selCell&&S.selCell.col===c&&S.selCell.row===r){S.selId=null;S.selCell=null;}
+    renderAll();return;
+  }
+  if(['npc_g','npc_s','npc_t'].includes(t)){
+    S.npcs=S.npcs.filter(n=>!(n.col===c&&n.row===r));
+    S.animals=S.animals.filter(a=>!(a.col===c&&a.row===r));
+    const lbl=t==='npc_g'?'G':t==='npc_s'?'S':'?';
+    const npc={id:uid('npc'),col:c,row:r,name:NPC_NAMES[lbl],label:lbl,color:'#8888cc',texture:null,dialogue:['Hello!']};
+    S.npcs.push(npc);S.selId=npc.id;S.selCell={col:c,row:r};renderAll();return;
+  }
+  if(t==='animal'){
+    S.npcs=S.npcs.filter(n=>!(n.col===c&&n.row===r));
+    S.animals=S.animals.filter(a=>!(a.col===c&&a.row===r));
+    const anm={id:uid('anm'),col:c,row:r,name:'Animal',color:'#40b870',texture:null,dialogue:['...']};
+    S.animals.push(anm);S.selId=anm.id;S.selCell={col:c,row:r};renderAll();return;
+  }
+  const tmap={floor:TILE.FLOOR,wall:TILE.WALL,rug:TILE.RUG,stairs:TILE.STAIRS,door:TILE.DOOR_C,chest:TILE.CHEST_C};
+  if(tmap[t]!==undefined){
+    const prev=S.map[r][c];
+    S.map[r][c]=tmap[t];
+    if(t==='door'||t==='chest'){
+      const k=`${c},${r}`;
+      if(!S.locks[k]){const cid=_id++;S.locks[k]={type:t,challengeId:cid};S.challenges.push({id:cid,prompt:'Which is correct?',choices:['','','',''],answer:0,color:'#a0c4ff',hint:'',reward:"''",display:'',choiceStyle:undefined});}
+    } else {
+      if(prev===TILE.DOOR_C||prev===TILE.CHEST_C)delete S.locks[`${c},${r}`];
+    }
+    renderAll();
+  }
+}
+
+// ── TOOL ──────────────────────────────────────────────────────────
+function setTool(t){S.tool=t;renderToolbar();}
+
+// ── ENTITY OPS ────────────────────────────────────────────────────
+function delEnt(id){
+  S.npcs=S.npcs.filter(n=>n.id!==id);S.animals=S.animals.filter(a=>a.id!==id);
+  if(S.selId===id){S.selId=null;S.selCell=null;}
+  renderAll();toast('Deleted');
+}
+
+function updEnt(id,k,v){const e=byId(id);if(e){e[k]=v;renderMap();renderLeft();}}
+function updDlLine(id,i,v){const e=byId(id);if(e)e.dialogue[i]=v;}
+function addDlLine(id){const e=byId(id);if(e){e.dialogue.push('');renderRight();}}
+function remDlLine(id,i){const e=byId(id);if(e){e.dialogue.splice(i,1);renderRight();}}
+function moveDlLine(id,i,d){const e=byId(id);if(!e)return;const a=e.dialogue,t=i+d;if(t<0||t>=a.length)return;[a[i],a[t]]=[a[t],a[i]];renderRight();}
+
+// ── CHALLENGE OPS ─────────────────────────────────────────────────
+function updCh(chId,k,v){const ch=S.challenges.find(c=>c.id===chId);if(ch){ch[k]=v;renderMap();}}
+function updChChoice(chId,i,v){const ch=S.challenges.find(c=>c.id===chId);if(ch)ch.choices[i]=v;}
+function remLock(lk){
+  const[c,r]=lk.split(',').map(Number);
+  delete S.locks[lk];S.map[r][c]=TILE.FLOOR;
+  S.selId=null;S.selCell=null;renderAll();toast('Lock removed');
+}
+
+// ── TEXTURES ──────────────────────────────────────────────────────
+function importClsTex(k){S.texTarget={t:'class',k};document.getElementById('file-tex').value='';document.getElementById('file-tex').click();}
+function importInstTex(id){S.texTarget={t:'inst',k:id};document.getElementById('file-tex').value='';document.getElementById('file-tex').click();}
+function clearClsTex(k){
+  if(BUILTIN_TEXTURES[k]){S.textures.classes[k]=BUILTIN_TEXTURES[k];}
+  else{delete S.textures.classes[k];}
+  renderLeft();renderMap();toast('Cleared');
+}
+function clearInstTex(id){const e=byId(id);if(e)e.texture=null;delete S.textures.instances[id];renderRight();renderMap();toast('Cleared');}
+
+document.getElementById('file-tex').addEventListener('change',function(e){
+  const f=e.target.files[0];if(!f||!S.texTarget)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const b=ev.target.result;
+    if(S.texTarget.t==='class'){S.textures.classes[S.texTarget.k]=b;renderLeft();}
+    else{const e2=byId(S.texTarget.k);if(e2)e2.texture=b;S.textures.instances[S.texTarget.k]=b;renderRight();}
+    renderMap();toast('Texture imported');S.texTarget=null;
+  };rd.readAsDataURL(f);
+});
+
+// ── LEFT TAB ──────────────────────────────────────────────────────
+function setLTab(t){
+  S.ltab=t;
+  document.getElementById('tab-a').classList.toggle('on',t==='assets');
+  document.getElementById('tab-t').classList.toggle('on',t==='textures');
+  renderLeft();
+}
+function togCat(k){S.open[k]=!S.open[k];renderLeft();}
+function addAsset(type){
+  const m={npc:'npc_s',animal:'animal'};
+  setTool(m[type]||type);toast(`Click the map to place ${type}`);
+}
+
+// ── IMPORT ────────────────────────────────────────────────────────
+function triggerImport(){document.getElementById('file-imp').value='';document.getElementById('file-imp').click();}
+document.getElementById('file-imp').addEventListener('change',function(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{loadData(JSON.parse(ev.target.result));toast('Imported');}
+    catch(err){alert('Invalid JSON: '+err.message);}
+  };rd.readAsText(f);
+});
+
+function loadData(d){
+  if(d.map)S.map=d.map;
+  if(d.playerStart)S.playerStart=d.playerStart;
+  if(d.npcs)S.npcs=d.npcs.map(n=>({texture:null,...n}));
+  if(d.animals)S.animals=d.animals.map(a=>({texture:null,...a}));
+  if(d.locks)S.locks=d.locks;
+  if(d.challenges)S.challenges=d.challenges;
+  if(d.textures){
+    S.textures.classes=d.textures.classes||{};
+    S.textures.instances=d.textures.instances||{};
+    S.npcs.forEach(n=>{if(S.textures.instances[n.id])n.texture=S.textures.instances[n.id];});
+    S.animals.forEach(a=>{if(S.textures.instances[a.id])a.texture=S.textures.instances[a.id];});
+  }
+  S.selId=null;S.selCell=null;renderAll();
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────
+function openExport(){
+  S.npcs.forEach(n=>{if(n.texture)S.textures.instances[n.id]=n.texture;});
+  S.animals.forEach(a=>{if(a.texture)S.textures.instances[a.id]=a.texture;});
+  const data={
+    version:'1.0',playerStart:S.playerStart,map:S.map,
+    npcs:S.npcs.map(({id,col,row,name,label,color,texture,dialogue})=>({id,col,row,name,label,color,texture_b64:texture||null,dialogue})),
+    animals:S.animals.map(({id,col,row,name,color,texture,dialogue})=>({id,col,row,name,color,texture_b64:texture||null,dialogue})),
+    locks:S.locks,challenges:S.challenges,
+    textures:{classes:S.textures.classes,instances:S.textures.instances},
+  };
+  document.getElementById('jout').value=JSON.stringify(data,null,2);
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function copyJSON(){const t=document.getElementById('jout');t.select();document.execCommand('copy');toast('Copied');}
+function dlJSON(){
+  const b=new Blob([document.getElementById('jout').value],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='lingo_assets.json';a.click();toast('Downloaded');
+}
+
+// ── RENDER MAP ────────────────────────────────────────────────────
+function renderMap(){
+  const g=document.getElementById('map-grid');g.innerHTML='';
+  for(let r=0;r<MAP_H;r++){
+    for(let c=0;c<MAP_W;c++){
+      const tile=S.map[r][c];
+      const cell=document.createElement('div');cell.className='mc';
+      const isSel=(S.selCell&&S.selCell.col===c&&S.selCell.row===r)||
+                  (S.selId&&(()=>{const e=byId(S.selId);return e&&e.col===c&&e.row===r;})());
+      if(isSel)cell.classList.add('selc');
+
+      // Background
+      const bg=document.createElement('div');bg.className='mcbg';
+      const ck=tile===0?'floor':tile===1?'wall':(tile===2||tile===3)?'door':(tile===4||tile===5)?'chest':tile===6?'stairs':tile===7?'rug':null;
+      if(ck&&S.textures.classes[ck]){
+        bg.style.backgroundImage=`url('${S.textures.classes[ck]}')`;
+      } else {
+        bg.style.background=TILE_BG[tile]||'#18182e';
+        if(tile===1)bg.style.background='repeating-linear-gradient(0deg,transparent,transparent 7px,rgba(255,255,255,.015) 7px,rgba(255,255,255,.015) 8px),#050510';
+        if(tile===7)bg.style.backgroundImage='radial-gradient(circle at 50% 50%,rgba(96,64,224,.25) 40%,transparent 70%)';
+      }
+      cell.appendChild(bg);
+
+      // Player
+      if(S.playerStart.col===c&&S.playerStart.row===r){const p=document.createElement('div');p.className='pring';cell.appendChild(p);}
+
+      // Entity
+      const npc=npcAt(c,r),anm=anmAt(c,r);
+      if(npc||anm){
+        const ew=document.createElement('div');ew.className='mce';
+        const dot=document.createElement('div');dot.className='edot';
+        const ent=npc||anm;
+        const texKey=npc?(npc.label==='G'?'npc_guard':npc.label==='S'?'npc_sage':'npc_stranger'):'animal';
+        const tex=ent.texture||S.textures.classes[texKey];
+        if(tex){
+          dot.style.width='28px';dot.style.height='28px';dot.style.backgroundImage=`url('${tex}')`;
+          dot.style.backgroundSize='contain';dot.style.backgroundPosition='center';dot.style.backgroundRepeat='no-repeat';dot.style.borderRadius='2px';
+        } else {
+          dot.style.background=ent.color||'#888';dot.textContent=npc?npc.label:'A';
+        }
+        ew.appendChild(dot);cell.appendChild(ew);
+      }
+
+      // Badge
+      const lk=S.locks[`${c},${r}`];
+      if(lk){const b=document.createElement('div');b.className='mcbadge';b.textContent=`C:${lk.challengeId}`;cell.appendChild(b);}
+
+      cell.addEventListener('click',()=>cellClick(c,r));
+      g.appendChild(cell);
+    }
+  }
+}
+
+// ── RENDER TOOLBAR ────────────────────────────────────────────────
+function renderToolbar(){
+  const bar=document.getElementById('toolbar');bar.innerHTML='';
+  const groups=[
+    [['select','⊹ Select']],
+    [['floor','Floor'],['wall','Wall'],['rug','Rug'],['stairs','Stairs']],
+    [['door','Door'],['chest','Chest']],
+    [['player','Player']],
+    [['npc_g','NPC·G'],['npc_s','NPC·S'],['npc_t','NPC·?'],['animal','Animal']],
+    [['erase','⌫ Erase']],
+  ];
+  groups.forEach(grp=>{
+    const g=document.createElement('div');g.className='tgrp';
+    grp.forEach(([k,lbl])=>{
+      const b=document.createElement('button');b.className='ttb'+(S.tool===k?' on':'');
+      b.textContent=lbl;b.onclick=()=>setTool(k);g.appendChild(b);
+    });
+    bar.appendChild(g);
+  });
+}
+
+// ── RENDER LEFT ───────────────────────────────────────────────────
+function renderLeft(){
+  const body=document.getElementById('left-body');body.innerHTML='';
+  if(S.ltab==='assets')renderLeftAssets(body);
+  else renderLeftTextures(body);
+}
+
+function renderLeftAssets(body){
+  const doorLocks=Object.entries(S.locks).filter(([,v])=>v.type==='door');
+  const chestLocks=Object.entries(S.locks).filter(([,v])=>v.type==='chest');
+  const cats=[
+    {k:'npc',lbl:'NPC',items:S.npcs,color:'#4898e0',addable:true},
+    {k:'animal',lbl:'Animal',items:S.animals,color:'#40b870',addable:true},
+    {k:'door',lbl:'Door',items:doorLocks.map(([k,v])=>{const[c,r]=k.split(',').map(Number);return{id:k,col:c,row:r,...v};}),color:'#d05c28',addable:false},
+    {k:'chest',lbl:'Chest',items:chestLocks.map(([k,v])=>{const[c,r]=k.split(',').map(Number);return{id:k,col:c,row:r,...v};}),color:'#c89830',addable:false},
+  ];
+  cats.forEach(cat=>{
+    const div=document.createElement('div');div.className='cat'+(S.open[cat.k]?' open':'');
+    const head=document.createElement('div');head.className='cat-head';head.onclick=()=>togCat(cat.k);
+    head.innerHTML=`<div class="cdot" style="background:${cat.color}"></div><span>${cat.lbl}</span><div class="ccount">${cat.items.length}</div><span class="caret">▶</span>`;
+    div.appendChild(head);
+    const items=document.createElement('div');items.className='cat-items';
+    cat.items.forEach(item=>{
+      const row=document.createElement('div');
+      const isSel=S.selId===item.id||(S.selCell&&`${S.selCell.col},${S.selCell.row}`===item.id);
+      row.className='ar'+(isSel?' sel':'');
+      if(cat.k==='npc'||cat.k==='animal'){
+        const dot=document.createElement('div');dot.className='adot';dot.style.background=item.color||cat.color;
+        const name=document.createElement('span');name.className='aname';
+        name.textContent=cat.k==='npc'?`[${item.label}] ${item.name}`:item.name;
+        const pos=document.createElement('span');pos.className='apos';pos.textContent=`${item.col},${item.row}`;
+        const del=document.createElement('button');del.className='adel';del.textContent='×';
+        del.onclick=e=>{e.stopPropagation();delEnt(item.id);};
+        row.append(dot,name,pos,del);row.onclick=()=>selEnt(item.id);
+      } else {
+        const dot=document.createElement('div');dot.className='adot';dot.style.background=cat.color;
+        const name=document.createElement('span');name.className='aname';name.textContent=`${cat.lbl} C:${item.challengeId}`;
+        const pos=document.createElement('span');pos.className='apos';pos.textContent=item.id;
+        row.append(dot,name,pos);row.onclick=()=>selCell(item.col,item.row);
+      }
+      items.appendChild(row);
+    });
+    if(cat.addable){
+      const btn=document.createElement('button');btn.className='cat-add';btn.textContent=`+ Add ${cat.lbl}`;
+      btn.onclick=()=>addAsset(cat.k);items.appendChild(btn);
+    }
+    div.appendChild(items);body.appendChild(div);
+  });
+}
+
+function renderLeftTextures(body){
+  const keys=[
+    {k:'floor',lbl:'Floor',bg:'#18182e'},{k:'wall',lbl:'Wall',bg:'#050510'},
+    {k:'door',lbl:'Door',bg:'#4a1800'},{k:'chest',lbl:'Chest',bg:'#4a2808'},
+    {k:'stairs',lbl:'Stairs',bg:'#0a180a'},{k:'rug',lbl:'Rug',bg:'#14103a'},
+    {k:'npc_guard',lbl:'NPC Guard',bg:'#4898e0'},{k:'npc_sage',lbl:'NPC Sage',bg:'#4898e0'},
+    {k:'npc_stranger',lbl:'NPC Stranger',bg:'#6868a0'},{k:'animal',lbl:'Animal',bg:'#40b870'},
+  ];
+  keys.forEach(({k,lbl,bg})=>{
+    const slot=document.createElement('div');slot.className='tslot';
+    const thumb=document.createElement('div');thumb.className='tthumb';
+    const tex=S.textures.classes[k];
+    const isBuiltin=!!BUILTIN_TEXTURES[k]&&S.textures.classes[k]===BUILTIN_TEXTURES[k];
+    if(tex){thumb.style.backgroundImage=`url('${tex}')`;}else{thumb.style.background=bg;}
+    const info=document.createElement('div');info.className='tinfo';
+    info.innerHTML=`<div class="tname">${lbl}</div><div class="tstat">${isBuiltin?'Built-in':tex?'Custom':'Default'}</div>`;
+    const btns=document.createElement('div');btns.style.cssText='display:flex;flex-direction:column;gap:3px';
+    const ib=document.createElement('button');ib.className='tbtn2';ib.textContent='Import';ib.onclick=()=>importClsTex(k);
+    btns.appendChild(ib);
+    if(tex&&!isBuiltin){const cb=document.createElement('button');cb.className='tbtn2 clr';cb.textContent='Clear';cb.onclick=()=>clearClsTex(k);btns.appendChild(cb);}
+    if(isBuiltin){const rb=document.createElement('button');rb.className='tbtn2 clr';rb.textContent='Reset';rb.onclick=()=>{S.textures.classes[k]=BUILTIN_TEXTURES[k];renderLeft();renderMap();toast('Reset to built-in');};btns.appendChild(rb);}
+    slot.append(thumb,info,btns);body.appendChild(slot);
+    // Critter gallery under animal slot
+    if(k==='animal'){
+      const gal=document.createElement('div');
+      gal.style.cssText='padding:6px 10px 4px;display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid var(--border)';
+      BUILTIN_CRITTERS.forEach(cr=>{
+        const img=document.createElement('div');
+        img.title=cr.label;
+        img.style.cssText=`width:32px;height:32px;border:1px solid var(--border2);border-radius:2px;cursor:pointer;background:var(--bg2);background-image:url('${cr.url}');background-size:contain;background-position:center;background-repeat:no-repeat;transition:border-color .1s`;
+        img.onmouseenter=()=>img.style.borderColor='var(--accent)';
+        img.onmouseleave=()=>img.style.borderColor='';
+        img.onclick=()=>{S.textures.classes.animal=cr.url;renderLeft();renderMap();toast(`Animal: ${cr.label}`);};
+        gal.appendChild(img);
+      });
+      body.appendChild(gal);
+    }
+  });
+
+  // ── UI LIBRARY (full /ui_assets server) ──────────────────────────
+  if (UI_LIBRARY.length > 0) {
+    const cats = [...new Set(UI_LIBRARY.map(a => a.category))].sort();
+    if (!S.uiLibCat) S.uiLibCat = cats.includes('environment') ? 'environment' : cats[0];
+    if (!S.uiLibTarget) S.uiLibTarget = 'floor';
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'border-top:1px solid var(--border);padding:8px 10px;background:var(--panel)';
+    wrap.innerHTML = `<div style="font-size:9px;color:var(--mid);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">UI Library — ${UI_LIBRARY.length} assets</div>`;
+
+    // Target selector
+    const targetRow = document.createElement('div');
+    targetRow.style.cssText = 'margin-bottom:6px';
+    targetRow.innerHTML = '<div style="font-size:8px;color:var(--dim);margin-bottom:3px">Apply to class:</div>';
+    const targetSel = document.createElement('select');
+    targetSel.className = 'fi';
+    targetSel.style.cssText = 'width:100%;font-size:10px;padding:3px 5px';
+    ['floor','wall','door','chest','stairs','rug','npc_guard','npc_sage','npc_stranger','animal'].forEach(k => {
+      const o = document.createElement('option'); o.value=k; o.textContent=k;
+      if (k === S.uiLibTarget) o.selected = true;
+      targetSel.appendChild(o);
+    });
+    targetSel.onchange = () => { S.uiLibTarget = targetSel.value; };
+    targetRow.appendChild(targetSel);
+    wrap.appendChild(targetRow);
+
+    // Category tabs
+    const tabRow = document.createElement('div');
+    tabRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px';
+    cats.forEach(c => {
+      const tab = document.createElement('button');
+      tab.textContent = c;
+      tab.className = 'tbtn2';
+      tab.style.cssText = `padding:2px 6px;font-size:8px;${S.uiLibCat===c?'border-color:var(--accent);color:var(--accent)':''}`;
+      tab.onclick = () => { S.uiLibCat = c; renderLeft(); };
+      tabRow.appendChild(tab);
+    });
+    wrap.appendChild(tabRow);
+
+    // Thumbnail grid
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:3px;max-height:240px;overflow-y:auto';
+    UI_LIBRARY.filter(a => a.category === S.uiLibCat).forEach(a => {
+      const t = document.createElement('img');
+      t.src = a.url; t.title = a.name;
+      t.style.cssText = `width:100%;aspect-ratio:1/1;object-fit:contain;border:1px solid var(--border2);border-radius:2px;background:var(--bg2);cursor:pointer;box-sizing:border-box`;
+      t.onmouseenter = () => t.style.borderColor = 'var(--accent)';
+      t.onmouseleave = () => t.style.borderColor = '';
+      t.onclick = () => {
+        S.textures.classes[S.uiLibTarget] = a.url;
+        renderLeft(); renderMap();
+        toast(`Applied to ${S.uiLibTarget}: ${a.name}`);
+      };
+      grid.appendChild(t);
+    });
+    wrap.appendChild(grid);
+    body.appendChild(wrap);
+  } else {
+    const note = document.createElement('div');
+    note.style.cssText = 'padding:8px 10px;font-size:8px;color:var(--dim);text-align:center';
+    note.textContent = 'UI library: open this page from the staging URL to load /ui_assets/';
+    body.appendChild(note);
+  }
+}
+
+// ── RENDER RIGHT ──────────────────────────────────────────────────
+function renderRight(){
+  const body=document.getElementById('rbody');body.innerHTML='';
+  if(S.selId){
+    const npc=S.npcs.find(n=>n.id===S.selId);
+    const anm=S.animals.find(a=>a.id===S.selId);
+    if(npc){renderRightNpc(body,npc);return;}
+    if(anm){renderRightAnm(body,anm);return;}
+  }
+  if(S.selCell){
+    const{col:c,row:r}=S.selCell;
+    const lk=S.locks[`${c},${r}`];
+    if(lk){renderRightChallenge(body,`${c},${r}`,lk);return;}
+    renderRightTile(body,c,r,S.map[r][c]);return;
+  }
+  body.innerHTML='<div class="rempty">Select a cell or entity<br>to edit its properties.<br><br>Use the toolbar above<br>to paint tiles or<br>place entities.</div>';
+}
+
+function makeColorRow(val,onChange){
+  const row=document.createElement('div');row.className='crow';
+  const pk=document.createElement('input');pk.type='color';pk.value=val||'#888888';
+  const inp=document.createElement('input');inp.className='fi';inp.style.flex='1';inp.value=val||'';
+  const sw=document.createElement('div');sw.className='cswatch';sw.style.background=val||'#888';
+  const upd=v=>{pk.value=v;inp.value=v;sw.style.background=v;onChange(v);};
+  pk.oninput=()=>upd(pk.value);inp.oninput=()=>upd(inp.value);
+  row.append(pk,inp,sw);return row;
+}
+
+function makeDialogueEditor(entity){
+  const sec=document.createElement('div');sec.className='rsec';
+  sec.innerHTML='<div class="rstitle">Dialogue</div>';
+  entity.dialogue.forEach((line,i)=>{
+    const dl=document.createElement('div');dl.className='dline';
+    const num=document.createElement('div');num.className='dnum';num.textContent=i+1;
+    const ta=document.createElement('textarea');ta.className='dta';ta.value=line;ta.rows=2;
+    ta.oninput=()=>updDlLine(entity.id,i,ta.value);
+    const btns=document.createElement('div');btns.className='dbtns';
+    const up=document.createElement('button');up.className='dbtn';up.textContent='↑';up.title='Move up';up.onclick=()=>moveDlLine(entity.id,i,-1);
+    const dn=document.createElement('button');dn.className='dbtn';dn.textContent='↓';dn.title='Move down';dn.onclick=()=>moveDlLine(entity.id,i,1);
+    const del=document.createElement('button');del.className='dbtn del';del.textContent='×';del.onclick=()=>remDlLine(entity.id,i);
+    btns.append(up,dn,del);dl.append(num,ta,btns);sec.appendChild(dl);
+  });
+  const add=document.createElement('button');add.className='full mt8';add.textContent='+ Add Line';
+  add.onclick=()=>addDlLine(entity.id);sec.appendChild(add);
+  return sec;
+}
+
+function makeTexSection(entity){
+  const sec=document.createElement('div');sec.className='rsec';
+  sec.innerHTML='<div class="rstitle">Texture</div>';
+  const prev=document.createElement('div');prev.className='tprev';
+  if(entity.texture){prev.style.backgroundImage=`url('${entity.texture}')`;}
+  else prev.innerHTML='<span>No custom texture</span>';
+  sec.appendChild(prev);
+  const row=document.createElement('div');row.className='flex-row';
+  const ib=document.createElement('button');ib.className='mini';ib.textContent='Import Texture';ib.onclick=()=>importInstTex(entity.id);
+  row.appendChild(ib);
+  if(entity.texture){
+    const cb=document.createElement('button');cb.className='mini';cb.style.cssText='color:var(--red);border-color:rgba(224,72,72,.4)';
+    cb.textContent='Clear';cb.onclick=()=>clearInstTex(entity.id);row.appendChild(cb);
+  }
+  sec.appendChild(row);return sec;
+}
+
+function makePosSection(entity){
+  const sec=document.createElement('div');sec.className='rsec';
+  sec.innerHTML='<div class="rstitle">Position</div>';
+  const row=document.createElement('div');row.className='row2';
+  ['col','row'].forEach(k=>{
+    const f=document.createElement('div');f.className='field';
+    f.innerHTML=`<label class="fl">${k==='col'?'Col':'Row'}</label>`;
+    const inp=document.createElement('input');inp.className='fi';inp.type='number';
+    inp.min=0;inp.max=k==='col'?MAP_W-1:MAP_H-1;inp.value=entity[k];
+    inp.oninput=()=>{entity[k]=parseInt(inp.value)||0;if(S.selCell)S.selCell={col:entity.col,row:entity.row};renderMap();renderLeft();};
+    f.appendChild(inp);row.appendChild(f);
+  });
+  sec.appendChild(row);return sec;
+}
+
+function renderRightNpc(body,npc){
+  const head=document.createElement('div');head.className='rhead';
+  head.innerHTML=`<span class="rbadge npc">NPC</span><span style="font-size:10px;color:var(--bright)">${npc.name}</span>`;
+  body.appendChild(head);
+
+  const sec1=document.createElement('div');sec1.className='rsec';
+  sec1.innerHTML='<div class="rstitle">Identity</div>';
+  const row2=document.createElement('div');row2.className='row2';
+  // Name
+  const nf=document.createElement('div');nf.className='field';nf.innerHTML='<label class="fl">Name</label>';
+  const ni=document.createElement('input');ni.className='fi';ni.value=npc.name;
+  ni.oninput=()=>{npc.name=ni.value;renderLeft();};nf.appendChild(ni);row2.appendChild(nf);
+  // Label
+  const lf=document.createElement('div');lf.className='field';lf.innerHTML='<label class="fl">Label</label>';
+  const ls=document.createElement('select');ls.className='fi';
+  ['G','S','?'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=`${v} — ${NPC_NAMES[v]}`;if(v===npc.label)o.selected=true;ls.appendChild(o);});
+  ls.onchange=()=>updEnt(npc.id,'label',ls.value);lf.appendChild(ls);row2.appendChild(lf);
+  sec1.appendChild(row2);
+  // Color
+  const cf=document.createElement('div');cf.className='field mt4';cf.innerHTML='<label class="fl">Color</label>';
+  cf.appendChild(makeColorRow(npc.color,v=>updEnt(npc.id,'color',v)));sec1.appendChild(cf);
+  body.appendChild(sec1);
+  body.appendChild(makeTexSection(npc));
+  body.appendChild(makeDialogueEditor(npc));
+  body.appendChild(makePosSection(npc));
+  const dsec=document.createElement('div');dsec.className='rsec';
+  const db=document.createElement('button');db.className='danger';db.textContent='Delete NPC';db.onclick=()=>delEnt(npc.id);
+  dsec.appendChild(db);body.appendChild(dsec);
+}
+
+function renderRightAnm(body,anm){
+  const head=document.createElement('div');head.className='rhead';
+  head.innerHTML=`<span class="rbadge anm">Animal</span><span style="font-size:10px;color:var(--bright)">${anm.name}</span>`;
+  body.appendChild(head);
+  const sec1=document.createElement('div');sec1.className='rsec';
+  sec1.innerHTML='<div class="rstitle">Identity</div>';
+  const nf=document.createElement('div');nf.className='field';nf.innerHTML='<label class="fl">Name</label>';
+  const ni=document.createElement('input');ni.className='fi';ni.value=anm.name;
+  ni.oninput=()=>{anm.name=ni.value;renderLeft();};nf.appendChild(ni);sec1.appendChild(nf);
+  const cf=document.createElement('div');cf.className='field mt4';cf.innerHTML='<label class="fl">Color</label>';
+  cf.appendChild(makeColorRow(anm.color,v=>updEnt(anm.id,'color',v)));sec1.appendChild(cf);
+  body.appendChild(sec1);
+  body.appendChild(makeTexSection(anm));
+  body.appendChild(makeDialogueEditor(anm));
+  body.appendChild(makePosSection(anm));
+  const dsec=document.createElement('div');dsec.className='rsec';
+  const db=document.createElement('button');db.className='danger';db.textContent='Delete Animal';db.onclick=()=>delEnt(anm.id);
+  dsec.appendChild(db);body.appendChild(dsec);
+}
+
+function renderRightChallenge(body,lk,lock){
+  const ch=getOrMakeChallenge(lk);
+  const[c,r]=lk.split(',').map(Number);
+  const head=document.createElement('div');head.className='rhead';
+  head.innerHTML=`<span class="rbadge ${lock.type}">${lock.type.toUpperCase()}</span><span style="font-size:9px;color:var(--mid)">${c},${r}</span>`;
+  body.appendChild(head);
+  if(!ch){body.innerHTML+='<div class="rempty">No challenge data.</div>';return;}
+
+  // Display + color
+  const sec1=document.createElement('div');sec1.className='rsec';
+  sec1.innerHTML='<div class="rstitle">Display</div>';
+  const df=document.createElement('div');df.className='field';df.innerHTML='<label class="fl">Display Char (hiragana/kanji)</label>';
+  const dr=document.createElement('div');dr.className='flex-row';
+  const di=document.createElement('input');di.className='fi';di.style.cssText='width:56px;font-size:20px;text-align:center';
+  di.value=ch.display||'';di.placeholder='あ';di.oninput=()=>updCh(ch.id,'display',di.value);dr.appendChild(di);
+  if(ch.display){const dp=document.createElement('span');dp.style.cssText='font-size:28px;color:var(--accent);line-height:1';dp.textContent=ch.display;dr.appendChild(dp);}
+  df.appendChild(dr);sec1.appendChild(df);
+  const coF=document.createElement('div');coF.className='field mt4';coF.innerHTML='<label class="fl">Accent Color</label>';
+  coF.appendChild(makeColorRow(ch.color,v=>updCh(ch.id,'color',v)));sec1.appendChild(coF);
+  body.appendChild(sec1);
+
+  // Question
+  const sec2=document.createElement('div');sec2.className='rsec';
+  sec2.innerHTML='<div class="rstitle">Question</div>';
+  const pf=document.createElement('div');pf.className='field';pf.innerHTML='<label class="fl">Prompt</label>';
+  const pta=document.createElement('textarea');pta.className='fi';pta.style.cssText='resize:vertical;min-height:56px;font-size:10px';
+  pta.value=ch.prompt||'';pta.placeholder='Which is correct?';pta.oninput=()=>updCh(ch.id,'prompt',pta.value);
+  pf.appendChild(pta);sec2.appendChild(pf);
+
+  const chf=document.createElement('div');chf.className='field';chf.innerHTML='<label class="fl">Choices — ● = correct</label>';
+  ch.choices.forEach((choice,i)=>{
+    const row=document.createElement('div');row.className='cch';
+    const radio=document.createElement('input');radio.type='radio';radio.name=`ch-${lk}`;radio.className='cradio';radio.checked=ch.answer===i;
+    radio.onchange=()=>{
+      updCh(ch.id,'answer',i);
+      // Update correct class on all inputs in this challenge section
+      chf.querySelectorAll('.cci').forEach((el,j)=>el.classList.toggle('ok',j===i));
+    };
+    const inp=document.createElement('input');inp.className='cci'+(ch.answer===i?' ok':'');
+    inp.value=choice;inp.placeholder=`Option ${i+1}`;inp.oninput=()=>updChChoice(ch.id,i,inp.value);
+    row.append(radio,inp);chf.appendChild(row);
+  });
+  sec2.appendChild(chf);
+
+  const stf=document.createElement('div');stf.className='field mt4';stf.innerHTML='<label class="fl">Choice Style</label>';
+  const stog=document.createElement('div');stog.className='stog';
+  ['normal','hiragana'].forEach(s=>{
+    const b=document.createElement('button');b.className='sopt';
+    const isOn=s==='normal'?!ch.choiceStyle:ch.choiceStyle===s;
+    if(isOn)b.classList.add('on');b.textContent=s;
+    b.onclick=()=>{updCh(ch.id,'choiceStyle',s==='normal'?undefined:s);renderRight();};
+    stog.appendChild(b);
+  });
+  stf.appendChild(stog);sec2.appendChild(stf);
+  body.appendChild(sec2);
+
+  // Extras
+  const sec3=document.createElement('div');sec3.className='rsec';
+  sec3.innerHTML='<div class="rstitle">Extras</div>';
+  const hf=document.createElement('div');hf.className='field';hf.innerHTML='<label class="fl">Hint</label>';
+  const hi=document.createElement('input');hi.className='fi';hi.value=ch.hint||'';hi.placeholder='Optional hint...';
+  hi.oninput=()=>updCh(ch.id,'hint',hi.value);hf.appendChild(hi);sec3.appendChild(hf);
+  const rf=document.createElement('div');rf.className='field';rf.innerHTML='<label class="fl">Reward</label>';
+  const ri=document.createElement('input');ri.className='fi';ri.value=ch.reward||'';ri.placeholder="''";
+  ri.oninput=()=>updCh(ch.id,'reward',ri.value);rf.appendChild(ri);sec3.appendChild(rf);
+  body.appendChild(sec3);
+
+  const sec4=document.createElement('div');sec4.className='rsec';
+  const rb=document.createElement('button');rb.className='danger';rb.textContent=`Remove ${lock.type==='door'?'Door':'Chest'} Lock`;rb.onclick=()=>remLock(lk);
+  sec4.appendChild(rb);body.appendChild(sec4);
+}
+
+function renderRightTile(body,c,r,tile){
+  const head=document.createElement('div');head.className='rhead';
+  head.innerHTML=`<span style="font-size:9px;color:var(--mid)">${TILE_LBL[tile]||'TILE'}</span><span style="font-size:9px;color:var(--dim)">${c}, ${r}</span>`;
+  body.appendChild(head);
+  const sec=document.createElement('div');sec.className='rsec';
+  sec.innerHTML=`<div class="rstitle">Cell Info</div>
+    <div style="font-size:10px;color:var(--dim);line-height:2.2">
+      Type: <span style="color:var(--text)">${TILE_LBL[tile]}</span><br>
+      Col: <span style="color:var(--text)">${c}</span><br>
+      Row: <span style="color:var(--text)">${r}</span>
+      ${S.playerStart.col===c&&S.playerStart.row===r?'<br><span style="color:var(--blue)">● Player Start</span>':''}
+    </div>`;
+  body.appendChild(sec);
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────────
+function renderAll(){renderMap();renderLeft();renderRight();}
+
+// ── BUILTIN TEXTURES ─────────────────────────────────────────────
+// Pre-load existing env/critter assets via absolute URL (served by Flask)
+const BUILTIN_TEXTURES = {
+  floor:        '/ui_assets/environment/floor.png',
+  wall:         '/ui_assets/environment/wall.png',
+  door:         '/ui_assets/environment/door_closed.png',
+  chest:        '/ui_assets/environment/chest_closed.png',
+  stairs:       '/ui_assets/environment/stairs_closed.png',
+  npc_guard:    '/ui_assets/environment/npc_guard.png',
+  npc_sage:     '/ui_assets/environment/npc_sage.png',
+  npc_stranger: '/ui_assets/environment/npc_stranger.png',
+  animal:       '/ui_assets/critters/a_realistic_cute_bunny_sitting_h.png',
+};
+
+// Additional critter options stored for the texture panel gallery
+const BUILTIN_CRITTERS = [
+  {label:'Bunny',  url:'/ui_assets/critters/a_realistic_cute_bunny_sitting_h.png'},
+  {label:'Bunny 2',url:'/ui_assets/critters/a_realistic_cute_bunny_sitting_h_1.png'},
+  {label:'Sparrow',url:'/ui_assets/critters/a_realistic_small_sparrow_standi.png'},
+  {label:'Sparrow 2',url:'/ui_assets/critters/a_realistic_small_sparrow_standi_1.png'},
+];
+
+// Full UI library — populated from /ui_assets/manifest.json on startup
+let UI_LIBRARY = []; // [{id, name, category, url}]
+
+async function fetchUiLibrary(){
+  try {
+    const res = await fetch('/ui_assets/manifest.json');
+    if (!res.ok) return;
+    const data = await res.json();
+    UI_LIBRARY = (data.assets || []).filter(a => a.url && /\.(png|jpe?g|gif|webp)$/i.test(a.url));
+    if (typeof toast === 'function') toast(`Loaded ${UI_LIBRARY.length} UI assets`);
+    if (typeof renderLeft === 'function' && S.ltab === 'textures') renderLeft();
+  } catch (e) {}
+}
+
+function loadBuiltinTextures(){
+  Object.entries(BUILTIN_TEXTURES).forEach(([k,url])=>{
+    if(!S.textures.classes[k]) S.textures.classes[k]=url;
+  });
+}
+loadBuiltinTextures();
+fetchUiLibrary();
+
+// ── INIT ──────────────────────────────────────────────────────────
+renderToolbar();
+renderAll();
+
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='e'){e.preventDefault();openExport();}
+  if(e.key==='Escape')closeModal();
+  if(e.key==='1')setTool('floor');if(e.key==='2')setTool('wall');
+  if(e.key==='3')setTool('door');if(e.key==='4')setTool('chest');
+  if(e.key==='q')setTool('select');if(e.key==='e')setTool('erase');
+});
+</script>
+</body>
+</html>
