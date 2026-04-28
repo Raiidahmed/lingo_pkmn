@@ -3,10 +3,6 @@ import { getLevelCount, getLevelName } from '../engine/dungeon.js';
 
 const LANGUAGES = [
   { id: 'es', flag: '🇪🇸', name: 'SPANISH',    native: 'Español'   },
-  { id: 'fr', flag: '🇫🇷', name: 'FRENCH',     native: 'Français'  },
-  { id: 'de', flag: '🇩🇪', name: 'GERMAN',     native: 'Deutsch'   },
-  { id: 'it', flag: '🇮🇹', name: 'ITALIAN',    native: 'Italiano'  },
-  { id: 'pt', flag: '🇵🇹', name: 'PORTUGUESE', native: 'Português' },
   { id: 'ja', flag: '🇯🇵', name: 'JAPANESE',   native: '日本語'    },
 ];
 
@@ -53,7 +49,7 @@ export default function StatusPage() {
       {/* Language selector */}
       <div className="card">
         <div className="card-title">STUDY LANGUAGE</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {LANGUAGES.map(lang => {
             const active = language === lang.id;
             return (
@@ -130,18 +126,7 @@ export default function StatusPage() {
               ))}
             </div>
           </>
-        ) : (
-          <>
-            <div className="card-title">LEVELS</div>
-            <div style={{ textAlign: 'center', padding: '24px 0' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>🔒</div>
-              <div style={{ fontSize: 8, color: 'var(--text-dim)' }}>COMING SOON</div>
-              <div style={{ fontSize: 7, color: 'var(--text-dim)', marginTop: 8, lineHeight: 2 }}>
-                {LANGUAGES.find(l => l.id === language)?.name} levels are in development.
-              </div>
-            </div>
-          </>
-        )}
+        ) : null}
       </div>
 
       {/* Word bank preview */}

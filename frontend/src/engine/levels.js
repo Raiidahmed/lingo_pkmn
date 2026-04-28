@@ -1,10 +1,10 @@
-// LingoDungeon — Level data ported from lingo_pkmn
+// LingoDungeon — Spanish dungeon levels.
 // TILE constants: FLOOR=0, WALL=1, DOOR_C=2, DOOR_O=3, CHEST_C=4, CHEST_O=5, STAIRS=6, RUG=7
 
 export const LEVELS = [
   {
     "id": 0,
-    "name": "The Entrance Hall",
+    "name": "The Gatehouse of First Words",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -259,10 +259,9 @@ export const LEVELS = [
         "label": "G",
         "name": "Guard",
         "dialogue": [
-          "Bienvenido, adventurer. I guard this hallway and, sadly, also the curriculum.",
-          "Every door in here thinks it is a Spanish professor. None of them are humble about it.",
-          "Answer clearly, walk proudly, and ignore any chest that sounds smug.",
-          "Buena suerte. If a door judges you, judge it back."
+          "Welcome to the Gatehouse. The doors here do not open for strength, only basic manners.",
+          "First survival words: gracias, buenos dias, and Como te llamas?",
+          "The chests are not friendly, but they respect clear Spanish. That is more than I can say for most furniture."
         ]
       },
       {
@@ -273,9 +272,9 @@ export const LEVELS = [
         "label": "S",
         "name": "Sage",
         "dialogue": [
-          "Quick survival kit: hola means hello. Useful for people, less useful for haunted furniture.",
-          "Como te llamas means 'What is your name?' which is a strong first-date opener and a decent dungeon opener.",
-          "Gracias is thank you, por favor is please. Manners still work in cursed architecture."
+          "This first floor teaches greetings and tiny descriptive sentences.",
+          "Remember: el gato es pequeno means the cat is small. The dungeon has no cat. The dungeon has standards.",
+          "Open every door and chest, then the stairs will stop pretending to be decorative."
         ]
       },
       {
@@ -286,9 +285,9 @@ export const LEVELS = [
         "label": "?",
         "name": "Stranger",
         "dialogue": [
-          "...",
-          "Rojo is red, azul is blue, verde is green.",
-          "Remember the colors. The dungeon decor budget was small, but educational."
+          "I came here to learn Spanish and was immediately judged by a door.",
+          "Tip from a nervous stranger: read the whole sentence before choosing. The dungeon likes obvious traps.",
+          "If a chest whispers, answer calmly. Whispering furniture feeds on panic."
         ]
       }
     ],
@@ -345,7 +344,7 @@ export const LEVELS = [
   },
   {
     "id": 1,
-    "name": "The Scholar's Maze",
+    "name": "The Scholar's Candle Maze",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -612,10 +611,9 @@ export const LEVELS = [
         "label": "T",
         "name": "Teacher",
         "dialogue": [
-          "Welcome to the Scholar's Maze, where full sentences roam free and absolutely pay no rent.",
-          "Quiero means 'I want.' Quiero comer means 'I want to eat.' A noble and relatable sentence.",
-          "Tengo hambre means 'I am hungry.' Literally 'I have hunger,' because Spanish likes to keep things interesting.",
-          "Think in phrases, not lonely little words. Words need friends."
+          "Welcome to the candle maze, where sentence fragments go to become useful.",
+          "Quiero comer means I want to eat. Tengo hambre means I am hungry. Both are valid dungeon feelings.",
+          "Look for full phrases, not lonely words. Lonely words get lost in corridors."
         ]
       },
       {
@@ -626,9 +624,9 @@ export const LEVELS = [
         "label": "L",
         "name": "Librarian",
         "dialogue": [
-          "Ella is she. El is he. Nosotros is we. Grammar is just naming who caused the chaos.",
-          "Use estar for temporary states: estoy, estas, esta. Feelings, locations, and panic all fit nicely.",
-          "Ella esta leyendo means 'She is reading.' Present progressive, now with 100% more books."
+          "The maze shelves are arranged by grammar, then by dramatic inconvenience.",
+          "Ella esta leyendo un libro: she is reading a book. Present action, right now.",
+          "Nosotros estamos contentos means we are happy. The maze is not, but that is its problem."
         ]
       },
       {
@@ -639,9 +637,9 @@ export const LEVELS = [
         "label": "G",
         "name": "Ghost",
         "dialogue": [
-          "Oooooo. I died waiting for someone to learn ir, so please don't waste this haunting.",
-          "Yo voy means 'I go.' Voy a la escuela means 'I go to school.'",
-          "Ir is irregular: voy, vas, va, vamos, van. It refuses to behave, but at least it is famous."
+          "Boo. Also: voy means I go. Very important for fleeing ghosts politely.",
+          "Yo voy a la escuela means I go to school. I went once. Haunting was cheaper.",
+          "The doors love subject pronouns. Humor them."
         ]
       }
     ],
@@ -710,7 +708,7 @@ export const LEVELS = [
   },
   {
     "id": 2,
-    "name": "The Conjurer's Keep",
+    "name": "The Conjurer's Verb Keep",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -985,9 +983,9 @@ export const LEVELS = [
         "label": "C",
         "name": "Conjurer",
         "dialogue": [
-          "Welcome to the Keep. We conjugate verbs here and absolutely overreact about endings.",
-          "Hablar becomes hablo, hablas, habla. Regular -ar verbs are the reliable coworkers of Spanish.",
-          "Once you know the pattern, half the dungeon loses its personality."
+          "This keep studies verbs. The stones conjugate at night. It is unsettling but educational.",
+          "Yo hablo, ellos son, tu tienes, nosotros vamos. Four keys for four stubborn locks.",
+          "Irregular verbs act royal. Do not bow. Just memorize them."
         ]
       },
       {
@@ -998,9 +996,9 @@ export const LEVELS = [
         "label": "S",
         "name": "Specter",
         "dialogue": [
-          "Irregular verbs haunt these halls because they refused to be normal in life too.",
-          "Ser: soy, eres, es, somos, son. Tener: tengo, tienes, tiene. Ir: voy, vas, va.",
-          "Memorize them now and spare yourself future emotional damage."
+          "I was speaking is yo estaba hablando. Past action, ghost-approved.",
+          "They had already left is ellos ya se habian ido. Very advanced. Very rude of them.",
+          "If a rune asks tense, ask yourself: now, ongoing past, or already completed?"
         ]
       },
       {
@@ -1011,9 +1009,9 @@ export const LEVELS = [
         "label": "O",
         "name": "Oracle",
         "dialogue": [
-          "Past tense lives upstairs and has strong opinions about timing.",
-          "Estaba hablando means 'was speaking.' Habian ido means 'had gone.'",
-          "Relax. We are still beginner-friendly, just with mood lighting."
+          "The keep tests present, imperfect-progressive, and past perfect phrases.",
+          "Do not let long answers scare you. Find the verb spine first.",
+          "The final rune respects confidence, but it still checks spelling emotionally."
         ]
       }
     ],
@@ -1094,7 +1092,7 @@ export const LEVELS = [
   },
   {
     "id": 3,
-    "name": "The Market of Mild Panic",
+    "name": "The Vault Market Catacombs",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -1361,9 +1359,9 @@ export const LEVELS = [
         "label": "V",
         "name": "Vendor",
         "dialogue": [
-          "Welcome to the market, where everyone talks fast and every tomato has emotional baggage.",
-          "Quiero una manzana means 'I want an apple.' Useful if you enjoy buying apples or sounding prepared.",
-          "Cuesta means 'it costs.' Numbers suddenly matter a lot when money enters the chat."
+          "Welcome to the market vaults. Every stall is underground because rent is cursed.",
+          "Cuesta cinco dolares means it costs five dollars. Even dungeon apples have pricing.",
+          "Quiero una manzana means I want an apple. A brave sentence in a place with no sunlight."
         ]
       },
       {
@@ -1374,8 +1372,9 @@ export const LEVELS = [
         "label": "C",
         "name": "Cashier",
         "dialogue": [
-          "La caja is the register. It is where your coins go to retire.",
-          "Dos cafes means two coffees. One for you, one for the version of you who made it this far."
+          "La caja is the cash register. Donde esta la caja? is practical when the shop is also a maze.",
+          "Dos cafes means two coffees. The dungeon runs on both of them.",
+          "Adjectives often follow nouns: la camisa roja, the red shirt."
         ]
       },
       {
@@ -1386,8 +1385,9 @@ export const LEVELS = [
         "label": "S",
         "name": "Shopper",
         "dialogue": [
-          "Estoy buscando pan means 'I am looking for bread.'",
-          "This is a market, so obviously nobody has bread where it makes sense."
+          "Estoy buscando pan means I am looking for bread. Same, honestly.",
+          "The market chests test shopping words, colors, numbers, and useful panic.",
+          "If you find bread, tell me. If the bread talks, do not negotiate."
         ]
       }
     ],
@@ -1468,7 +1468,7 @@ export const LEVELS = [
   },
   {
     "id": 4,
-    "name": "The Clocktower of Polite Chaos",
+    "name": "The Clocktower of Polite Echoes",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -1743,9 +1743,9 @@ export const LEVELS = [
         "label": "K",
         "name": "Clerk",
         "dialogue": [
-          "Time phrases are easy until someone asks them before coffee.",
-          "Son las ocho means 'It is eight o'clock.' If it is one o'clock, Spanish gets fancy and says es la una.",
-          "Also, please and thank you still work when everyone is panicking."
+          "The clocktower teaches time, days, and polite survival phrases.",
+          "Son las ocho means it is eight o clock. The bells are thrilled you noticed.",
+          "Hoy es martes means today is Tuesday. Ayer fue lunes means yesterday was Monday."
         ]
       },
       {
@@ -1756,8 +1756,9 @@ export const LEVELS = [
         "label": "B",
         "name": "Bellkeeper",
         "dialogue": [
-          "Hoy is today, ayer is yesterday, manana is tomorrow. Time is fake, but vocabulary is real.",
-          "Puede repetir, por favor? means 'Can you repeat, please?' Use it whenever life becomes too fast."
+          "Necesito llegar temprano means I need to arrive early. The tower approves punctual dread.",
+          "Abren a las nueve means they open at nine. Doors love business hours.",
+          "Puede repetir, por favor? is how you ask someone to repeat politely."
         ]
       },
       {
@@ -1768,8 +1769,9 @@ export const LEVELS = [
         "label": "W",
         "name": "Watcher",
         "dialogue": [
-          "Temprano means early. Tarde can mean late or afternoon, because context enjoys drama.",
-          "You are doing well. The clocks are just loud about it."
+          "This level is a clock with opinions. Move calmly.",
+          "When the Spanish mentions time, look for son las, hoy, ayer, or a las.",
+          "The chests are not timed. They only make you feel timed. Different curse."
         ]
       }
     ],
@@ -2117,9 +2119,9 @@ export const LEVELS = [
         "label": "H",
         "name": "Chef",
         "dialogue": [
-          "Welcome to the Kitchen Catacombs, where every skeleton is somehow judging your pronunciation.",
-          "Me gusta means 'I like.' Quisiera is a polite 'I would like.'",
-          "Learn the food phrases and maybe nobody burns the soup today."
+          "Welcome to the kitchen catacombs. The soup is cursed but grammatically correct.",
+          "Me gusta el arroz means I like rice. No quiero sopa means I do not want soup.",
+          "Food phrases matter. Adventurers who cannot order dinner become cautionary skeletons."
         ]
       },
       {
@@ -2130,8 +2132,9 @@ export const LEVELS = [
         "label": "R",
         "name": "Server",
         "dialogue": [
-          "La cuenta, por favor means 'The bill, please.' Important if you enjoy leaving restaurants legally.",
-          "Alergia means allergy. Useful and dramatically non-optional."
+          "Quisiera el menu means I would like the menu. Polite, useful, and slightly fancy.",
+          "La cuenta, por favor means the bill, please. Even dungeons close tabs eventually.",
+          "El agua esta fria means the water is cold. A chest taught me that and then sneezed frost."
         ]
       },
       {
@@ -2142,8 +2145,9 @@ export const LEVELS = [
         "label": "D",
         "name": "Dish Ghost",
         "dialogue": [
-          "El agua esta fria means 'The water is cold.'",
-          "I have haunted worse kitchens, but not by much."
+          "Tengo alergia a las nueces means I have an allergy to nuts. Important sentence. Zero jokes.",
+          "The kitchen tests likes, dislikes, restaurant manners, and safety.",
+          "I haunt plates because nobody rinsed me. Learn from this."
         ]
       }
     ],
@@ -2224,7 +2228,7 @@ export const LEVELS = [
   },
   {
     "id": 6,
-    "name": "The Night School Halls",
+    "name": "The Night School Crypts",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -2499,9 +2503,9 @@ export const LEVELS = [
         "label": "P",
         "name": "Principal",
         "dialogue": [
-          "Welcome to night school. Everyone is tired, but the verbs are wide awake.",
-          "Daily routine phrases are powerful because they show up in real life constantly.",
-          "Also, yes, the hallway lockers are quiz-based. Budget cuts."
+          "Night school is in session. The desks are coffins but the lesson plan is solid.",
+          "Me despierto a las seis means I wake up at six. A heroic claim in this hallway.",
+          "Siempre estudio por la noche means I always study at night. You are doing that now, technically."
         ]
       },
       {
@@ -2512,8 +2516,9 @@ export const LEVELS = [
         "label": "J",
         "name": "Janitor",
         "dialogue": [
-          "Me despierto means 'I wake up.' Trabajo means 'I work.' Estudio means 'I study.'",
-          "Learn these and you can narrate a very responsible day."
+          "Despues trabajo means afterward, I work. Then I sweep bats. Then I question my career.",
+          "Mi hermana vive en Boston means my sister lives in Boston.",
+          "Daily routine phrases are dungeon maps for normal life."
         ]
       },
       {
@@ -2524,8 +2529,9 @@ export const LEVELS = [
         "label": "N",
         "name": "Student",
         "dialogue": [
-          "Mi hermana vive en Boston. Nosotros practicamos español cada dia.",
-          "Useful, normal sentences. A rare luxury in this dungeon."
+          "Practicamos espanol todos los dias means we practice Spanish every day.",
+          "Ellos comen antes de clase means they eat before class. Wise. Extremely wise.",
+          "If a door asks about routine, look for time words: siempre, despues, antes, todos los dias."
         ]
       }
     ],
@@ -2606,7 +2612,7 @@ export const LEVELS = [
   },
   {
     "id": 7,
-    "name": "The Trainyard of Tenses",
+    "name": "The Iron Rail Dungeon",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -2873,9 +2879,9 @@ export const LEVELS = [
         "label": "C",
         "name": "Conductor",
         "dialogue": [
-          "Future plans in beginner Spanish are easy: ir plus a plus infinitive. No time machine required.",
-          "Voy a estudiar means 'I am going to study.' Vamos a salir means 'We are going to leave.'",
-          "Directions also matter, unless you enjoy getting lost with confidence."
+          "This rail dungeon teaches near future, movement, and directions.",
+          "Voy a estudiar manana means I am going to study tomorrow.",
+          "Vamos a salir ahora means we are going to leave now. The train loves decisions."
         ]
       },
       {
@@ -2886,8 +2892,9 @@ export const LEVELS = [
         "label": "P",
         "name": "Porter",
         "dialogue": [
-          "Derecha is right. Izquierda is left. Todo recto is straight ahead.",
-          "These words save time, stress, and dramatic spinning in place."
+          "El tren va al centro means the train goes downtown.",
+          "Gira a la derecha means turn right. Sigue todo recto means go straight ahead.",
+          "The rails are straight. The grammar is mostly straight. The passengers are not."
         ]
       },
       {
@@ -2898,8 +2905,9 @@ export const LEVELS = [
         "label": "T",
         "name": "Passenger",
         "dialogue": [
-          "Cerca means near. Estacion means station.",
-          "If you can ask where something is and where it is going, you are dangerous in a good way."
+          "Estamos cerca de la estacion means we are near the station.",
+          "Near future uses ir + a + infinitive: voy a estudiar, vamos a salir.",
+          "If you miss the train, blame the cursed platform. If you miss the answer, reread the verb."
         ]
       }
     ],
@@ -2980,7 +2988,7 @@ export const LEVELS = [
   },
   {
     "id": 8,
-    "name": "The Office of Impossible Forms",
+    "name": "The Archive of Impossible Forms",
     "playerStart": {
       "col": 7,
       "row": 10
@@ -3255,9 +3263,9 @@ export const LEVELS = [
         "label": "M",
         "name": "Manager",
         "dialogue": [
-          "Welcome to the office, where forms multiply when frightened.",
-          "Today we touch simple past actions. Short, useful, and only a little annoying.",
-          "Do not fear the preterite. Fear meetings that should have been emails."
+          "Welcome to the archive. The forms are impossible, but the preterite is manageable.",
+          "Ayer envie el correo means yesterday I sent the email.",
+          "Ella hablo con el jefe means she spoke with the boss. Office horror, grammatically clean."
         ]
       },
       {
@@ -3268,8 +3276,9 @@ export const LEVELS = [
         "label": "I",
         "name": "Intern",
         "dialogue": [
-          "Envie means I sent. Habló means she spoke. Comimos means we ate.",
-          "Tiny endings, huge consequences. Basically office life."
+          "Comimos a las dos means we ate at two. A rare archived lunch success.",
+          "Necesite ayuda means I needed help. A powerful phrase in any bureaucracy.",
+          "Llegaron tarde means they arrived late. The archive filed a complaint."
         ]
       },
       {
@@ -3280,8 +3289,9 @@ export const LEVELS = [
         "label": "G",
         "name": "Copy Ghost",
         "dialogue": [
-          "Necesite ayuda means I needed help. Llegaron tarde means they arrived late.",
-          "Honestly, same."
+          "Termine el informe means I finished the report. This sentence is fantasy content.",
+          "This floor focuses on completed past actions. Look for ayer and preterite endings.",
+          "The copy machine is haunted by unfinished drafts. Do not make eye contact."
         ]
       }
     ],
@@ -3637,9 +3647,9 @@ export const LEVELS = [
         "label": "Q",
         "name": "Queen",
         "dialogue": [
-          "You made it to the palace. Please stay calm; the carpets are mostly ceremonial menace.",
-          "This final floor mixes polite requests, locations, past, future, and surviving one more quiz with dignity.",
-          "At this point, the doors are more nervous than you are."
+          "The final palace tests practical Spanish under royal pressure.",
+          "Puede ayudarme? means can you help me? Polite panic is still panic.",
+          "No entendi la pregunta means I did not understand the question. This is wisdom, not weakness."
         ]
       },
       {
@@ -3650,8 +3660,9 @@ export const LEVELS = [
         "label": "A",
         "name": "Advisor",
         "dialogue": [
-          "Puede ayudarme means 'Can you help me?' No entendi la pregunta means 'I did not understand the question.'",
-          "Both are excellent palace survival skills."
+          "Ayer fui al banco means yesterday I went to the bank.",
+          "Manana vamos a visitar a la familia means tomorrow we are going to visit family.",
+          "The palace mixes past, future plans, location, and polite requests. Bring all your keys."
         ]
       },
       {
@@ -3662,8 +3673,9 @@ export const LEVELS = [
         "label": "S",
         "name": "Steward",
         "dialogue": [
-          "Debajo de la mesa means under the table. Mañana vamos a visitar a la familia means we are going to visit the family tomorrow.",
-          "If that sentence shows up in a dungeon, just nod and keep moving."
+          "La llave esta debajo de la mesa means the key is under the table. Terrible security, excellent vocabulary.",
+          "Necesitamos abrir la ultima puerta means we need to open the last door. Very direct. Very useful.",
+          "Por favor, hable mas despacio means please speak more slowly. Final boss survival phrase."
         ]
       }
     ],
