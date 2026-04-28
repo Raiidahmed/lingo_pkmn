@@ -115,7 +115,7 @@ export const useStore = create((set, get) => ({
   startLevel: 1,
   resumeMode: false,
   save: null,   // { snapshot, status } from API
-  language: 'es',
+  language: 'ja',
   lightMode: localStorage.getItem('lingo_light_mode') === '1',
   ui: JSON.parse(localStorage.getItem('lingo_ui') || 'null') || {
     borderWidth: 1,    // px, 0–8

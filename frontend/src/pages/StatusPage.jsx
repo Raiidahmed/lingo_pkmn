@@ -2,8 +2,8 @@ import { useStore } from '../store.js';
 import { getLevelCount, getLevelName } from '../engine/dungeon.js';
 
 const LANGUAGES = [
-  { id: 'es', flag: '🇪🇸', name: 'SPANISH',    native: 'Español'   },
   { id: 'ja', flag: '🇯🇵', name: 'JAPANESE',   native: '日本語'    },
+  { id: 'es', flag: '🇪🇸', name: 'SPANISH',    native: 'Español'   },
 ];
 
 export default function StatusPage() {
