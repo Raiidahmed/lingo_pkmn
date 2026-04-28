@@ -24,8 +24,9 @@ const COLOR_FOLDER = {
   '#e0e0e0': 'white', '#b0bec5': 'white', '#fff9c4': 'yellow',
 };
 
-// Single hiragana → romaji filename suffix
-const HIRAGANA_ROMAJI = {
+// Single kana → romaji filename suffix (hiragana + katakana share the suffix)
+const KANA_ROMAJI = {
+  // Hiragana
   'あ':'a',  'い':'i',  'う':'u',  'え':'e',  'お':'o',
   'か':'ka', 'き':'ki', 'く':'ku', 'け':'ke', 'こ':'ko',
   'さ':'sa', 'し':'shi','す':'su', 'せ':'se', 'そ':'so',
@@ -36,6 +37,17 @@ const HIRAGANA_ROMAJI = {
   'や':'ya', 'ゆ':'yu', 'よ':'yo',
   'ら':'ra', 'り':'ri', 'る':'ru', 'れ':'re', 'ろ':'ro',
   'わ':'wa', 'を':'wo', 'ん':'n',
+  // Katakana — same sound, same sprite suffix
+  'ア':'a',  'イ':'i',  'ウ':'u',  'エ':'e',  'オ':'o',
+  'カ':'ka', 'キ':'ki', 'ク':'ku', 'ケ':'ke', 'コ':'ko',
+  'サ':'sa', 'シ':'shi','ス':'su', 'セ':'se', 'ソ':'so',
+  'タ':'ta', 'チ':'chi','ツ':'tsu','テ':'te', 'ト':'to',
+  'ナ':'na', 'ニ':'ni', 'ヌ':'nu', 'ネ':'ne', 'ノ':'no',
+  'ハ':'ha', 'ヒ':'hi', 'フ':'fu', 'ヘ':'he', 'ホ':'ho',
+  'マ':'ma', 'ミ':'mi', 'ム':'mu', 'メ':'me', 'モ':'mo',
+  'ヤ':'ya', 'ユ':'yu', 'ヨ':'yo',
+  'ラ':'ra', 'リ':'ri', 'ル':'ru', 'レ':'re', 'ロ':'ro',
+  'ワ':'wa', 'ヲ':'wo', 'ン':'n',
 };
 
 function getFolder(color) {
@@ -47,7 +59,7 @@ const _cache = new Map();
 export function loadMouseImage(color, displayChar) {
   const folder = getFolder(color);
   const romaji = (displayChar && displayChar.length === 1)
-    ? HIRAGANA_ROMAJI[displayChar]
+    ? KANA_ROMAJI[displayChar]
     : null;
   const suffix = romaji || 'base';
   const path = `/mice/${folder}/${folder}_mouse_${suffix}.png`;
