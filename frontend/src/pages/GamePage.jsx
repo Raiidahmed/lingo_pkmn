@@ -152,16 +152,29 @@ export default function GamePage() {
   }
 
   // --- NPC interaction ---
-  function tryTalkNPC(player) {
-    const npc = levelDataRef.current?.npcs?.find(n =>
-      Math.abs(n.col - player.col) + Math.abs(n.row - player.row) <= 1
-    );
+  function findNPCAt(pos) {
+    return levelDataRef.current?.npcs?.find(n =>
+      n.col === pos.col && n.row === pos.row
+    ) ?? null;
+  }
+
+  function findNearbyNPC(player) {
+    return levelDataRef.current?.npcs?.find(n =>
+      Math.max(Math.abs(n.col - player.col), Math.abs(n.row - player.row)) <= 1
+    ) ?? null;
+  }
+
+  function openNPCDialogue(npc) {
     if (!npc) return false;
     dialogueActiveRef.current = true;
     const dlg = { npc, lineIndex: 0 };
     dialogueRef.current = dlg;
     setDialogue(dlg);
     return true;
+  }
+
+  function tryTalkNPC(player) {
+    return openNPCDialogue(findNearbyNPC(player));
   }
 
   // --- Shared move execution (keyboard and D-pad both route here) ---
@@ -176,6 +189,13 @@ export default function GamePage() {
     };
     if (target.row < 0 || target.row >= MAP_H || target.col < 0 || target.col >= MAP_W) return;
     const targetTile = gridRef.current[target.row][target.col];
+
+    const targetNPC = findNPCAt(target);
+    if (targetNPC) {
+      openNPCDialogue(targetNPC);
+      lastMoveRef.current = now;
+      return;
+    }
 
     if (targetTile === TILE.DOOR_C || targetTile === TILE.CHEST_C) {
       tryOpenChallenge(target.col, target.row);
