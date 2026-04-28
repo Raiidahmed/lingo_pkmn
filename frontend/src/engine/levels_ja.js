@@ -650,3 +650,11 @@ const LEVELS_JA = [
 export function getLevel(n) {
   return LEVELS_JA[Math.min(Math.max(n - 1, 0), LEVELS_JA.length - 1)];
 }
+
+export function getLevelCount() {
+  return LEVELS_JA.length;
+}
+
+export function getLevelName(n) {
+  return getLevel(n).name;
+}

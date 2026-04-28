@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
-import { loadLevel, tryMove, TILE, MAP_W, MAP_H } from '../engine/dungeon.js';
+import { loadLevel, tryMove, TILE, MAP_W, MAP_H, getLevelCount } from '../engine/dungeon.js';
 import { preloadMouseImages } from '../engine/mouseAssets.js';
-import { render, getCanvasSize } from '../engine/renderer.js';
+import { render, getCanvasSize, createRenderCache } from '../engine/renderer.js';
 
 const MAX_HEARTS = 3;
 const MOVE_COOLDOWN = 120;
@@ -30,6 +30,11 @@ export default function GamePage() {
   const gameOverRef        = useRef(false);
   const choiceTimerRef     = useRef(null);  // cleared on unmount to prevent state updates after teardown
   const ctxRef             = useRef(null);  // canvas context cached once at mount
+  const renderCacheRef     = useRef(createRenderCache());
+  const viewRef            = useRef({
+    accent: theme.accent,
+    canvasTint: lightMode ? (ui?.canvasTint ?? 0.58) : 0,
+  });
 
   // --- React state (triggers re-render) ---
   const [hearts,       setHearts]       = useState(MAX_HEARTS);
@@ -49,11 +54,19 @@ export default function GamePage() {
   // Keep a ref to dialogue so advanceDialogue can read current state from the RAF keydown handler
   const dialogueRef = useRef(null);
   useEffect(() => { dialogueRef.current = dialogue; }, [dialogue]);
+  useEffect(() => {
+    viewRef.current = {
+      accent: theme.accent,
+      canvasTint: lightMode ? (ui?.canvasTint ?? 0.58) : 0,
+    };
+    renderCacheRef.current.key = '';
+  }, [theme.accent, lightMode, ui?.canvasTint]);
 
   // --- Level loading ---
   function initLevel(n, snapshot = null) {
     const data = loadLevel(n, language);
     levelDataRef.current = data;
+    renderCacheRef.current.key = '';
     // Deep copy grid so mutations don't affect the source
     gridRef.current = data.grid.map(row => [...row]);
     solvedLocksRef.current = new Set();
@@ -183,7 +196,7 @@ export default function GamePage() {
       setScore(scoreRef.current);
       api.submitScore(completedLevel, scoreRef.current, Date.now() - startTimeRef.current)
         .catch(e => console.warn('submitScore', e));
-      if (nextN > 10) {
+      if (nextN > getLevelCount(language)) {
         finishGame(true);
       } else {
         learnedWordsRef.current = [];
@@ -285,7 +298,7 @@ export default function GamePage() {
     api.saveGame(null, {}).catch(e => console.warn('saveGame', e));
     // Refresh user data (word bank already submitted per-answer, just sync store)
     api.me().then(d => updateWordBank(d.user?.word_bank ?? [])).catch(() => {});
-    endGame({ level, score: finalScore, time_ms, wordsPassed: learnedWordsRef.current.length });
+    endGame({ level, language, score: finalScore, time_ms, wordsPassed: learnedWordsRef.current.length });
   }
 
   // --- D-pad: move exactly once per tap, delegates to shared applyMove ---
@@ -311,7 +324,7 @@ export default function GamePage() {
       language: language,
       locks: levelDataRef.current?.locks,
       challenges: levelDataRef.current?.challenges,
-    }, theme.accent, (() => { const s = useStore.getState(); return s.lightMode ? (s.ui?.canvasTint ?? 0.58) : 0; })());
+    }, viewRef.current.accent, viewRef.current.canvasTint, renderCacheRef.current);
   }
 
   // --- Mount ---
@@ -329,7 +342,7 @@ export default function GamePage() {
       const cont   = containerRef.current;
       if (!canvas || !cont) return;
       const { width: cw, height: ch } = getCanvasSize();
-      const scale = Math.min(cont.clientWidth / cw, cont.clientHeight / ch, 2);
+      const scale = Math.max(0.1, Math.min(cont.clientWidth / cw, cont.clientHeight / ch, 2));
       canvas.style.width  = `${cw * scale}px`;
       canvas.style.height = `${ch * scale}px`;
       canvas.width  = cw;

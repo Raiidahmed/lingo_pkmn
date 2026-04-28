@@ -1,5 +1,5 @@
-import { getLevel as getLevelES } from './levels.js';
-import { getLevel as getLevelJA } from './levels_ja.js';
+import { getLevel as getLevelES, getLevelCount as getLevelCountES, getLevelName as getLevelNameES } from './levels.js';
+import { getLevel as getLevelJA, getLevelCount as getLevelCountJA, getLevelName as getLevelNameJA } from './levels_ja.js';
 
 export const TILE = {
   FLOOR:   0,
@@ -15,6 +15,8 @@ export const MAP_W = 15;
 export const MAP_H = 13;
 
 const LEVEL_GETTERS = { es: getLevelES, ja: getLevelJA };
+const LEVEL_COUNT_GETTERS = { es: getLevelCountES, ja: getLevelCountJA };
+const LEVEL_NAME_GETTERS = { es: getLevelNameES, ja: getLevelNameJA };
 
 export function loadLevel(levelN, lang = 'es') {
   const getter = LEVEL_GETTERS[lang] ?? getLevelES;
@@ -30,6 +32,16 @@ export function loadLevel(levelN, lang = 'es') {
     name: data.name,
     numLocks: Object.keys(data.locks).length,
   };
+}
+
+export function getLevelCount(lang = 'es') {
+  const getter = LEVEL_COUNT_GETTERS[lang] ?? getLevelCountES;
+  return getter();
+}
+
+export function getLevelName(levelN, lang = 'es') {
+  const getter = LEVEL_NAME_GETTERS[lang] ?? getLevelNameES;
+  return getter(levelN);
 }
 
 export function tryMove(grid, player, dx, dy, exitOpen) {

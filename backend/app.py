@@ -23,6 +23,32 @@ from .db import (
 
 DEFAULT_DB = str(Path(__file__).parent / "lingo.db")
 FRONTEND_DIST = str(Path(__file__).parent.parent / "frontend" / "dist")
+JSON_SEPARATORS = (",", ":")
+
+
+def safe_json_loads(value, fallback):
+    if not value:
+        return fallback
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return fallback
+
+
+def json_dumps(value):
+    return json.dumps(value, separators=JSON_SEPARATORS)
+
+
+def parse_int(value, default=0, min_value=None, max_value=None):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    if min_value is not None:
+        parsed = max(min_value, parsed)
+    if max_value is not None:
+        parsed = min(max_value, parsed)
+    return parsed
 
 
 def create_app():
@@ -63,7 +89,7 @@ def create_app():
         conn.commit()
         word_bank = get_user_word_bank(conn, user["id"])
         save = load_save(conn, user["id"])
-        levels_completed = json.loads(user["levels_completed"] or "[]")
+        levels_completed = safe_json_loads(user["levels_completed"], [])
         return jsonify(
             {
                 "token": token,
@@ -75,8 +101,8 @@ def create_app():
                     "levels_completed": levels_completed,
                 },
                 "save": {
-                    "snapshot": json.loads(save["snapshot_json"]) if save and save["snapshot_json"] else None,
-                    "status": json.loads(save["status_json"]) if save and save["status_json"] else {},
+                    "snapshot": safe_json_loads(save["snapshot_json"], None) if save else None,
+                    "status": safe_json_loads(save["status_json"], {}) if save else {},
                 },
             }
         )
@@ -97,7 +123,7 @@ def create_app():
         conn = get_db()
         word_bank = get_user_word_bank(conn, user["id"])
         save = load_save(conn, user["id"])
-        levels_completed = json.loads(user["levels_completed"] or "[]")
+        levels_completed = safe_json_loads(user["levels_completed"], [])
         return jsonify(
             {
                 "user": {
@@ -109,8 +135,8 @@ def create_app():
                 },
                 "word_bank": word_bank,
                 "save": {
-                    "snapshot": json.loads(save["snapshot_json"]) if save and save["snapshot_json"] else None,
-                    "status": json.loads(save["status_json"]) if save and save["status_json"] else {},
+                    "snapshot": safe_json_loads(save["snapshot_json"], None) if save else None,
+                    "status": safe_json_loads(save["status_json"], {}) if save else {},
                 },
             }
         )
@@ -125,8 +151,8 @@ def create_app():
         status = data.get("status", {})
         conn = get_db()
         save_game(conn, user["id"],
-                  json.dumps(snapshot) if snapshot is not None else None,
-                  json.dumps(status))
+                  json_dumps(snapshot) if snapshot is not None else None,
+                  json_dumps(status))
         conn.commit()
         return jsonify({"ok": True})
 
@@ -141,9 +167,9 @@ def create_app():
         if not user:
             return jsonify({"error": "Unauthorized"}), 401
         data = request.get_json(silent=True) or {}
-        level = int(data.get("level", 1))
-        score = int(data.get("score", 0))
-        time_ms = int(data.get("time_ms", 0))
+        level = parse_int(data.get("level"), default=1, min_value=1)
+        score = parse_int(data.get("score"), default=0, min_value=0)
+        time_ms = parse_int(data.get("time_ms"), default=0, min_value=0)
         conn = get_db()
         submit_score(conn, user["id"], user["username"], level, score, time_ms)
         conn.commit()
@@ -155,7 +181,7 @@ def create_app():
         if not user:
             return jsonify({"error": "Unauthorized"}), 401
         data = request.get_json(silent=True) or {}
-        level_n = int(data.get("level", 1))
+        level_n = parse_int(data.get("level"), default=1, min_value=1)
         conn = get_db()
         mark_level_complete(conn, user["id"], level_n)
         conn.commit()
@@ -193,6 +219,8 @@ def create_app():
 
     @app.post("/api/debug/wipe-scores")
     def debug_wipe_scores():
+        if os.getenv("LINGO_ENABLE_DEBUG") != "1":
+            return jsonify({"error": "Debug routes are disabled"}), 404
         data = request.get_json(silent=True) or {}
         if data.get("confirm") != "WIPE":
             return jsonify({"error": "Pass confirm: WIPE"}), 400

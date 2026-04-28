@@ -1,10 +1,5 @@
 import { useStore } from '../store.js';
-
-const LEVEL_NAMES = [
-  'The Entrance Hall', "The Scholar's Maze", "The Conjurer's Keep",
-  'The Market', 'The Clocktower', 'The Kitchen Catacombs',
-  'The Night School', 'The Trainyard', 'The Office', 'The Palace',
-];
+import { getLevelCount, getLevelName } from '../engine/dungeon.js';
 
 const LANGUAGES = [
   { id: 'es', flag: '🇪🇸', name: 'SPANISH',    native: 'Español'   },
@@ -21,6 +16,7 @@ export default function StatusPage() {
   const snapshot = save?.snapshot ?? null;
   const wordBank = user?.word_bank ?? [];
   const completed = user?.levels_completed ?? [];
+  const levelCount = getLevelCount(language);
 
   const currentLevel = status.levelIndex ?? 1;
   const hasResume = !!snapshot;
@@ -92,9 +88,9 @@ export default function StatusPage() {
       <div className="card">
         {language === 'es' ? (
           <>
-            <div className="card-title">LEVELS — {completed.length}/10 COMPLETED</div>
+            <div className="card-title">LEVELS — {completed.length}/{levelCount} COMPLETED</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map(n => {
+              {Array.from({ length: levelCount }, (_, i) => i + 1).map(n => {
                 const done = completed.includes(n);
                 return (
                   <button
@@ -111,7 +107,7 @@ export default function StatusPage() {
                     }}
                     onClick={() => startGame(n, false)}
                   >
-                    <span>{n}. {LEVEL_NAMES[n - 1]}</span>
+                    <span>{n}. {getLevelName(n, language)}</span>
                     <span style={{ fontSize: 10 }}>{done ? '✓' : ''}</span>
                   </button>
                 );
@@ -120,22 +116,16 @@ export default function StatusPage() {
           </>
         ) : language === 'ja' ? (
           <>
-            <div className="card-title">LEVELS — JAPANESE</div>
+            <div className="card-title">LEVELS — JAPANESE ({levelCount})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[
-                { n: 1, ja: 'あいうえお', en: 'The Five Vowels' },
-                { n: 2, ja: '曜日',       en: 'Days of the Week' },
-                { n: 3, ja: '数字',       en: 'Numbers' },
-                { n: 4, ja: '動物',       en: 'Animals' },
-                { n: 5, ja: '天気',       en: 'Weather' },
-              ].map(({ n, ja, en }) => (
+              {Array.from({ length: levelCount }, (_, i) => i + 1).map(n => (
                 <button
                   key={n}
                   className="btn"
                   style={{ padding: '10px 12px', fontSize: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   onClick={() => startGame(n, false)}
                 >
-                  <span>{n}.&nbsp;<span style={{ fontFamily: 'var(--font-ja)', fontSize: 13 }}>{ja}</span>&nbsp;— {en}</span>
+                  <span>{n}.&nbsp;<span style={{ fontFamily: 'var(--font-ja)', fontSize: 13 }}>{getLevelName(n, language)}</span></span>
                 </button>
               ))}
             </div>

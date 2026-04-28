@@ -1,8 +1,9 @@
 import { useStore } from '../store.js';
+import { getLevelCount } from '../engine/dungeon.js';
 
 export default function GameOverPage() {
-  const { gameResult, startGame, setScreen } = useStore();
-  const { level, score, time_ms, wordsPassed } = gameResult ?? {};
+  const { gameResult, startGame, setScreen, language: selectedLanguage } = useStore();
+  const { level, language = selectedLanguage, score, time_ms, wordsPassed } = gameResult ?? {};
 
   function fmtTime(ms) {
     if (!ms) return '0:00';
@@ -10,7 +11,8 @@ export default function GameOverPage() {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  const isWin = level >= 10;
+  const levelCount = getLevelCount(language);
+  const isWin = level >= levelCount;
 
   return (
     <div className="page" style={{ justifyContent: 'center', minHeight: '100dvh' }}>
@@ -18,7 +20,7 @@ export default function GameOverPage() {
         {isWin ? 'VICTORY!' : 'GAME OVER'}
       </div>
       <div className="subtitle">
-        {isWin ? 'You conquered all 10 levels!' : `You fell on Level ${level}`}
+        {isWin ? `You conquered all ${levelCount} levels!` : `You fell on Level ${level}`}
       </div>
 
       <div className="card" style={{ width: '100%', maxWidth: 320 }}>

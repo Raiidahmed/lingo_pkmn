@@ -2,6 +2,8 @@ import { TILE, MAP_W, MAP_H } from './dungeon.js';
 import { loadMouseImage } from './mouseAssets.js';
 
 const T = 32;
+const CANVAS_W = MAP_W * T;
+const CANVAS_H = MAP_H * T;
 
 // Deterministic tile variation hash
 function tvar(col, row) {
@@ -605,44 +607,50 @@ function drawPlayer(ctx, x, y, accent) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function render(ctx, state, accentColor, canvasTint = 0) {
-  const { grid, player, exitOpen, particles, npcs, levelN, language, locks, challenges } = state;
-  const light = canvasTint > 0;
+export function createRenderCache() {
+  return {
+    canvas: null,
+    ctx: null,
+    key: '',
+  };
+}
 
-  ctx.clearRect(0, 0, MAP_W * T, MAP_H * T);
+function ensureStaticLayer(cache) {
+  if (!cache.canvas) {
+    cache.canvas = document.createElement('canvas');
+    cache.canvas.width = CANVAS_W;
+    cache.canvas.height = CANVAS_H;
+    cache.ctx = cache.canvas.getContext('2d');
+  }
+  return cache.ctx;
+}
+
+function isDynamicJapaneseCritter(language, tile) {
+  return language === 'ja' && (tile === TILE.CHEST_C || tile === TILE.CHEST_O);
+}
+
+function getGridCacheKey(grid, exitOpen, accentColor, light, language) {
+  return [
+    language,
+    exitOpen ? 1 : 0,
+    light ? 1 : 0,
+    accentColor,
+    ...grid.map(row => row.join('')),
+  ].join('|');
+}
+
+function drawStaticMap(ctx, state, accentColor, light) {
+  const { grid, exitOpen, language } = state;
+
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
   for (let r = 0; r < MAP_H; r++) {
     for (let c = 0; c < MAP_W; c++) {
       const t = grid[r][c];
       const x = c * T, y = r * T;
-      
-      // Japanese level critter — use pre-generated sprites when ready
-      if (language === 'ja' && (t === TILE.CHEST_C || t === TILE.CHEST_O)) {
-        const lockKey = `${c},${r}`;
-        const lockInfo = locks ? locks[lockKey] : null;
-        const challenge = (lockInfo && challenges) ? challenges[lockInfo.challengeId] : null;
-        const displayChar = challenge ? (challenge.display || '') : '';
-        const critterColor = challenge ? challenge.color : null;
-        const isOpen = t === TILE.CHEST_O;
 
-        const imgChar = isOpen ? displayChar : null;
-        const img = loadMouseImage(critterColor || '#d0d0d0', imgChar);
-
-        if (img.complete && img.naturalWidth > 0) {
-          drawFloor(ctx, x, y, c, r, light);
-          ctx.drawImage(img, x, y, T, T);
-          // For multi-char display (no pre-baked image), overlay text
-          if (isOpen && displayChar && displayChar.length > 1) {
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 7px "Noto Sans JP", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(displayChar, x + T / 2, y + 21);
-            ctx.textBaseline = 'alphabetic';
-          }
-        } else {
-          drawMouse(ctx, x, y, critterColor || '#d0d0d0', displayChar, isOpen);
-        }
+      if (isDynamicJapaneseCritter(language, t)) {
+        drawFloor(ctx, x, y, c, r, light);
         continue;
       }
 
@@ -659,6 +667,66 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
       }
     }
   }
+}
+
+function drawJapaneseCritters(ctx, state) {
+  const { grid, language, locks, challenges } = state;
+  if (language !== 'ja') return;
+
+  for (let r = 0; r < MAP_H; r++) {
+    for (let c = 0; c < MAP_W; c++) {
+      const t = grid[r][c];
+      if (!isDynamicJapaneseCritter(language, t)) continue;
+
+      const x = c * T, y = r * T;
+      const lockKey = `${c},${r}`;
+      const lockInfo = locks ? locks[lockKey] : null;
+      const challenge = (lockInfo && challenges) ? challenges[lockInfo.challengeId] : null;
+      const displayChar = challenge ? (challenge.display || '') : '';
+      const critterColor = challenge ? challenge.color : null;
+      const isOpen = t === TILE.CHEST_O;
+
+      const imgChar = isOpen ? displayChar : null;
+      const img = loadMouseImage(critterColor || '#d0d0d0', imgChar);
+
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, x, y, T, T);
+        // For multi-char display (no pre-baked image), overlay text
+        if (isOpen && displayChar && displayChar.length > 1) {
+          ctx.fillStyle = '#000000';
+          ctx.font = 'bold 7px "Noto Sans JP", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(displayChar, x + T / 2, y + 21);
+          ctx.textBaseline = 'alphabetic';
+        }
+      } else {
+        drawMouse(ctx, x, y, critterColor || '#d0d0d0', displayChar, isOpen);
+      }
+    }
+  }
+}
+
+export function render(ctx, state, accentColor, canvasTint = 0, cache = null) {
+  const { grid, player, exitOpen, particles, npcs, language } = state;
+  const light = canvasTint > 0;
+
+  if (!grid) return;
+
+  if (cache) {
+    const key = getGridCacheKey(grid, exitOpen, accentColor, light, language);
+    const layerCtx = ensureStaticLayer(cache);
+    if (cache.key !== key) {
+      drawStaticMap(layerCtx, state, accentColor, light);
+      cache.key = key;
+    }
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.drawImage(cache.canvas, 0, 0);
+  } else {
+    drawStaticMap(ctx, state, accentColor, light);
+  }
+
+  drawJapaneseCritters(ctx, state);
 
   if (npcs) {
     for (const npc of npcs) drawNPC(ctx, npc.col * T, npc.row * T, npc);
@@ -670,7 +738,7 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
   if (canvasTint > 0) {
     ctx.globalAlpha = canvasTint * 0.25;
     ctx.fillStyle = '#c8dcee';
-    ctx.fillRect(0, 0, MAP_W * T, MAP_H * T);
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.globalAlpha = 1;
   }
 
@@ -687,5 +755,5 @@ export function render(ctx, state, accentColor, canvasTint = 0) {
 }
 
 export function getCanvasSize() {
-  return { width: MAP_W * T, height: MAP_H * T };
+  return { width: CANVAS_W, height: CANVAS_H };
 }

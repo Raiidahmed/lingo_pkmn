@@ -3759,3 +3759,11 @@ export const LEVELS = [
 export function getLevel(n) {
   return LEVELS[Math.min(Math.max(n - 1, 0), LEVELS.length - 1)];
 }
+
+export function getLevelCount() {
+  return LEVELS.length;
+}
+
+export function getLevelName(n) {
+  return getLevel(n).name;
+}
